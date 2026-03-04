@@ -1554,6 +1554,61 @@ const TYPE_META = {
   sebi:      {label:'SEBI ALERT',      icon:'⚖️', color:'#ff7043'},
 };
 
+function updateAlertCount(){
+  const el=document.getElementById('alert-count');
+  const el2=document.getElementById('ap-count');
+  if(el) el.textContent=alertStore.length>99?'99+':alertStore.length;
+  if(el2) el2.textContent=alertStore.length+' event'+(alertStore.length===1?'':'s');
+}
+
+function apFil(f,el){
+  apFilter=f;
+  document.querySelectorAll('.apf').forEach(a=>a.classList.remove('on'));
+  if(el) el.classList.add('on');
+  renderAlertPanel();
+}
+
+function clearAlerts(){ alertStore=[]; updateAlertCount(); renderAlertPanel(); }
+
+function renderAlertPanel(){
+  const list=document.getElementById('ap-list');
+  if(!list) return;
+  const filtered=apFilter==='all'?alertStore:alertStore.filter(a=>a.type===apFilter);
+  if(!filtered.length){ list.innerHTML='<div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">No alerts in this category.</div>'; return; }
+  list.innerHTML=filtered.map(a=>{
+    const meta=TYPE_META[a.type]||{label:a.type.toUpperCase(),icon:'📌',color:'var(--dim2)'};
+    const col=meta.color||'var(--dim2)';
+    const isUp=a.chg&&a.chg.startsWith('+'), isDn=a.chg&&a.chg.startsWith('-');
+    return `<div class="ap-item" style="border-left:3px solid ${col};padding:10px 12px;margin-bottom:4px;background:var(--bg3);border-radius:0 4px 4px 0">
+      <div style="font-size:8px;color:${col};font-weight:700;letter-spacing:.1em;margin-bottom:3px">${meta.icon} ${meta.label}${a.badge?` · <span style="opacity:.7">${a.badge}</span>`:''}</div>
+      <div style="font-size:10px;color:var(--tx);font-weight:600;margin-bottom:2px">${a.title}</div>
+      <div style="font-size:9px;color:var(--dim);line-height:1.4;margin-bottom:4px">${a.detail}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:8px;color:var(--dim2)">${a.timeStr} IST</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          ${a.stock?`<span style="font-size:8px;color:${col};font-weight:700">${a.stock}</span>`:''}
+          ${a.chg?`<span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:${isUp?'var(--gn)':isDn?'var(--rd)':'var(--sf)'}">${a.chg}</span>`:''}
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let notifEnabled = false;
+function syncNotifBtn(){
+  const btn=document.getElementById('notif-btn');
+  if(!btn) return;
+}
+function fireNotif(title, body){
+  if(!notifEnabled) return;
+  try {
+    if('Notification' in window && Notification.permission==='granted'){
+      const n=new Notification(title,{body,icon:'https://fav.farm/📊',tag:'bharat-'+Date.now()});
+      setTimeout(()=>n.close(),8000);
+    }
+  } catch(e){}
+}
+
 function pushAlert(type, title, detail, stock='', badge='', chg=''){
   const id = Date.now()+'_'+Math.random();
   const now=istNow();
@@ -1650,52 +1705,53 @@ const NOTIF_PRIORITY = new Set(['breakout','breakdown','circuit','whale','inside
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════
-// DATA ENGINE — Claude API (claude-haiku, built-in, no key needed)
+// DATA ENGINE — Yahoo Finance via CORS proxy with direct fallback
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function askClaude(prompt, maxTokens) {
-  maxTokens = maxTokens || 512;
-  try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: maxTokens,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    if (!res.ok) { console.error('Claude API error:', res.status); return null; }
-    var data = await res.json();
-    return (data.content || []).filter(function(b){ return b.type === 'text'; }).map(function(b){ return b.text; }).join('');
-  } catch(e) { console.error('Claude fetch error:', e); return null; }
-}
+const YF = 'https://query1.finance.yahoo.com';
+const YF2 = 'https://query2.finance.yahoo.com';
+const FIELDS = 'regularMarketPrice,regularMarketPreviousClose,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,marketCap,trailingPE,fiftyTwoWeekHigh,fiftyTwoWeekLow,shortName,longName,exchange,symbol';
 
-function grabJSON(text) {
-  if (!text) return null;
+async function yfFetch(path, timeout) {
+  timeout = timeout || 9000;
+  const sig = AbortSignal.timeout(timeout);
+
+  // 1. Try direct query2 (no CORS issues on Vercel-served pages)
   try {
-    var m = text.match(/```json[\s\S]*?(\{[\s\S]*?\})[\s\S]*?```/) || text.match(/(\{[\s\S]*\})/);
-    return m ? JSON.parse(m[1]) : null;
-  } catch(e) { return null; }
+    const r = await fetch(YF2 + path, { signal: sig, headers: { 'Accept': 'application/json' } });
+    if (r.ok) { const j = await r.json(); if (j) return j; }
+  } catch(e) {}
+
+  // 2. Try direct query1
+  try {
+    const r = await fetch(YF + path, { signal: AbortSignal.timeout(timeout), headers: { 'Accept': 'application/json' } });
+    if (r.ok) { const j = await r.json(); if (j) return j; }
+  } catch(e) {}
+
+  // 3. allorigins proxy
+  try {
+    const url = encodeURIComponent(YF + path);
+    const r = await fetch('https://api.allorigins.win/get?url=' + url, { signal: AbortSignal.timeout(timeout + 3000) });
+    if (r.ok) { const wrap = await r.json(); return JSON.parse(wrap.contents); }
+  } catch(e) {}
+
+  return null;
 }
 
 async function fetchLivePrices() {
-  var prompt = 'Search NSE India or MoneyControl for current live Indian market prices right now. Return ONLY this JSON, no explanation: {"nifty":24500,"nifty_prev":24400,"sensex":81000,"sensex_prev":80800,"banknifty":52500,"banknifty_prev":52200,"brent":75.5,"gold_inr":72000,"inrusd":83.9}';
-  var text = await askClaude(prompt);
-  var d = grabJSON(text);
-  if (d) {
-    if (d.nifty)     liveData.nifty  = { v: d.nifty,     prev: d.nifty_prev     || d.nifty*0.995,  open: d.nifty*0.997,  high: d.nifty*1.005,  low: d.nifty*0.993  };
-    if (d.sensex)    liveData.sensex = { v: d.sensex,    prev: d.sensex_prev    || d.sensex*0.995, open: d.sensex*0.997, high: d.sensex*1.005, low: d.sensex*0.993 };
-    if (d.banknifty) liveData.bank   = { v: d.banknifty, prev: d.banknifty_prev || d.banknifty*0.995 };
-    if (d.brent)     liveData.brent  = { v: d.brent };
-    if (d.gold_inr)  liveData.gold   = { v: d.gold_inr };
-    if (d.inrusd)    liveData.inrusd = { v: d.inrusd };
-  }
+  const path = '/v7/finance/quote?symbols=' + encodeURIComponent('^NSEI,^BSESN,^NSEBANK,BZ=F,GC=F,INR=X') + '&fields=' + FIELDS + '&formatted=false';
+  const j = await yfFetch(path);
+  const results = (j && j.quoteResponse && j.quoteResponse.result) || [];
+  results.forEach(function(q) {
+    const p = q.regularMarketPrice, prev = q.regularMarketPreviousClose, s = q.symbol;
+    const base = { v: p, prev: prev, open: q.regularMarketOpen||p, high: q.regularMarketDayHigh||p, low: q.regularMarketDayLow||p };
+    if (s==='^NSEI')    liveData.nifty  = base;
+    if (s==='^BSESN')   liveData.sensex = base;
+    if (s==='^NSEBANK') liveData.bank   = base;
+    if (s==='BZ=F')     liveData.brent  = { v: p };
+    if (s==='GC=F')     liveData.gold   = { v: Math.round(p * ((liveData.inrusd && liveData.inrusd.v) || 84) / 31.1) };
+    if (s==='INR=X')    liveData.inrusd = { v: p };
+  });
   updateAllDisplays();
 }
 
@@ -1753,6 +1809,8 @@ const STOCK_MAP = {
   'SWIGGY':'SWIGGY.NS','NYKAA':'NYKAA.NS','ANGELONE':'ANGELONE.NS',
   'LODHA':'LODHA.NS','GODREJPROP':'GODREJPROP.NS',
   'BAJAJFINSV':'BAJAJFINSV.NS','BAJAJ FINSERV':'BAJAJFINSV.NS',
+  'DIXON':'DIXON.NS','HAL':'HAL.NS','IRCTC':'IRCTC.NS',
+  'CANBK':'CANBK.NS','CANARA':'CANBK.NS',
 };
 
 const SECTOR_MAP = {
@@ -1764,45 +1822,31 @@ const SECTOR_MAP = {
   'HCLTECH.NS':'IT Services','SUNPHARMA.NS':'Pharma',
   'TATAMOTORS.NS':'Auto','BAJFINANCE.NS':'NBFC',
   'NTPC.NS':'Power PSU','ONGC.NS':'Oil & Gas',
-  'ADANIENT.NS':'Conglomerate','DRREDDY.NS':'Pharma',
-  'CIPLA.NS':'Pharma','SUZLON.NS':'Renewable Energy',
-  'WAAREE.NS':'Renewable Energy','COFORGE.NS':'IT Mid-cap',
-  'PAYTM.NS':'Fintech','ZOMATO.NS':'Foodtech',
-  'HAL.NS':'Defence','BEL.NS':'Defence','IEX.NS':'Energy Exchange',
-  'IRFC.NS':'PSU Finance','INDIGO.NS':'Aviation',
-  'DLF.NS':'Real Estate','ITC.NS':'FMCG','MARUTI.NS':'Auto',
-  'TITAN.NS':'Jewellery / Consumer','ASIANPAINT.NS':'Paints',
-  'HDFCLIFE.NS':'Insurance','JSWSTEEL.NS':'Steel',
-  'HINDUNILVR.NS':'FMCG','KOTAKBANK.NS':'Private Banking',
-  'AXISBANK.NS':'Private Banking','LT.NS':'Infra / Engineering',
 };
 
 function resolveSymbol(input) {
-  var up = input.toUpperCase().trim();
+  const up = input.toUpperCase().trim();
   if (STOCK_MAP[up]) return STOCK_MAP[up];
-  for (var k in STOCK_MAP) { if (k.startsWith(up)) return STOCK_MAP[k]; }
-  // If already looks like a Yahoo symbol pass through
+  for (const k in STOCK_MAP) { if (k.startsWith(up)) return STOCK_MAP[k]; }
   if (up.endsWith('.NS') || up.endsWith('.BO') || up.startsWith('^')) return input;
   return up + '.NS';
 }
 
 function searchSuggest(val) {
-  var box = document.getElementById('search-suggestions');
+  const box = document.getElementById('search-suggestions');
   if (!val || val.length < 2) { box.style.display = 'none'; return; }
-  var up = val.toUpperCase().trim();
-  var matches = Object.keys(STOCK_MAP).filter(function(k){ return k.startsWith(up); }).slice(0, 8);
+  const up = val.toUpperCase().trim();
+  const matches = Object.keys(STOCK_MAP).filter(k => k.startsWith(up)).slice(0, 8);
   if (!matches.length) { box.style.display = 'none'; return; }
   box.style.display = 'block';
-  box.innerHTML = matches.map(function(m){
-    var row = document.createElement('div');
-    row.style.cssText = 'padding:7px 12px;font-family:DM Mono,monospace;font-size:10px;cursor:pointer;border-bottom:1px solid rgba(255,153,51,.12)';
+  box.innerHTML = matches.map(m => {
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:7px 12px;font-family:DM Mono,monospace;font-size:10px;cursor:pointer;border-bottom:1px solid rgba(255,153,51,.1)';
     row.onmouseover = function(){ this.style.background='rgba(255,153,51,.08)'; };
     row.onmouseout  = function(){ this.style.background='transparent'; };
-    row.onclick = (function(s){ return function(){ quickSearch(s); }; })(m);
+    row.onclick = () => quickSearch(m);
     row.innerHTML = '<span style="color:var(--sf)">' + m + '</span><span style="color:var(--dim2);font-size:9px;margin-left:8px">' + STOCK_MAP[m] + '</span>';
-    var tmp = document.createElement('div');
-    tmp.appendChild(row);
-    return tmp.innerHTML;
+    return row.outerHTML;
   }).join('');
 }
 
@@ -1813,22 +1857,22 @@ function quickSearch(sym) {
 }
 
 function doSearch() {
-  var input = document.getElementById('stock-search-input').value.trim();
+  const input = document.getElementById('stock-search-input').value.trim();
   if (!input) return;
   document.getElementById('search-suggestions').style.display = 'none';
   loadStockData(resolveSymbol(input));
 }
 
 function genSimChart(base, range) {
-  var counts = { '1d': 78, '5d': 100, '1mo': 22, '3mo': 65, '1y': 52 };
-  var n = counts[range] || 22;
-  var pts = [], v = base * 0.93, now = Date.now();
-  var step = range === '1d' ? 5*60000 : 24*3600000;
-  for (var i = n; i >= 0; i--) {
-    v = v * (1 + (Math.random() - 0.47) * 0.012);
-    pts.push({ t: new Date(now - i * step), c: +v.toFixed(2) });
+  const counts = { '1d': 78, '5d': 100, '1mo': 22, '3mo': 65, '1y': 52 };
+  const n = counts[range] || 22;
+  const pts = []; let v = base * 0.93; const now = Date.now();
+  const step = range === '1d' ? 5*60000 : 24*3600000;
+  for (let i = n; i >= 0; i--) {
+    v = v * (1 + (Math.random()-0.47)*0.012);
+    pts.push({ t: new Date(now - i*step), c: +v.toFixed(2) });
   }
-  pts[pts.length - 1].c = base;
+  pts[pts.length-1].c = base;
   return pts;
 }
 
@@ -1837,44 +1881,50 @@ async function loadStockData(sym) {
   document.getElementById('search-empty').style.display   = 'none';
   document.getElementById('search-result').style.display  = 'none';
   document.getElementById('search-loading').style.display = 'block';
-  var ldiv = document.querySelector('#search-loading div:last-child');
-  if (ldiv) ldiv.innerHTML = 'Searching live price via AI…<br><span style="font-size:9px;opacity:.5">5–10 seconds — fetching real data</span>';
+  const ldiv = document.querySelector('#search-loading div:last-child');
+  if (ldiv) ldiv.innerHTML = 'Fetching live data\u2026<br><span style="font-size:9px;opacity:.5">2\u20135 seconds</span>';
 
-  var ticker  = sym.replace('.NS','').replace('.BO','').replace('^','');
-  var fund    = FUNDAMENTALS[sym] || {};
-  var name    = fund.name || ticker;
+  try {
+    const qPath = '/v7/finance/quote?symbols=' + encodeURIComponent(sym) + '&fields=' + FIELDS + '&formatted=false';
+    const cPath = '/v8/finance/chart/' + encodeURIComponent(sym) + '?range=1y&interval=1d&includePrePost=false';
 
-  var text = await askClaude(
-    'Search for the current live NSE stock price of ' + name + ' (' + ticker + ') on NSE India or MoneyControl right now today. Return ONLY this JSON with real numbers in INR, no markdown: {"price":1234.50,"prev_close":1220.00,"open":1225.00,"high":1245.00,"low":1218.00,"volume":2500000,"week52_high":1450.00,"week52_low":950.00}',
-    768
-  );
+    const [qj, cj] = await Promise.all([yfFetch(qPath), yfFetch(cPath, 14000)]);
 
-  document.getElementById('search-loading').style.display = 'none';
+    document.getElementById('search-loading').style.display = 'none';
 
-  var d = grabJSON(text);
-  if (!d || !d.price) { showSearchError(sym); return; }
+    const q = qj && qj.quoteResponse && qj.quoteResponse.result && qj.quoteResponse.result[0];
+    if (!q || !q.regularMarketPrice) { showSearchError(sym); return; }
 
-  currentStockPrice = d.price;
+    currentStockPrice = q.regularMarketPrice;
 
-  var q = {
-    symbol:                     ticker,
-    longName:                   name,
-    exchange:                   'NSE',
-    regularMarketPrice:         d.price,
-    regularMarketPreviousClose: d.prev_close || d.price * 0.99,
-    regularMarketOpen:          d.open       || d.price * 0.998,
-    regularMarketDayHigh:       d.high       || d.price * 1.012,
-    regularMarketDayLow:        d.low        || d.price * 0.988,
-    fiftyTwoWeekHigh:           d.week52_high || d.price * 1.25,
-    fiftyTwoWeekLow:            d.week52_low  || d.price * 0.72,
-    regularMarketVolume:        d.volume     || null,
-    marketCap:                  null,
-  };
-
-  var chartPts = genSimChart(d.price, currentRange);
-  var closes   = genSimChart(d.price, '1y').map(function(p){ return p.c; });
-  renderStockResult(q, fund, chartPts, sym, closes);
+    const res    = cj && cj.chart && cj.chart.result && cj.chart.result[0];
+    const ts     = (res && res.timestamp) || [];
+    const q0     = (res && res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
+    const hist   = ts.map((t,i) => ({ t: new Date(t*1000), c: q0.close && q0.close[i] })).filter(p => p.c);
+    const closes = hist.map(p => p.c);
+    const chartPts = hist.length > 2 ? hist : genSimChart(q.regularMarketPrice, currentRange);
+    const fund   = FUNDAMENTALS[sym] || {};
+    renderStockResult(q, fund, chartPts, sym, closes);
+  } catch(e) {
+    console.error('loadStockData:', e);
+    document.getElementById('search-loading').style.display = 'none';
+    showSearchError(sym);
+  }
 }
+
+function showSearchError(sym) {
+  const ticker = sym.replace('.NS','').replace('.BO','').replace('^','');
+  const el = document.getElementById('search-empty');
+  document.getElementById('search-result').style.display = 'none';
+  el.style.display = 'block';
+  el.innerHTML = '<div style="font-size:32px;margin-bottom:12px">\u26a0\ufe0f</div>'
+    + '<div style="font-size:16px;color:var(--rd);margin-bottom:10px;font-weight:600">No data for \u201c' + ticker + '\u201d</div>'
+    + '<div style="font-size:10px;color:var(--dim2);line-height:1.9">'
+    + 'NSE hours: 9:15 AM \u2013 3:30 PM IST (Mon\u2013Fri)<br>'
+    + 'Try: RELIANCE &middot; TCS &middot; HDFCBANK &middot; INFY &middot; SBIN<br>'
+    + 'Or tap a Quick Pick button above.</div>';
+}
+
 
 
 
