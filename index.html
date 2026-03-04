@@ -1656,11 +1656,43 @@ const NOTIF_PRIORITY = new Set(['breakout','breakdown','circuit','whale','inside
 async function apiFetch(params, timeout) {
   timeout = timeout || 10000;
   var qs = new URLSearchParams(params).toString();
+
+  // Try our serverless proxy first
   try {
     var r = await fetch('/api/stock?' + qs, { signal: AbortSignal.timeout(timeout) });
-    if (!r.ok) return null;
-    return await r.json();
-  } catch(e) { return null; }
+    if (r.ok) {
+      var j = await r.json();
+      if (j && !j.error) return j;
+      console.warn('API returned error:', j);
+    } else {
+      console.warn('API HTTP error:', r.status, await r.text().catch(()=>''));
+    }
+  } catch(e) {
+    console.warn('API fetch failed:', e.message);
+  }
+
+  // Fallback: try Yahoo Finance directly (works sometimes from browser)
+  try {
+    var sym = params.sym || '';
+    var type = params.type || 'quote';
+    var fields = 'regularMarketPrice,regularMarketPreviousClose,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,marketCap,trailingPE,fiftyTwoWeekHigh,fiftyTwoWeekLow,shortName,longName,exchange,symbol';
+    var directUrl;
+    if (type === 'chart') {
+      directUrl = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + (params.range||'1y') + '&interval=' + (params.interval||'1d') + '&includePrePost=false';
+    } else {
+      directUrl = 'https://query2.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(sym) + '&fields=' + fields + '&formatted=false';
+    }
+    var r2 = await fetch(directUrl, {
+      signal: AbortSignal.timeout(timeout),
+      headers: { 'Accept': 'application/json' }
+    });
+    if (r2.ok) return await r2.json();
+    console.warn('Direct Yahoo also failed:', r2.status);
+  } catch(e2) {
+    console.warn('Direct Yahoo failed:', e2.message);
+  }
+
+  return null;
 }
 
 async function fetchLivePrices() {
@@ -1835,16 +1867,17 @@ async function loadStockData(sym) {
 
 
 function showSearchError(sym) {
+  var ticker = sym.replace('.NS','').replace('.BO','').replace('^','');
   document.getElementById('search-result').style.display = 'none';
   document.getElementById('search-empty').style.display  = 'block';
   document.getElementById('search-empty').innerHTML = `
     <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.15em;color:var(--rd);margin-bottom:10px">No data for "${sym.replace('.NS','')}"</div>
-    <div style="font-size:10px;color:var(--dim2);line-height:1.8">
-      Could not fetch from Yahoo Finance.<br>
-      <span style="color:var(--sf)">▸</span> Market may be closed (NSE: 9:15 AM–3:30 PM IST)<br>
-      <span style="color:var(--sf)">▸</span> Try a Quick Pick button above<br>
-      <span style="color:var(--sf)">▸</span> Check your internet connection
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.15em;color:var(--rd);margin-bottom:10px">No data for "${ticker}"</div>
+    <div style="font-size:10px;color:var(--dim2);line-height:1.9">
+      Yahoo Finance could not be reached.<br>
+      <span style="color:var(--sf)">▸</span> NSE hours: 9:15 AM – 3:30 PM IST (Mon–Fri)<br>
+      <span style="color:var(--sf)">▸</span> Try: RELIANCE · TCS · HDFCBANK · INFY · SBIN<br>
+      <span style="color:var(--sf)">▸</span> Open browser Console (F12) to see error details
     </div>`;
 }
 
