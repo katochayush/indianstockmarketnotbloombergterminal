@@ -1708,49 +1708,31 @@ const NOTIF_PRIORITY = new Set(['breakout','breakdown','circuit','whale','inside
 // DATA ENGINE — Yahoo Finance via CORS proxy with direct fallback
 // ═══════════════════════════════════════════════════════════════════════════
 
-const YF = 'https://query1.finance.yahoo.com';
-const YF2 = 'https://query2.finance.yahoo.com';
 const FIELDS = 'regularMarketPrice,regularMarketPreviousClose,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,marketCap,trailingPE,fiftyTwoWeekHigh,fiftyTwoWeekLow,shortName,longName,exchange,symbol';
 
-async function yfFetch(path, timeout) {
-  timeout = timeout || 9000;
-  const sig = AbortSignal.timeout(timeout);
-
-  // 1. Try direct query2 (no CORS issues on Vercel-served pages)
+async function apiFetch(params, timeout) {
+  timeout = timeout || 10000;
   try {
-    const r = await fetch(YF2 + path, { signal: sig, headers: { 'Accept': 'application/json' } });
-    if (r.ok) { const j = await r.json(); if (j) return j; }
-  } catch(e) {}
-
-  // 2. Try direct query1
-  try {
-    const r = await fetch(YF + path, { signal: AbortSignal.timeout(timeout), headers: { 'Accept': 'application/json' } });
-    if (r.ok) { const j = await r.json(); if (j) return j; }
-  } catch(e) {}
-
-  // 3. allorigins proxy
-  try {
-    const url = encodeURIComponent(YF + path);
-    const r = await fetch('https://api.allorigins.win/get?url=' + url, { signal: AbortSignal.timeout(timeout + 3000) });
-    if (r.ok) { const wrap = await r.json(); return JSON.parse(wrap.contents); }
-  } catch(e) {}
-
-  return null;
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch('/api/stock?' + qs, { signal: AbortSignal.timeout(timeout) });
+    if (!r.ok) { console.warn('API error', r.status); return null; }
+    return await r.json();
+  } catch(e) { console.warn('apiFetch failed:', e.message); return null; }
 }
 
 async function fetchLivePrices() {
-  const path = '/v7/finance/quote?symbols=' + encodeURIComponent('^NSEI,^BSESN,^NSEBANK,BZ=F,GC=F,INR=X') + '&fields=' + FIELDS + '&formatted=false';
-  const j = await yfFetch(path);
+  const j = await apiFetch({ sym: '^NSEI,^BSESN,^NSEBANK,BZ=F,GC=F,INR=X', type: 'batch' });
   const results = (j && j.quoteResponse && j.quoteResponse.result) || [];
   results.forEach(function(q) {
     const p = q.regularMarketPrice, prev = q.regularMarketPreviousClose, s = q.symbol;
     const base = { v: p, prev: prev, open: q.regularMarketOpen||p, high: q.regularMarketDayHigh||p, low: q.regularMarketDayLow||p };
-    if (s==='^NSEI')    liveData.nifty  = base;
-    if (s==='^BSESN')   liveData.sensex = base;
-    if (s==='^NSEBANK') liveData.bank   = base;
-    if (s==='BZ=F')     liveData.brent  = { v: p };
-    if (s==='GC=F')     liveData.gold   = { v: Math.round(p * ((liveData.inrusd && liveData.inrusd.v) || 84) / 31.1) };
-    if (s==='INR=X')    liveData.inrusd = { v: p };
+    if (s==='^NSEI')     liveData.nifty  = base;
+    if (s==='^BSESN')    liveData.sensex = base;
+    if (s==='^NSEBANK')  liveData.bank   = base;
+    if (s==='^NSEMDCP50') liveData.mid   = base;
+    if (s==='BZ=F')      liveData.brent  = { v: p };
+    if (s==='GC=F')      liveData.gold   = { v: Math.round(p * ((liveData.inrusd && liveData.inrusd.v) || 84) / 31.1) };
+    if (s==='INR=X')     liveData.inrusd = { v: p };
   });
   updateAllDisplays();
 }
@@ -1882,13 +1864,13 @@ async function loadStockData(sym) {
   document.getElementById('search-result').style.display  = 'none';
   document.getElementById('search-loading').style.display = 'block';
   const ldiv = document.querySelector('#search-loading div:last-child');
-  if (ldiv) ldiv.innerHTML = 'Fetching live data\u2026<br><span style="font-size:9px;opacity:.5">2\u20135 seconds</span>';
+  if (ldiv) ldiv.innerHTML = 'Fetching live data\u2026<br><span style="font-size:9px;opacity:.5">2\u20134 seconds</span>';
 
   try {
-    const qPath = '/v7/finance/quote?symbols=' + encodeURIComponent(sym) + '&fields=' + FIELDS + '&formatted=false';
-    const cPath = '/v8/finance/chart/' + encodeURIComponent(sym) + '?range=1y&interval=1d&includePrePost=false';
-
-    const [qj, cj] = await Promise.all([yfFetch(qPath), yfFetch(cPath, 14000)]);
+    const [qj, cj] = await Promise.all([
+      apiFetch({ sym: sym, type: 'quote' }),
+      apiFetch({ sym: sym, type: 'chart', range: '1y', interval: '1d' }, 14000)
+    ]);
 
     document.getElementById('search-loading').style.display = 'none';
 
