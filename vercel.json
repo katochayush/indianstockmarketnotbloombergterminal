@@ -1,1 +1,7 @@
-{}
+{
+  "functions": {
+    "api/stock.js": {
+      "runtime": "edge"
+    }
+  }
+}
