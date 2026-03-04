@@ -1867,11 +1867,8 @@ async function loadStockData(sym) {
   if (ldiv) ldiv.innerHTML = 'Fetching live data\u2026<br><span style="font-size:9px;opacity:.5">2\u20134 seconds</span>';
 
   try {
-    const [qj, cj] = await Promise.all([
-      apiFetch({ sym: sym, type: 'quote' }),
-      apiFetch({ sym: sym, type: 'chart', range: '1y', interval: '1d' }, 14000)
-    ]);
-
+    // Quote is critical — if this fails show error
+    const qj = await apiFetch({ sym: sym, type: 'quote' });
     document.getElementById('search-loading').style.display = 'none';
 
     const q = qj && qj.quoteResponse && qj.quoteResponse.result && qj.quoteResponse.result[0];
@@ -1879,13 +1876,19 @@ async function loadStockData(sym) {
 
     currentStockPrice = q.regularMarketPrice;
 
-    const res    = cj && cj.chart && cj.chart.result && cj.chart.result[0];
-    const ts     = (res && res.timestamp) || [];
-    const q0     = (res && res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
-    const hist   = ts.map((t,i) => ({ t: new Date(t*1000), c: q0.close && q0.close[i] })).filter(p => p.c);
-    const closes = hist.map(p => p.c);
-    const chartPts = hist.length > 2 ? hist : genSimChart(q.regularMarketPrice, currentRange);
-    const fund   = FUNDAMENTALS[sym] || {};
+    // Chart is optional — fall back to simulated if it fails
+    let chartPts = genSimChart(q.regularMarketPrice, currentRange);
+    let closes = [];
+    try {
+      const cj = await apiFetch({ sym: sym, type: 'chart', range: '1y', interval: '1d' }, 10000);
+      const res = cj && cj.chart && cj.chart.result && cj.chart.result[0];
+      const ts  = (res && res.timestamp) || [];
+      const q0  = (res && res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
+      const hist = ts.map((t,i) => ({ t: new Date(t*1000), c: q0.close && q0.close[i] })).filter(p => p.c);
+      if (hist.length > 2) { chartPts = hist; closes = hist.map(p => p.c); }
+    } catch(ce) { /* use sim chart */ }
+
+    const fund = FUNDAMENTALS[sym] || {};
     renderStockResult(q, fund, chartPts, sym, closes);
   } catch(e) {
     console.error('loadStockData:', e);
