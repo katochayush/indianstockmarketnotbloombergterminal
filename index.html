@@ -493,7 +493,7 @@ body{padding-bottom:28px}
     <div class="ap-title">Alert Stream</div>
     <div style="display:flex;align-items:center;gap:8px">
       <span id="ap-count" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--dim2)">0 events</span>
-      <button id="notif-btn" onclick="requestNotifPermission()" style="display:none;background:rgba(255,153,51,.12);border:1px solid rgba(255,153,51,.3);border-radius:4px;padding:3px 9px;color:var(--sf);font-size:9px;font-weight:700;letter-spacing:.08em;cursor:pointer;transition:all .2s;white-space:nowrap">🔔 Enable Notifications</button>
+      <button id="notif-btn" style="background:rgba(255,153,51,.12);border:1px solid rgba(255,153,51,.3);border-radius:4px;padding:3px 9px;color:var(--sf);font-size:9px;font-weight:700;letter-spacing:.08em;cursor:pointer;transition:all .2s;white-space:nowrap">🔔 Enable Notifications</button>
       <button class="ap-close" onclick="toggleAlertPanel()">✕</button>
     </div>
   </div>
@@ -1518,1004 +1518,663 @@ function toggleAlertPanel(){
   syncNotifBtn();
 }
 
-// ── BROWSER PUSH NOTIFICATIONS ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// BROWSER NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════
 let notifEnabled = false;
 
-function syncNotifBtn(){
+function syncNotifBtn() {
   const btn = document.getElementById('notif-btn');
-  if(!btn) return;
-  if(!('Notification' in window)){
+  if (!btn) return;
+
+  // Helper to style the button
+  const style = (text, bg, border, color, handler) => {
+    btn.textContent = text;
+    btn.style.background   = bg;
+    btn.style.borderColor  = border;
+    btn.style.color        = color;
+    btn.style.opacity      = '1';
+    btn.onclick = handler;
+  };
+
+  if (!('Notification' in window)) {
     btn.style.display = 'none';
     return;
   }
-  if(Notification.permission === 'granted'){
-    notifEnabled = true;
-    btn.style.display = 'flex';
-    btn.textContent = '🔔 Notifications ON';
-    btn.style.background = 'rgba(0,210,106,.12)';
-    btn.style.borderColor = 'rgba(0,210,106,.3)';
-    btn.style.color = 'var(--gn)';
-    btn.onclick = () => {
-      notifEnabled = !notifEnabled;
-      btn.textContent = notifEnabled ? '🔔 Notifications ON' : '🔕 Notifications OFF';
-      btn.style.background = notifEnabled ? 'rgba(0,210,106,.12)' : 'rgba(255,255,255,.05)';
-      btn.style.color = notifEnabled ? 'var(--gn)' : 'var(--dim2)';
-    };
-  } else if(Notification.permission === 'denied'){
-    btn.style.display = 'flex';
-    btn.textContent = '🚫 Notifications Blocked';
-    btn.style.background = 'rgba(255,59,59,.08)';
-    btn.style.borderColor = 'rgba(255,59,59,.2)';
-    btn.style.color = 'var(--rd)';
-    btn.title = 'Notifications are blocked. Reset permission in browser site settings.';
-    btn.onclick = () => {
-      alert('Notifications are blocked for this site.\n\nTo enable:\n1. Click the 🔒 lock icon in your browser address bar\n2. Set Notifications → Allow\n3. Reload the page');
-    };
-  } else {
-    // 'default' — not yet asked
-    btn.style.display = 'flex';
-    btn.textContent = '🔔 Enable Notifications';
-    btn.style.background = 'rgba(255,153,51,.12)';
-    btn.style.borderColor = 'rgba(255,153,51,.3)';
-    btn.style.color = 'var(--sf)';
-    btn.onclick = requestNotifPermission;
-  }
-}
 
-async function requestNotifPermission(){
-  if(!('Notification' in window)){
-    alert('Your browser does not support desktop notifications.'); return;
-  }
-  try {
-    const perm = await Notification.requestPermission();
-    syncNotifBtn();
-    if(perm === 'granted'){
-      notifEnabled = true;
-      // Welcome notification
-      fireNotif('🇮🇳 BHARAT TERMINAL', 'Market alerts enabled! You\'ll get notified for breakouts, circuits, FII moves, and major events.', '📊');
+  btn.style.display = 'inline-flex';
+  btn.style.alignItems = 'center';
+
+  if (Notification.permission === 'granted') {
+    if (notifEnabled) {
+      style('🔔 Notifs ON — tap to pause',
+        'rgba(0,210,106,.15)', 'rgba(0,210,106,.4)', 'var(--gn)',
+        () => { notifEnabled = false; syncNotifBtn(); });
+    } else {
+      style('🔕 Notifs paused — tap to resume',
+        'rgba(255,255,255,.06)', 'rgba(255,255,255,.15)', 'var(--dim2)',
+        () => { notifEnabled = true; syncNotifBtn(); });
     }
-  } catch(e) {}
+  } else if (Notification.permission === 'denied') {
+    style('🚫 Blocked — how to fix',
+      'rgba(255,59,59,.1)', 'rgba(255,59,59,.3)', 'var(--rd)',
+      () => alert('Notifications are blocked by your browser.\n\nTo enable:\n1. Click the 🔒 lock icon in your address bar\n2. Set Notifications → Allow\n3. Reload the page'));
+  } else {
+    style('🔔 Enable Notifications',
+      'rgba(255,153,51,.12)', 'rgba(255,153,51,.3)', 'var(--sf)',
+      requestNotifPermission);
+  }
 }
 
-function fireNotif(title, body, icon='📊'){
-  if(!notifEnabled || Notification.permission !== 'granted') return;
+async function requestNotifPermission() {
+  if (!('Notification' in window)) { alert('Your browser does not support notifications.'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    notifEnabled = true;
+    fireNotif('🇮🇳 Bharat Terminal', 'Alerts live! Breakouts, circuits & whale trades will notify you.');
+  }
+  syncNotifBtn();
+}
+
+function fireNotif(title, body) {
+  if (!notifEnabled || Notification.permission !== 'granted') return;
   try {
     const n = new Notification(title, {
       body,
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="%23050709"/><text y="22" x="6" font-size="20">📊</text></svg>',
-      badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" rx="3" fill="%23FF9933"/></svg>',
-      tag: 'bharat-alert',
-      renotify: true,
-      silent: false,
+      icon: 'https://fav.farm/📊',
+      tag: 'bharat-' + Date.now(),
+      renotify: false,
     });
     n.onclick = () => { window.focus(); n.close(); };
-    setTimeout(() => n.close(), 8000);
+    setTimeout(() => n.close(), 9000);
   } catch(e) {}
 }
 
-// Map alert types to notification priority (only high-priority ones fire notif)
 const NOTIF_PRIORITY = new Set(['breakout','breakdown','circuit','whale','insider','sebi','ipo','block','earnings']);
-
-// Init on load
-window.addEventListener('load', () => {
-  setTimeout(syncNotifBtn, 500);
-  // Also show button immediately if panel ever opens
-});
-function apFil(f,el){
-  apFilter=f;
-  document.querySelectorAll('.apf').forEach(a=>a.classList.remove('on'));
-  el.classList.add('on');
-  renderAlertPanel();
-}
-function clearAlerts(){alertStore=[];updateAlertCount();renderAlertPanel();}
-function updateAlertCount(){
-  const c=document.getElementById('alert-count');
-  const c2=document.getElementById('ap-count');
-  if(c)c.textContent=alertStore.length;
-  if(c2)c2.textContent=`${alertStore.length} event${alertStore.length!==1?'s':''}`;
-}
-function renderAlertPanel(){
-  const list=document.getElementById('ap-list');
-  if(!list)return;
-  const filtered=apFilter==='all'?alertStore:alertStore.filter(a=>a.type===apFilter);
-  if(!filtered.length){list.innerHTML='<div class="ap-empty">No alerts in this category.</div>';return;}
-  list.innerHTML=filtered.map(a=>{
-    const meta=TYPE_META[a.type]||{label:a.type.toUpperCase(),icon:'📌',color:'var(--dim2)'};
-    const col=meta.color||'var(--dim2)';
-    const isUp=a.chg&&a.chg.startsWith('+'),isDn=a.chg&&a.chg.startsWith('-');
-    return`<div class="ap-item" style="border-left-color:${col}">
-      <div class="api-type" style="color:${col}">${meta.icon} ${meta.label}${a.badge?` · <span style="font-size:8px;opacity:.7">${a.badge}</span>`:''}</div>
-      <div class="api-title">${a.title}</div>
-      <div class="api-body">${a.detail}</div>
-      <div class="api-foot">
-        <span>${a.timeStr} IST</span>
-        <span style="display:flex;align-items:center;gap:6px">
-          ${a.stock?`<span class="api-tag" style="color:${col}">${a.stock}</span>`:''}
-          ${a.chg?`<span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:${isUp?'var(--gn)':isDn?'var(--rd)':'var(--sf)'}">${a.chg}</span>`:''}
-        </span>
-      </div>
-    </div>`;
-  }).join('');
-}
+window.addEventListener('load', () => setTimeout(syncNotifBtn, 600));
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EVENT STREAM BAR
-// ═══════════════════════════════════════════════════════════════════════════
-const ES_EVENTS = [
-  {dot:'gn',text:'NIFTY 50',val:'▲ +0.59%',vc:'gn'},{dot:'gn',text:'SENSEX',val:'▲ +0.61%',vc:'gn'},
-  {dot:'sf',text:'FII NET TODAY',val:'−₹1,072 Cr',vc:'sf'},{dot:'gn',text:'DII NET TODAY',val:'+₹3,364 Cr',vc:'gn'},
-  {dot:'rd',text:'BRENT CRUDE',val:'$74.82 ▼',vc:'rd'},{dot:'gn',text:'GOLD MCX',val:'₹72,840 ▲',vc:'gn'},
-  {dot:'sf',text:'WAAREE ENERGIES',val:'▲ +3.40% | PROMOTER BUY',vc:'sf'},{dot:'gn',text:'COFORGE',val:'▲ +2.90% | UK CONTRACT',vc:'gn'},
-  {dot:'rd',text:'PAYTM',val:'▼ −3.80% | MS ASIA EXIT',vc:'rd'},{dot:'gn',text:'SIP INFLOWS',val:'₹29,000 Cr/mo | DII CUSHION',vc:'gn'},
-  {dot:'sf',text:'RBI REPO RATE',val:'HELD 6.5% | JUNE CUT SIGNAL',vc:'sf'},{dot:'gn',text:'SUZLON',val:'▲ +4.12% | 52WK HIGH',vc:'gn'},
-  {dot:'rd',text:'IEX',val:'▼ SEBI INVESTIGATION ACTIVE',vc:'rd'},{dot:'sf',text:'AIRTEL',val:'▲ +2.42% | SBI MF ADDS ₹680 Cr',vc:'sf'},
-];
-function buildES(){
-  const arr=[...ES_EVENTS,...ES_EVENTS];
-  document.getElementById('es-inner').innerHTML=arr.map(e=>
-    `<span class="es-item"><span class="es-dot ${e.dot}"></span><span class="es-text">${e.text}</span><span class="es-val ${e.vc}">${e.val}</span></span>`
-  ).join('');
-}
-buildES();
-
-// ═══════════════════════════════════════════════════════════════════════════
-// LIVE PRICE ENGINE — Yahoo Finance via CORS proxy
+// LIVE INDEX DATA — Yahoo Finance (works from browser, no key needed)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Yahoo Finance symbols for indices and key stocks
-const LIVE_SYMBOLS = {
-  NIFTY:    '^NSEI',
-  SENSEX:   '^BSESN',
-  BANKNIFTY:'^NSEBANK',
-  MIDCAP:   '^NSEMDCP50',
-  BRENT:    'BZ=F',
-  GOLD:     'GC=F',
-  INRUSD:   'INRUSD=X',
-  USDINR:   'INR=X',
-};
+// ── DATA ENGINE — uses /api/stock Vercel serverless route (no CORS issues) ──
 
-// Base values for change calculation (prev close)
-let liveData = {
-  nifty:  {v:24336, prev:24193, open:24214, high:24402, low:24198},
-  sensex: {v:80218, prev:79729, open:79810, high:80394, low:79724},
-  bank:   {v:52140, prev:52204, open:52280, high:52440, low:51980},
-  mid:    {v:56891, prev:56580, open:56602, high:57124, low:56490},
-  brent:  {v:74.82},
-  gold:   {v:72840},
-  inrusd: {v:83.94},
-};
-
-let tickCount=0;
-const firedAlerts=new Set();
-
-// ── ANTHROPIC API — used for live stock data (bypasses CORS) ────────────────
-async function askClaude(prompt) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-  const data = await res.json();
-  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-  return text;
-}
-
-// Parse JSON from Claude response robustly
-function parseJSON(text) {
+async function apiFetch(params, timeout = 10000) {
+  const qs = new URLSearchParams(params).toString();
   try {
-    const m = text.match(/```json\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
-    return JSON.parse(m ? m[1] : text);
+    const r = await fetch(`/api/stock?${qs}`, { signal: AbortSignal.timeout(timeout) });
+    if (!r.ok) return null;
+    return await r.json();
   } catch(e) { return null; }
 }
 
-// Fetch all index prices via Claude web search
+const YF_BASE = 'https://query1.finance.yahoo.com'; // kept for reference only
+
+async function yfQuote(symbols) {
+  const syms = Array.isArray(symbols) ? symbols.join(',') : symbols;
+  const isMulti = Array.isArray(symbols) && symbols.length > 1;
+  const j = await apiFetch({ sym: syms, type: isMulti ? 'batch' : 'quote' });
+  return j?.quoteResponse?.result || null;
+}
+
+async function yfChart(symbol, range, interval) {
+  const j = await apiFetch({ sym: symbol, type: 'chart', range, interval }, 14000);
+  const res = j?.chart?.result?.[0];
+  if (!res) return null;
+  const ts  = res.timestamp || [];
+  const q0  = res.indicators?.quote?.[0] || {};
+  return ts.map((t, i) => ({
+    t: new Date(t * 1000),
+    o: q0.open?.[i], h: q0.high?.[i], lo: q0.low?.[i], c: q0.close?.[i], v: q0.volume?.[i]
+  })).filter(p => p.c != null);
+}
+
 async function fetchLivePrices() {
+  const syms = ['^NSEI', '^BSESN', '^NSEBANK', '^NSEMDCP50', 'BZ=F', 'GC=F', 'INR=X'];
   try {
-    const text = await askClaude(
-      `Search for the current live prices of these Indian market indices and return ONLY a JSON object with no explanation or markdown:
-      NIFTY 50 (NSE:NIFTY), SENSEX (BSE:SENSEX), BANK NIFTY (NSE:BANKNIFTY), Brent Crude (USD), Gold MCX (INR per 10g), USD/INR rate.
-      Return exactly this JSON structure:
-      {"nifty":{"v":24000,"prev":23800},"sensex":{"v":79000,"prev":78500},"bank":{"v":52000,"prev":51800},"brent":{"v":74.5},"gold":{"v":72000},"inrusd":{"v":83.9}}
-      Use real current values from a live financial source. Return only the JSON, nothing else.`
-    );
-    const d = parseJSON(text);
-    if (d) {
-      if (d.nifty?.v)  liveData.nifty  = { ...liveData.nifty,  ...d.nifty  };
-      if (d.sensex?.v) liveData.sensex = { ...liveData.sensex, ...d.sensex };
-      if (d.bank?.v)   liveData.bank   = { ...liveData.bank,   ...d.bank   };
-      if (d.brent?.v)  liveData.brent  = { v: d.brent.v };
-      if (d.gold?.v)   liveData.gold   = { v: d.gold.v };
-      if (d.inrusd?.v) liveData.inrusd = { v: d.inrusd.v };
-    }
+    const results = await yfQuote(syms);
+    if (!results) { updateAllDisplays(); return; }
+    results.forEach(q => {
+      const p    = q.regularMarketPrice;
+      const prev = q.regularMarketPreviousClose;
+      const s    = q.symbol;
+      const base = { v: p, prev, open: q.regularMarketOpen || p, high: q.regularMarketDayHigh || p, low: q.regularMarketDayLow || p };
+      if (s === '^NSEI')     liveData.nifty  = base;
+      if (s === '^BSESN')    liveData.sensex = base;
+      if (s === '^NSEBANK')  liveData.bank   = base;
+      if (s === '^NSEMDCP50') liveData.mid   = base;
+      if (s === 'BZ=F')      liveData.brent  = { v: p };
+      if (s === 'GC=F')      liveData.gold   = { v: Math.round(p * (liveData.inrusd?.v || 84) / 10) };
+      if (s === 'INR=X')     liveData.inrusd = { v: p };
+    });
   } catch(e) {}
   updateAllDisplays();
 }
 
-function fmt(v, dec=2){ return v?.toLocaleString('en-IN',{minimumFractionDigits:dec, maximumFractionDigits:dec}) || '—'; }
-function fmtINR(v){ return '₹' + fmt(v); }
-
-function chgStr(v, prev){
-  if(!prev || !v) return {s:'—', up:true, p:0, abs:0};
-  const c = v - prev, p = c/prev*100, up = c >= 0;
-  return { s:`${up?'▲':'▼'} ${fmt(Math.abs(c))} (${up?'+':''}${p.toFixed(2)}%)`, up, p, abs:c };
-}
-
-function updateHdrIdx(valId, chgId, v, prev){
-  const el = document.getElementById(valId);
-  const cel = document.getElementById(chgId);
-  if(!el||!cel) return;
-  const {up,p} = chgStr(v, prev);
-  el.textContent = fmt(v);
-  cel.textContent = `${up?'▲':'▼'} ${Math.abs(p).toFixed(2)}%`;
-  cel.className = `hi-chg ${up?'up':'dn'}`;
-}
-
-function flashCard(idxNum, up){
-  const card = document.getElementById('ic'+idxNum);
-  if(!card) return;
-  card.classList.remove('flash-up','flash-dn','up','dn');
-  card.classList.add(up?'up':'dn');
-  void card.offsetWidth;
-  card.classList.add(up?'flash-up':'flash-dn');
-}
-
-function updateAllDisplays(){
-  const {nifty, sensex, bank, mid, brent, gold, inrusd} = liveData;
-
-  // Index cards
-  const idxMap = [
-    {d:nifty,  ids:['nv','nc'], n:0},
-    {d:sensex, ids:['sv','sc'], n:1},
-    {d:bank,   ids:['bv','bc'], n:2},
-    {d:mid,    ids:['mv','mc2'],n:3},
-  ];
-  idxMap.forEach(({d,ids,n})=>{
-    const {s,up} = chgStr(d.v, d.prev);
-    const ve = document.getElementById(ids[0]);
-    const ce = document.getElementById(ids[1]);
-    if(ve) ve.textContent = fmt(d.v);
-    if(ce) { ce.textContent = s; ce.className = 'ich2 '+(up?'up':'dn'); }
-    flashCard(n, up);
-  });
-
-  // Header bar indices
-  updateHdrIdx('h-nifty','h-niftyc', nifty.v, nifty.prev);
-  updateHdrIdx('h-sensex','h-sensexc', sensex.v, sensex.prev);
-  updateHdrIdx('h-bank','h-bankc', bank.v, bank.prev);
-
-  // Status bar
-  const sbN = document.getElementById('sb-nifty');
-  const sbS = document.getElementById('sb-sensex');
-  const sbI = document.getElementById('sb-inr');
-  if(sbN){ const {up}=chgStr(nifty.v,nifty.prev); sbN.textContent=fmt(nifty.v); sbN.style.color=up?'var(--gn)':'var(--rd)'; }
-  if(sbS){ const {up}=chgStr(sensex.v,sensex.prev); sbS.textContent=fmt(sensex.v,0); sbS.style.color=up?'var(--gn)':'var(--rd)'; }
-  if(sbI) sbI.textContent = '₹'+fmt(inrusd.v);
-
-  // Oil panel
-  const br  = document.getElementById('br2'); if(br)  br.textContent  = '$'+fmt(brent.v);
-  const gd  = document.getElementById('gd2'); if(gd)  gd.textContent  = '₹'+Math.round(gold.v).toLocaleString('en-IN');
-  const ir  = document.getElementById('ir2'); if(ir)  ir.textContent  = '₹'+fmt(inrusd.v);
-  const hb  = document.getElementById('h-brent'); if(hb) hb.textContent = '$'+fmt(brent.v);
-  const hg  = document.getElementById('h-gold');  if(hg) hg.textContent = '₹'+Math.round(gold.v).toLocaleString('en-IN');
-
-  // Update chart with real nifty value
-  if(chartInst){
-    const ds = chartInst.data.datasets[0];
-    ds.data.push(+(nifty.v||ds.data[ds.data.length-1]).toFixed(2));
-    ds.data.shift();
-    chartInst.update('none');
-  }
-
-  // Trigger smart alerts based on live values
-  triggerSmartAlerts();
-}
-
-// Tick: add small jitter so display isn't completely static between API polls
-function j(v,m){ return +(v+(Math.random()-.5)*m).toFixed(2); }
-
-function tick(){
-  tickCount++;
-  // Light jitter between real polls (±0.05% max)
-  if(liveData.nifty.v)  liveData.nifty.v  = j(liveData.nifty.v, liveData.nifty.v * 0.0003);
-  if(liveData.sensex.v) liveData.sensex.v = j(liveData.sensex.v, liveData.sensex.v * 0.0003);
-  if(liveData.bank.v)   liveData.bank.v   = j(liveData.bank.v,   liveData.bank.v * 0.0003);
-  if(liveData.brent.v)  liveData.brent.v  = j(liveData.brent.v, 0.04);
-  if(liveData.gold.v)   liveData.gold.v   = j(liveData.gold.v,  20);
-  if(liveData.inrusd.v) liveData.inrusd.v = j(liveData.inrusd.v, 0.008);
-  updateAllDisplays();
-  // Jitter movers table
-  VS_DATA.forEach(r=>{ const v=parseFloat(r.c)+(Math.random()-.5)*.04; r.c=Math.abs(v).toFixed(2); r.up=v>=0; });
-  rtbl();
-}
-
-// Initial fetch + poll every 30s
-fetchLivePrices();
-setInterval(fetchLivePrices, 30000);
-setInterval(tick, 3000);
-
 // ═══════════════════════════════════════════════════════════════════════════
-// BLOOMBERG-GRADE MARKET EVENT ENGINE
+// STOCK SEARCH ENGINE
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Market open burst sequence — fires in first 90 seconds
-const OPEN_BURST = [
-  {d:1200,  type:'macro',   title:'🇮🇳 NSE Regular Session Open — 9:15 AM IST', detail:'Pre-open auction discovered NIFTY at 24,336. Moderate bullish bias. Advance/Decline 3:1. Opening tick strong.', stock:'NSE OPEN', chg:'+0.59%'},
-  {d:3500,  type:'fii',    title:'FII Pre-Session Data Released', detail:'FIIs sold ₹1,072 Cr in index futures overnight. DIIs put in ₹3,364 Cr buy orders before open. Net market positive.', stock:'FII/DII', badge:'9:16 AM'},
-  {d:6000,  type:'sector', title:'Renewable & IT leading opening move', detail:'NIFTY IT +1.84% · Realty +3.12% · Telecom +2.08% leading advance. Energy -0.87% sole laggard. Broad-based buying.', stock:'SECTOR HEAT', chg:'+2.08%'},
-  {d:9000,  type:'fo',     title:'F&O Open Interest — Nifty PCR 1.18 (Bullish)', detail:'Put-Call Ratio 1.18 — above 1.0 is bullish sign. Max pain at 24,200. 24,500 CE sees highest call OI. Bulls in control.', stock:'NIFTY F&O', badge:'PCR 1.18'},
-  {d:12000, type:'block',  title:'Opening block: HDFC Bank 8.2L shares traded', detail:'Bulk transaction detected at open: HDFC Bank 8.2L shares @ ₹1,694. Likely institutional rebalancing. Positive for banking sector.', stock:'HDFCBANK', chg:'+0.82%'},
-  {d:16000, type:'news',   title:'Opening breadth: 3:1 advance/decline ratio', detail:'1,842 advances vs 612 declines at 9:20 AM. 94 stocks hitting 52-week highs. Bullish market internals. Mid/small-caps outperforming.', stock:'NSE BREADTH', badge:'9:20 AM'},
-  {d:20000, type:'sector', title:'Banking sector opens mixed — SBI leads', detail:'SBI +1.52% · ICICI +1.12% · HDFC Bank +0.82% · Kotak -0.34%. Bank Nifty slightly negative on profit-taking in Kotak.', stock:'BANKEX', chg:'-0.12%'},
-  {d:26000, type:'fo',     title:'Suzlon F&O ban triggered at open', detail:'SUZLON entered F&O ban list — OI crossed 95% of MWPL limit. Existing positions can be squared only. High retail interest driving ban.', stock:'SUZLON', badge:'F&O BAN'},
-  {d:32000, type:'macro',  title:'RBI Liquidity Window: ₹42,000 Cr injected', detail:'RBI conducted repo auction of ₹42,000 Cr at 6.5%. Liquidity surplus condition. Signals easing bias ahead of potential June cut.', stock:'RBI', badge:'REPO 6.5%'},
-  {d:39000, type:'ipo',    title:'Jio Financial Services IPO prep confirmed', detail:'Sources: JFSL SEBI DRHP filing begins this week. Valuation discussions ₹7.5L-8.2L Cr. Reliance shareholders eligible for preferential allotment.', stock:'JFSL', chg:'+4.20%'},
-  {d:47000, type:'insider',title:'WAAREE promoter buys 3.2L shares at open', detail:'SEBI disclosure: Promoter group added 3.2L shares @ ₹2,840 in morning trade. Pre-commissioning of 2.1 GW Gujarat solar park. Strong signal.', stock:'WAAREE', chg:'+3.40%'},
-  {d:55000, type:'whale',  title:'Vanguard EM Fund adds Reliance in block', detail:'~₹2,100 Cr block deal confirmed. 70.3L Reliance shares @ ₹2,991. Passive index rebalance + Jio IPO catalyst driving institutional interest.', stock:'RELIANCE', chg:'+1.18%'},
-  {d:63000, type:'breakout',title:'COFORGE breaks 52-week high on UK contract', detail:'BSE filing confirms $158M HMRC 5-year contract. Coforge crosses ₹8,200 — 52-week high. Volume 3.1x average. IT mid-cap in focus.', stock:'COFORGE', chg:'+2.90%'},
-  {d:72000, type:'macro',  title:'INR/USD: ₹83.94 — holding key 84 support', detail:'Rupee firmed slightly after RBI FX intervention signals. ₹84 is critical psychological support. FII equity buying providing partial offset.', stock:'INR/USD', badge:'₹83.94'},
-  {d:82000, type:'fo',     title:'NIFTY 24,500 Call sees massive OI addition', detail:'24,500 CE added 28.4L contracts — highest single-strike addition today. Writers defending this level. Watch for breakout above 24,500.', stock:'NIFTY CE', badge:'24500 STRIKE'},
-  {d:93000, type:'circuit', title:'IEX hits Lower Circuit — SEBI news', detail:'IEX fell 5% hitting lower circuit filter. SEBI frozen accounts confirmation published. Existing F&O positions to be squared by week end. Avoid.', stock:'IEX', chg:'-5.00%'},
-  {d:105000,type:'block',  title:'Norway Pension Fund block: HDFC Bank ₹1,240 Cr', detail:'GPFG Norway: 73.2L HDFC Bank shares @ ₹1,694 (~₹1,240 Cr). Sovereign fund building India banking position — long-term bullish signal.', stock:'HDFCBANK', chg:'+0.82%'},
-  {d:118000,type:'news',   title:'SIP inflows hit record ₹29,043 Cr in Feb', detail:'AMFI data released: SIP inflows ₹29,043 Cr — all-time high. Systematic domestic demand absorbing every FII exit. DII net buyers 19 of last 22 sessions.', stock:'AMFI/SIP', badge:'RECORD HIGH'},
-  {d:130000,type:'sector', title:'Realty sector surges — DLF leads at +3.8%', detail:'Post-RBI rate signal, real estate stocks surging. DLF +3.8% · Godrej Props +2.9% · Oberoi +2.4%. Rate cut in June = lower home loan rates. Buy signal.', stock:'REALTY', chg:'+3.12%'},
-  {d:142000,type:'fii',    title:'FII noon flow: Net sellers ₹890 Cr so far', detail:'FII cumulative noon selling ₹890 Cr but selective — buying IT and pharma, selling financials. DII already absorbed ₹2,100 Cr. Market direction positive.', stock:'FII MID-DAY', badge:'12:30 PM'},
-  {d:155000,type:'whale',  title:'SBI MF adds Airtel ₹680 Cr + NTPC ₹420 Cr', detail:'SBI Mutual Fund (AUM ₹10.8L Cr) bought Airtel ₹680 Cr + NTPC ₹420 Cr this session. Classic Budget capex + telecom play. Strong domestic conviction.', stock:'SBI MF', chg:'+2.42%'},
-  {d:168000,type:'earnings',title:'TCS Q4 date confirmed: April 12 Board meeting', detail:'TCS Board meeting scheduled April 12 for Q4 FY26 results. Analysts: PAT est ₹12,600 Cr. Deal TCV >$9B = 4–6% stock rally. IT sector read-across trigger.', stock:'TCS', badge:'APR 12'},
-  {d:181000,type:'breakdown',title:'PAYTM tests ₹400 psychological support', detail:'Paytm approaching ₹400 — critical support level. RBI audit still pending. Reddit r/IndiaInvestments showing 56% bearish sentiment. Volume below avg. Watch.', stock:'PAYTM', chg:'-3.80%'},
-  {d:194000,type:'sebi',   title:'SEBI issues circular on F&O margin framework', detail:'SEBI tightens overnight derivative positions for retail — new margin norms effective April 1. Angel One, Motilal Oswal affected. Advisory revenue now permitted.', stock:'SEBI', badge:'CIRCULAR'},
-  {d:207000,type:'macro',  title:'US Fed holds rates — India positive read', detail:'Fed Chair Powell: "No rush to cut." US 10Y yields steady at 4.4%. India FII outflow pressure eases — EM funds less likely to rotate to US treasuries.', stock:'FED/USD', badge:'FED HOLD'},
-  {d:220000,type:'breakout',title:'SUZLON touches 52-week high — ₹61.20', detail:'Suzlon Energy hits ₹61.20 — 52-week high. Order book ₹18K Cr record. Renewable energy theme unstoppable. Retail and HNI accumulation visible on Stocktwits.', stock:'SUZLON', chg:'+4.12%'},
-  {d:233000,type:'fo',     title:'Bank Nifty weekly options — heavy put writing at 52,000', detail:'52,000 PE has highest put OI for weekly expiry. Market makers expecting Bank Nifty to hold 52,000 this week. Support zone identified. Straddle costly at 450 pts.', stock:'BANKNIFTY F&O', badge:'52K SUPPORT'},
-  {d:246000,type:'insider',title:'HG Infra KMP buys ahead of NHAI order', detail:'Director-level insider bought HG Infra shares — SEBI disclosure. ₹11.1L Cr capex pipeline + NHAI order expected within 2 weeks. Classic pre-announcement buy signal.', stock:'HGINFRA', chg:'+2.10%'},
-  {d:259000,type:'sector', title:'IT sector mid-session — TCS, Infosys diverge', detail:'TCS -0.42% on position squaring. Infosys +0.32% on FII buying. NIFTY IT up overall due to Coforge, Persistent. US-India trade deal commentary key for PM Modi visit.', stock:'NIFTY IT', chg:'+1.84%'},
-  {d:272000,type:'whale',  title:'CLSA exits Zomato ₹890 Cr block', detail:'CLSA block: 4.1 Cr Zomato shares @ ₹214 (~₹890 Cr). Profit booking after 34% run. Quick commerce margins under pressure. Blinkit growth still strong.', stock:'ZOMATO', chg:'-2.10%'},
-  {d:285000,type:'news',   title:'PLI 2.0 — ₹2.5L Cr EV & Semiconductor scheme launched', detail:'DPIIT announces PLI expansion. ₹1.2L Cr semiconductors + ₹1.3L Cr EVs. Dixon Tech, Kaynes, M&M, Tata Motors direct beneficiaries. 5-7 year structural play.', stock:'PLI 2.0', badge:'BUDGET'},
-  {d:298000,type:'macro',  title:'OPEC+ holds production cuts — Brent firms', detail:'OPEC+ maintained current output cuts through June 2026. Brent crude moved from $74.82 toward $76. India CAD impact: every $1 rise = ~$2B extra annual bill.', stock:'BRENT CRUDE', badge:'OPEC+ HOLD'},
-  {d:312000,type:'breakout',title:'L&T breaks out — dual order win ₹5K-10K Cr', detail:'L&T wins power infra order domestic + Middle East ₹5K-10K Cr. Order book now ₹5.5L Cr+. Stock breaks above 200-DMA on heavy volume. Strong fundamental catalyst.', stock:'LT', chg:'+1.80%'},
-  {d:326000,type:'fii',    title:'Closing session FII data — net sellers ₹1,072 Cr', detail:'Final FII tally: sold ₹1,072 Cr equity + ₹2,840 Cr index F&O. DII absorbed with ₹3,364 Cr buying. Net market buyer for 19th session of last 22.', stock:'FII CLOSE', badge:'3:25 PM'},
-  {d:340000,type:'earnings',title:'HDFC Bank Q4 FY26 — NIM trajectory key watch', detail:'Analysts flagging NIM as #1 metric for HDFC Bank Q4. Rate cut signal = NIM compression risk. But CASA ratio + digital banking growth may offset. Mixed outlook.', stock:'HDFCBANK', badge:'APR 20'},
-  {d:354000,type:'circuit', title:'MIDCAP CIRCUIT WATCH: Renewable stocks near limit', detail:'SUZLON, WAAREE, NTPC near circuit breaker zones. Retail frenzy + F&O ban on SUZLON. NSE may invoke circuit filter. Avoid chasing at circuit-proximity levels.', stock:'MIDCAP CIRCUITS', badge:'WATCH'},
-];
+let currentStockPrice = null;
+let srChart = null;
+let currentSym = '';
+let currentRange = '1d';
 
-// All events fire at their scheduled delays from page load
-OPEN_BURST.forEach(ev => {
-  setTimeout(() => pushAlert(ev.type, ev.title, ev.detail, ev.stock||'', ev.badge||'', ev.chg||''), ev.d);
-});
-
-// Continuous market events cycling every 5 minutes after initial burst
-const REPEAT_EVENTS = [
-  {type:'fo',     title:'NIFTY straddle premium expanding — volatility pick-up',     detail:'ATM straddle at 24,300 now costs 420 pts (up from 380). India VIX inching up to 14.2. Option writers covering ahead of macro event.', stock:'VIX 14.2', chg:'+5.2%'},
-  {type:'sector', title:'Pharma sector gets boost from Biopharma Shakti policy',      detail:'Dr. Reddy\'s +1.8% · Sun Pharma +1.2% · Biocon +2.1%. ₹10,000 Cr over 5 years from budget. API self-reliance focus. Nil GST on health insurance.', stock:'NIFTY PHARMA', chg:'+1.12%'},
-  {type:'news',   title:'India–US trade deal framework — PM meeting scheduled',       detail:'PM Modi–President Trump meeting confirmed. Tech tariff relief for Indian IT firms + textile quota expansion. First formal trade deal since 2019 discussions.', stock:'INDIA-US TRADE', badge:'BILATERAL'},
-  {type:'macro',  title:'CPI inflation print: 4.2% — below RBI 4.5% target',         detail:'February CPI: 4.2% vs 4.5% expected. Vegetable prices normalizing. Core inflation 3.8%. Provides comfortable room for June rate cut. Bond yields fall 8bps.', stock:'CPI 4.2%', badge:'INFLATION'},
-  {type:'block',  title:'Reliance Industries: FII buys 70.3L shares in block',        detail:'Second major Reliance block this week. Cumulative institutional buying ₹4,200 Cr. Jio IPO + Biopharma entry driving re-rating. Target ₹3,200 emerging.', stock:'RELIANCE', chg:'+1.18%'},
-  {type:'whale',  title:'HDFC MF buys Infosys ₹890 Cr + ICICI Bank ₹540 Cr',        detail:'HDFC Mutual Fund rotation: exits Bajaj Finance ₹180 Cr, adds IT + banking exposure. Rate cut signal driving sector rotation into quality large-caps.', stock:'HDFC MF', badge:'DOMESTIC'},
-  {type:'sebi',   title:'SEBI new broker regulations — advisory revenue unlocked',    detail:'30-year overhaul: brokers can now charge for advisory + do underwriting. Angel One, 360 ONE, Motilal Oswal major beneficiaries. New revenue stream emerging.', stock:'SEBI BROKERS', badge:'NEW RULES'},
-  {type:'ipo',    title:'Ather Energy IPO opens — EV theme in focus',                 detail:'Ather Energy IPO subscription opens. GMP trading at 28% premium in grey market. Hero MotoCorp-backed. EV two-wheeler + PLI 2.0 beneficiary. Watch listing.', stock:'ATHER IPO', badge:'SUBSCRIPTION'},
-  {type:'fii',    title:'FII inflows: Emerging Market fund rotation into India',      detail:'Goldman Sachs EM fund report: India overweight maintained. China overweight cut. $14B reallocated to India over next 6 months. FII reversal may begin Q1 FY27.', stock:'FII OUTLOOK', badge:'GS REPORT'},
-  {type:'breakout',title:'Suzlon Energy breaks 52-week high on order book record',    detail:'Order book hits ₹18K Cr — highest ever for Suzlon. Wind energy + solar hybrid projects in Rajasthan and Gujarat. F&O ban adds to volatility. Handle with care.', stock:'SUZLON', chg:'+4.12%'},
-];
-
-let repeatCycle = 0;
-function fireRepeatEvents() {
-  const ev = REPEAT_EVENTS[repeatCycle % REPEAT_EVENTS.length];
-  pushAlert(ev.type, ev.title, ev.detail, ev.stock||'', ev.badge||'', ev.chg||'');
-  repeatCycle++;
+async function fetchChartData(sym, range) {
+  const cfg = {
+    '1d':  { range: '1d',  interval: '5m'  },
+    '5d':  { range: '5d',  interval: '15m' },
+    '1mo': { range: '1mo', interval: '1d'  },
+    '3mo': { range: '3mo', interval: '1d'  },
+    '1y':  { range: '1y',  interval: '1wk' },
+  };
+  const { range: r, interval: iv } = cfg[range] || cfg['1mo'];
+  const pts = await yfChart(sym, r, iv);
+  if (pts && pts.length > 2) return pts;
+  // Fallback: generate realistic sim from current price
+  return genSimChart(currentStockPrice || 1000, range);
 }
-// Start repeating after initial burst, every 45 seconds
-setTimeout(() => {
-  fireRepeatEvents();
-  setInterval(fireRepeatEvents, 45000);
-}, 360000);
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SMART REAL-TIME ALERT TRIGGERS (price-based)
-// ═══════════════════════════════════════════════════════════════════════════
-function triggerSmartAlerts(){
-  const niftyV  = liveData.nifty.v;
-  const sensexV = liveData.sensex.v;
-  const brent   = liveData.brent.v;
-  const gold    = liveData.gold.v;
-  // NIFTY levels
-  if(niftyV > 24600 && !firedAlerts.has('n-24600')){
-    firedAlerts.add('n-24600');
-    pushAlert('breakout','NIFTY 50 clears 24,600 — key resistance broken',
-      'NIFTY crossed 24,600 — last major resistance before all-time high zone. FII short-covering likely. Watch 24,800 as next target. Bulls firmly in control.','NIFTY 50','+0.69%','+264pts');
+function genSimChart(base, range) {
+  const counts = { '1d': 78, '5d': 100, '1mo': 22, '3mo': 65, '1y': 52 };
+  const n = counts[range] || 22;
+  const pts = []; let v = base * 0.97;
+  const now = Date.now();
+  const step = range === '1d' ? 5 * 60000 : 24 * 3600000;
+  for (let i = n; i >= 0; i--) {
+    v = v * (1 + (Math.random() - 0.478) * 0.008);
+    pts.push({ t: new Date(now - i * step), c: +v.toFixed(2) });
   }
-  if(niftyV > 25000 && !firedAlerts.has('n-25000')){
-    firedAlerts.add('n-25000');
-    pushAlert('breakout','🚨 NIFTY 50 crosses 25,000 — Psychological Milestone!',
-      'NIFTY breached 25,000 — massive psychological resistance. Momentum traders pile in. FII short-covering accelerating. Options market: 25,000 strike puts expire worthless.','NIFTY 50','25,000','ALL-TIME HIGH ZONE');
-  }
-  if(niftyV < 23800 && !firedAlerts.has('n-23800')){
-    firedAlerts.add('n-23800');
-    pushAlert('breakdown','NIFTY breaks 23,800 — support zone violated',
-      'NIFTY slipped below 23,800 — intermediate support broken. Watch for FII acceleration. DII SIP cushion at ₹29K Cr/mo critical now. Circuit trigger at 20% = 19,469.','NIFTY 50','-2.2%','-536pts');
-  }
-  if(niftyV < 23500 && !firedAlerts.has('n-23500')){
-    firedAlerts.add('n-23500');
-    pushAlert('circuit','🚨 NIFTY 23,500 SUPPORT BROKEN — CIRCUIT RISK',
-      'NIFTY fell below 23,500. Critical support violated. First circuit trigger at −10% = 21,902. DII must step in strongly. Panic selling possible in mid/small caps.','NIFTY 50','-3.5%','⚠️ CIRCUIT WATCH');
-  }
-  if(sensexV > 82000 && !firedAlerts.has('s-82000')){
-    firedAlerts.add('s-82000');
-    pushAlert('breakout','SENSEX crosses 82,000 — Bull momentum intact',
-      'SENSEX at 82,000 — new milestone. Macro tailwinds: rate cut expectations, DII SIP demand, PLI 2.0 policy thrust. INR stability key for sustaining FII confidence.','SENSEX','82,000','NEW HIGH');
-  }
-  if(brent > 80 && !firedAlerts.has('brent-80')){
-    firedAlerts.add('brent-80');
-    pushAlert('macro','Brent Crude crosses $80 — India macro risk rises',
-      'Brent above $80 widens India\'s CAD by ~$8B per year. Puts pressure on INR, delays RBI cut timeline. Bearish for OMCs (HPCL/BPCL) but positive for ONGC. Monitor.','BRENT CRUDE','$80+','⚠️ WATCH');
-  }
-  if(brent < 72 && !firedAlerts.has('brent-72')){
-    firedAlerts.add('brent-72');
-    pushAlert('breakout','Brent below $72 — India macro positive',
-      'Brent crude below $72 reduces India\'s oil import bill significantly. Positive for CAD, INR, and inflation. Enables RBI rate cut. Bullish: IndiGo, Asian Paints, HPCL, BPCL.','BRENT CRUDE','$72','POSITIVE FOR INDIA');
-  }
-  if(gold > 75000 && !firedAlerts.has('gold-75k')){
-    firedAlerts.add('gold-75k');
-    pushAlert('macro','Gold MCX crosses ₹75,000 — Safe haven demand surges',
-      'Gold MCX above ₹75,000. Global risk-off sentiment + INR weakness + geopolitical uncertainty. Positive for Titan, Kalyan Jewellers, SBI Gold ETF.','GOLD MCX','₹75,000','NEW HIGH');
-  }
-  if(tickCount===2)  pushAlert('news','Market open: Moderate bullish internals at 9:15 AM','Opening tick positive. Advance/Decline ratio 3:1. Breadth broad-based. Watch for direction in first 30 mins.','NSE OPEN','','9:15 AM IST');
-  if(tickCount===5)  pushAlert('fo','Early F&O snapshot: PCR 1.18 — Bullish put writing','Put writers dominating — PCR above 1.0 is bullish. Max pain 24,200. 24,500 CE has highest call OI.','NIFTY PCR','1.18 BULLISH','');
-  if(tickCount===10) pushAlert('sector','15-min market update: IT & Realty leading advance','NIFTY IT +1.84% · Realty +3.12% · Telecom +2.08%. Energy sole red sector. 94 stocks at 52-week highs.','BREADTH','3:1 A/D','9:30 AM');
-  if(tickCount===20) pushAlert('fii','30-min FII update: Selective buying in IT & Pharma','FII pattern: selling HDFC Bank + ICICI. Buying TCS + Infosys + Dr. Reddy\'s. Rate cut trade positioning.','FII 30-MIN','','9:45 AM');
-  if(tickCount===40) pushAlert('macro','Mid-morning: NIFTY holding above VWAP — Bulls in control','NIFTY trading above VWAP for 40 consecutive minutes. Delivery volumes above average — not speculative froth.','NIFTY VWAP','','10:15 AM');
+  pts[pts.length - 1].c = base;
+  return pts;
 }
-// ═══════════════════════════════════════════════════════════════════════════
-// STOCK SEARCH ENGINE — Live NSE/BSE prices + Technical Analysis
-// ═══════════════════════════════════════════════════════════════════════════
 
-// Comprehensive Indian stock symbol map: display name → Yahoo Finance symbol
+// ── STOCK MAP — display name / alias → Yahoo Finance symbol ──────────────
 const STOCK_MAP = {
-  // Indices
   'NIFTY50':'^NSEI','NIFTY':'^NSEI','NIFTY 50':'^NSEI',
   'SENSEX':'^BSESN','BSE':'^BSESN',
   'BANKNIFTY':'^NSEBANK','BANK NIFTY':'^NSEBANK','NIFTYBANK':'^NSEBANK',
-  'NIFTYMIDCAP':'^NSEMDCP50','MIDCAP':'^NSEMDCP50',
-  'NIFTYIT':'NIFTYIT.NS',
-  // Large caps
+  'MIDCAP':'^NSEMDCP50','NIFTYMIDCAP':'^NSEMDCP50',
   'RELIANCE':'RELIANCE.NS','RELIANCE INDUSTRIES':'RELIANCE.NS',
   'TCS':'TCS.NS','TATA CONSULTANCY':'TCS.NS',
   'HDFCBANK':'HDFCBANK.NS','HDFC BANK':'HDFCBANK.NS','HDFC':'HDFCBANK.NS',
   'INFOSYS':'INFY.NS','INFY':'INFY.NS',
   'ICICIBANK':'ICICIBANK.NS','ICICI BANK':'ICICIBANK.NS','ICICI':'ICICIBANK.NS',
-  'HINDUNILVR':'HINDUNILVR.NS','HUL':'HINDUNILVR.NS','HINDUSTAN UNILEVER':'HINDUNILVR.NS',
-  'KOTAKBANK':'KOTAKBANK.NS','KOTAK':'KOTAKBANK.NS','KOTAK BANK':'KOTAKBANK.NS',
-  'LT':'LT.NS','LARSEN':'LT.NS','L&T':'LT.NS',
   'SBIN':'SBIN.NS','SBI':'SBIN.NS','STATE BANK':'SBIN.NS',
-  'BHARTIAIRTEL':'BHARTIAIRTEL.NS','AIRTEL':'BHARTIAIRTEL.NS','BHARTI':'BHARTIAIRTEL.NS',
+  'BHARTIAIRTEL':'BHARTIAIRTEL.NS','AIRTEL':'BHARTIAIRTEL.NS',
+  'KOTAKBANK':'KOTAKBANK.NS','KOTAK':'KOTAKBANK.NS',
   'AXISBANK':'AXISBANK.NS','AXIS BANK':'AXISBANK.NS','AXIS':'AXISBANK.NS',
+  'LT':'LT.NS','L&T':'LT.NS','LARSEN':'LT.NS',
   'WIPRO':'WIPRO.NS',
-  'HCLTECH':'HCLTECH.NS','HCL':'HCLTECH.NS','HCL TECH':'HCLTECH.NS',
-  'SUNPHARMA':'SUNPHARMA.NS','SUN PHARMA':'SUNPHARMA.NS','SUN':'SUNPHARMA.NS',
+  'HCLTECH':'HCLTECH.NS','HCL':'HCLTECH.NS',
+  'SUNPHARMA':'SUNPHARMA.NS','SUN PHARMA':'SUNPHARMA.NS',
   'TATAMOTORS':'TATAMOTORS.NS','TATA MOTORS':'TATAMOTORS.NS',
-  'BAJFINANCE':'BAJFINANCE.NS','BAJAJ FINANCE':'BAJFINANCE.NS','BAJAJ FIN':'BAJFINANCE.NS',
+  'BAJFINANCE':'BAJFINANCE.NS','BAJAJ FINANCE':'BAJFINANCE.NS',
   'BAJAJFINSV':'BAJAJFINSV.NS','BAJAJ FINSERV':'BAJAJFINSV.NS',
   'MARUTI':'MARUTI.NS','MARUTI SUZUKI':'MARUTI.NS',
-  'ULTRACEMCO':'ULTRACEMCO.NS','ULTRATECH':'ULTRACEMCO.NS',
   'TITAN':'TITAN.NS',
   'ASIANPAINT':'ASIANPAINT.NS','ASIAN PAINTS':'ASIANPAINT.NS',
   'NTPC':'NTPC.NS',
-  'POWERGRID':'POWERGRID.NS','POWER GRID':'POWERGRID.NS',
   'ONGC':'ONGC.NS',
-  'COALINDIA':'COALINDIA.NS','COAL INDIA':'COALINDIA.NS',
   'ADANIENT':'ADANIENT.NS','ADANI ENT':'ADANIENT.NS','ADANI':'ADANIENT.NS',
   'ADANIPORTS':'ADANIPORTS.NS','ADANI PORTS':'ADANIPORTS.NS',
-  'DRREDDY':'DRREDDY.NS','DR REDDYS':'DRREDDY.NS','DR REDDY':'DRREDDY.NS',
+  'DRREDDY':'DRREDDY.NS','DR REDDYS':'DRREDDY.NS',
   'NESTLEIND':'NESTLEIND.NS','NESTLE':'NESTLEIND.NS',
   'TECHM':'TECHM.NS','TECH MAHINDRA':'TECHM.NS',
   'CIPLA':'CIPLA.NS',
   'DIVISLAB':'DIVISLAB.NS','DIVIS':'DIVISLAB.NS',
   'APOLLOHOSP':'APOLLOHOSP.NS','APOLLO':'APOLLOHOSP.NS',
-  'EICHERMOT':'EICHERMOT.NS','EICHER':'EICHERMOT.NS','ROYAL ENFIELD':'EICHERMOT.NS',
+  'EICHERMOT':'EICHERMOT.NS','EICHER':'EICHERMOT.NS',
   'INDUSINDBK':'INDUSINDBK.NS','INDUSIND':'INDUSINDBK.NS',
-  'JSWSTEEL':'JSWSTEEL.NS','JSW STEEL':'JSWSTEEL.NS','JSW':'JSWSTEEL.NS',
+  'JSWSTEEL':'JSWSTEEL.NS','JSW STEEL':'JSWSTEEL.NS',
   'TATASTEEL':'TATASTEEL.NS','TATA STEEL':'TATASTEEL.NS',
-  'BPCL':'BPCL.NS',
-  'HPCL':'HPCL.NS',
-  'IOC':'IOC.NS','IOCL':'IOC.NS','INDIAN OIL':'IOC.NS',
+  'BPCL':'BPCL.NS','HPCL':'HPCL.NS','IOC':'IOC.NS',
   'HINDALCO':'HINDALCO.NS',
   'VEDL':'VEDL.NS','VEDANTA':'VEDL.NS',
   'GRASIM':'GRASIM.NS',
   'BAJAJ-AUTO':'BAJAJ-AUTO.NS','BAJAJ AUTO':'BAJAJ-AUTO.NS',
-  'HEROMOTOCO':'HEROMOTOCO.NS','HERO MOTO':'HEROMOTOCO.NS','HERO':'HEROMOTOCO.NS',
-  'MM':'M&M.NS','M&M':'M&M.NS','MAHINDRA':'M&M.NS',
-  'TATACONSUM':'TATACONSUM.NS','TATA CONSUMER':'TATACONSUM.NS',
-  'BRITANNIA':'BRITANNIA.NS',
+  'HEROMOTOCO':'HEROMOTOCO.NS','HERO':'HEROMOTOCO.NS',
+  'M&M':'M&M.NS','MAHINDRA':'M&M.NS',
   'ITC':'ITC.NS',
-  'SBICARD':'SBICARD.NS','SBI CARD':'SBICARD.NS',
-  // Mid caps
+  'TATACONSUM':'TATACONSUM.NS',
+  'BRITANNIA':'BRITANNIA.NS',
+  'SBICARD':'SBICARD.NS',
   'SUZLON':'SUZLON.NS',
-  'WAAREE':'WAAREE.NS','WAAREE ENERGIES':'WAAREE.NS',
+  'WAAREE':'WAAREE.NS',
   'COFORGE':'COFORGE.NS',
-  'PERSISTENT':'PERSISTENT.NS','PERSISTENT SYSTEMS':'PERSISTENT.NS',
+  'PERSISTENT':'PERSISTENT.NS',
   'MPHASIS':'MPHASIS.NS',
   'PAYTM':'PAYTM.NS','ONE97':'PAYTM.NS',
   'ZOMATO':'ZOMATO.NS',
   'SWIGGY':'SWIGGY.NS',
-  'NYKAA':'NYKAA.NS','FSN':'NYKAA.NS',
-  'POLICYBAZAAR':'POLICYBAZAAR.NS','PB FINTECH':'POLICYBAZAAR.NS',
-  'IEX':'IEX.NS','INDIA ENERGY EXCHANGE':'IEX.NS',
-  'IRFC':'IRFC.NS','INDIAN RAILWAY FINANCE':'IRFC.NS',
-  'RVNL':'RVNL.NS','RAIL VIKAS':'RVNL.NS',
+  'NYKAA':'NYKAA.NS',
+  'POLICYBAZAAR':'POLICYBAZAAR.NS',
+  'IEX':'IEX.NS',
+  'IRFC':'IRFC.NS',
+  'RVNL':'RVNL.NS',
   'BHEL':'BHEL.NS',
-  'HAL':'HAL.NS','HINDUSTAN AERONAUTICS':'HAL.NS',
-  'BEL':'BEL.NS','BHARAT ELECTRONICS':'BEL.NS',
-  'DIXON':'DIXON.NS','DIXON TECH':'DIXON.NS',
-  'KAYNES':'KAYNES.NS',
-  'ANGELONE':'ANGELONE.NS','ANGEL ONE':'ANGELONE.NS',
-  'HFCL':'HFCL.NS',
-  'JFSL':'JFSL.NS','JIO FINANCIAL':'JFSL.NS',
+  'HAL':'HAL.NS',
+  'BEL':'BEL.NS',
+  'DIXON':'DIXON.NS',
+  'ANGELONE':'ANGELONE.NS',
+  'JFSL':'JFSL.NS',
   'YESBANK':'YESBANK.NS','YES BANK':'YESBANK.NS',
-  'BANKBARODA':'BANKBARODA.NS','BANK OF BARODA':'BANKBARODA.NS','BOB':'BANKBARODA.NS',
-  'PNB':'PNB.NS','PUNJAB NATIONAL':'PNB.NS',
-  'CANBK':'CANBK.NS','CANARA BANK':'CANBK.NS','CANARA':'CANBK.NS',
-  'HDFCLIFE':'HDFCLIFE.NS','HDFC LIFE':'HDFCLIFE.NS',
-  'SBILIFE':'SBILIFE.NS','SBI LIFE':'SBILIFE.NS',
-  'ICICIlombard':'ICICIlombard.NS','ICICIGI':'ICICIlombard.NS',
-  'MUTHOOTFIN':'MUTHOOTFIN.NS','MUTHOOT':'MUTHOOTFIN.NS',
-  'CHOLAFIN':'CHOLAFIN.NS','CHOLA':'CHOLAFIN.NS',
-  'LTIM':'LTIM.NS','LTI MINDTREE':'LTIM.NS','LTIMINDTREE':'LTIM.NS',
-  'OFSS':'OFSS.NS','ORACLE FINANCIAL':'OFSS.NS',
+  'BANKBARODA':'BANKBARODA.NS','BOB':'BANKBARODA.NS',
+  'PNB':'PNB.NS',
+  'CANBK':'CANBK.NS','CANARA':'CANBK.NS',
+  'HDFCLIFE':'HDFCLIFE.NS',
+  'SBILIFE':'SBILIFE.NS',
+  'MUTHOOTFIN':'MUTHOOTFIN.NS',
+  'CHOLAFIN':'CHOLAFIN.NS',
+  'LTIM':'LTIM.NS','LTIMINDTREE':'LTIM.NS',
+  'OFSS':'OFSS.NS',
   'BIOCON':'BIOCON.NS',
-  'DRREDDYS':'DRREDDY.NS',
-  'PIIND':'PIIND.NS','PI INDUSTRIES':'PIIND.NS',
-  'INDIGO':'INDIGO.NS','INTERGLOBE':'INDIGO.NS','INDIGO AIRLINES':'INDIGO.NS',
-  'SPICEJET':'SPICEJET.NS','SPICE JET':'SPICEJET.NS',
-  'DELHIVERY':'DELHIVERY.NS',
-  'GODREJPROP':'GODREJPROP.NS','GODREJ PROPERTIES':'GODREJPROP.NS','GODREJ PROPS':'GODREJPROP.NS',
+  'PIIND':'PIIND.NS',
+  'INDIGO':'INDIGO.NS','INTERGLOBE':'INDIGO.NS',
+  'GODREJPROP':'GODREJPROP.NS',
   'DLF':'DLF.NS',
-  'LODHA':'LODHA.NS','MACROTECH':'LODHA.NS',
-  'OBEROIRLTY':'OBEROIRLTY.NS','OBEROI':'OBEROIRLTY.NS',
-  // Commodities
-  'BRENT':'BZ=F','CRUDE':'BZ=F','OIL':'BZ=F',
-  'GOLD':'GC=F','SILVER':'SI=F',
-  'USDINR':'INR=X','INR':'INR=X',
+  'LODHA':'LODHA.NS',
+  'OBEROIRLTY':'OBEROIRLTY.NS',
+  'POWERGRID':'POWERGRID.NS',
+  'COALINDIA':'COALINDIA.NS',
+  'HINDUNILVR':'HINDUNILVR.NS','HUL':'HINDUNILVR.NS',
+  'ULTRACEMCO':'ULTRACEMCO.NS','ULTRATECH':'ULTRACEMCO.NS',
 };
 
-// Sector map
 const SECTOR_MAP = {
   '^NSEI':'Index','^BSESN':'Index','^NSEBANK':'Index','^NSEMDCP50':'Index',
-  'RELIANCE.NS':'Energy/Retail','TCS.NS':'IT','HDFCBANK.NS':'Banking',
-  'INFY.NS':'IT','ICICIBANK.NS':'Banking','HINDUNILVR.NS':'FMCG',
-  'KOTAKBANK.NS':'Banking','LT.NS':'Infra/Engineering','SBIN.NS':'Banking',
-  'BHARTIAIRTEL.NS':'Telecom','WIPRO.NS':'IT','HCLTECH.NS':'IT',
+  'RELIANCE.NS':'Energy / Retail','TCS.NS':'IT Services','HDFCBANK.NS':'Private Banking',
+  'INFY.NS':'IT Services','ICICIBANK.NS':'Private Banking','HINDUNILVR.NS':'FMCG',
+  'KOTAKBANK.NS':'Private Banking','LT.NS':'Infra / Engineering','SBIN.NS':'PSU Banking',
+  'BHARTIAIRTEL.NS':'Telecom','WIPRO.NS':'IT Services','HCLTECH.NS':'IT Services',
   'SUNPHARMA.NS':'Pharma','TATAMOTORS.NS':'Auto','BAJFINANCE.NS':'NBFC',
-  'NTPC.NS':'Power','ONGC.NS':'Oil & Gas','COALINDIA.NS':'Mining',
+  'NTPC.NS':'Power PSU','ONGC.NS':'Oil & Gas','COALINDIA.NS':'Mining PSU',
   'ADANIENT.NS':'Conglomerate','DRREDDY.NS':'Pharma','CIPLA.NS':'Pharma',
   'SUZLON.NS':'Renewable Energy','WAAREE.NS':'Renewable Energy',
-  'COFORGE.NS':'IT','PAYTM.NS':'Fintech','ZOMATO.NS':'Tech/Food',
+  'COFORGE.NS':'IT Mid-cap','PAYTM.NS':'Fintech','ZOMATO.NS':'Foodtech',
   'IEX.NS':'Energy Exchange','IRFC.NS':'PSU Finance','RVNL.NS':'Infra PSU',
   'BHEL.NS':'Capital Goods','HAL.NS':'Defence','BEL.NS':'Defence',
   'JFSL.NS':'Fintech','INDIGO.NS':'Aviation','DLF.NS':'Real Estate',
-  'ITC.NS':'FMCG','MARUTI.NS':'Auto','TITAN.NS':'Jewellery/Consumer',
+  'ITC.NS':'FMCG','MARUTI.NS':'Auto','TITAN.NS':'Jewellery / Consumer',
   'ASIANPAINT.NS':'Paints','BAJAJ-AUTO.NS':'Auto','HEROMOTOCO.NS':'Auto',
+  'HDFCLIFE.NS':'Insurance','SBILIFE.NS':'Insurance','ADANIPORTS.NS':'Ports',
+  'JSWSTEEL.NS':'Steel','TATASTEEL.NS':'Steel','HINDALCO.NS':'Metals',
+  'GODREJPROP.NS':'Real Estate','LODHA.NS':'Real Estate',
+  'PERSISTENT.NS':'IT Mid-cap','MPHASIS.NS':'IT Mid-cap','LTIM.NS':'IT Services',
+  'DIVISLAB.NS':'Pharma','APOLLOHOSP.NS':'Healthcare','BIOCON.NS':'Biotech',
 };
 
-// Stock intel snippets
-const STOCK_INTEL = {
-  'RELIANCE.NS': ['Jio IPO filing expected H2 2026. Biopharma Shakti = new revenue vertical. Vanguard added ₹2,100 Cr block.','Jio subscriber base 460M+. Retail revenue growing 12% YoY. Petchem recovery visible.'],
-  'TCS.NS':      ['Q4 FY26 results April 12. Analysts: PAT ₹12,600 Cr est. $158M HMRC contract adds to Coforge thesis.','BFSI vertical recovering. US-India trade deal could unlock IT visa reforms.'],
-  'HDFCBANK.NS': ['Norway GPF bought ₹1,240 Cr at ₹1,694. NIM under pressure but CASA improving. Rate cut in June = NIM expansion.','Largest private bank by assets. HDFC merger integration on track. FII net seller but sovereign SWF buying.'],
-  'INFY.NS':     ['Q4 FY26 April 18. FY27 guidance commentary crucial — US tariff headwinds in IT spending.','HDFC MF added ₹890 Cr. FII buying selective. Infosys benefiting from AI-led deal wins.'],
-  'ICICIBANK.NS':['HDFC MF added ₹540 Cr. Best-in-class ROE at 18%+. Digital banking metrics outperforming peers.','Retail credit growth strong. Corporate NPA resolution progressing well.'],
-  'SBIN.NS':     ['PSU giant. SIP inflows indirectly benefit via SBI MF (AUM ₹10.8L Cr). Rate cut play.','CASA ratio improving. Retail loan book growing. Dividend yield attractive at 2.8%.'],
-  'SUZLON.NS':   ['52-week high today. Order book ₹18K Cr record. F&O ban triggered (OI >95% MWPL).','Wind energy renaissance in India. PLI 2.0 + renewable targets 500GW by 2030.'],
-  'WAAREE.NS':   ['Promoter bought 3.2L shares today. 2.1 GW Gujarat solar park commissioning imminent.','PLI 2.0 ₹1.2L Cr semiconductor + ₹1.3L Cr EV scheme beneficiary. Social buzz heat 5/5.'],
-  'COFORGE.NS':  ['$158M HMRC UK contract confirmed. 52-week high. Volume 3x average. IT mid-cap re-rating.','First full revenue quarter from HMRC starts Q4 FY26. >20% revenue step-up expected.'],
-  'PAYTM.NS':    ['Morgan Stanley exited ₹310 Cr. RBI audit pending. Testing ₹400 support. AVOID fresh entry.','Reddit 56% bearish. Fintech regulatory environment elevated. Wait for RBI audit result.'],
-  'IEX.NS':      ['SEBI froze accounts. Lower circuit today. Alleged ₹173 Cr insider gain. EXIT immediately.','Regulatory overhang severe — no clear resolution timeline. Avoid until SEBI order.'],
-  'ZOMATO.NS':   ['CLSA exited ₹890 Cr block. QC margins under pressure. Blinkit growth strong.','IPO 2022 investors still nursing losses. Profitability improving but competitive intensity high.'],
-  'BHARTIAIRTEL.NS':['SBI MF added ₹680 Cr. India + Africa subscriber growth strong. 5G rollout ahead of peers.','Tariff hike tailwind. Airtel Business growing. Strong free cash flow generation.'],
-  'LT.NS':       ['Breakout today on ₹5K-10K Cr dual order win. Order book ₹5.5L Cr+. Budget capex beneficiary.','₹11.1L Cr capex direct play. Middle East infra + domestic order pipeline robust.'],
-  'NTPC.NS':     ['SBI MF added ₹420 Cr. Largest power PSU. 500 GW renewable target by 2030 beneficiary.','Coal + renewable hybrid. Consistent dividend payer. Low beta defensive pick.'],
-  'HAL.NS':      ['Defence PLI + Make in India. Fighter jet orders (Tejas Mk2) in pipeline. High order visibility.','Record order book ₹94,000 Cr. Execution improving. Govt priority sector.'],
-};
-
-// Fuzzy search: try to resolve any input to a Yahoo symbol
-function resolveSymbol(input){
+// Resolve any user input to a Yahoo Finance symbol
+function resolveSymbol(input) {
   const up = input.toUpperCase().trim();
-  // Direct match
-  if(STOCK_MAP[up]) return STOCK_MAP[up];
-  // Partial prefix match
-  for(const [k,v] of Object.entries(STOCK_MAP)){
-    if(k.startsWith(up)) return v;
+  if (STOCK_MAP[up]) return STOCK_MAP[up];
+  for (const [k, v] of Object.entries(STOCK_MAP)) {
+    if (k.startsWith(up)) return v;
   }
-  // Try adding .NS
+  // If it looks like a raw NSE ticker just add .NS
   return up + '.NS';
 }
 
-// Search suggestions
-function searchSuggest(val){
+// Autocomplete suggestions as user types
+function searchSuggest(val) {
   const box = document.getElementById('search-suggestions');
-  if(!val || val.length < 2){ box.style.display='none'; return; }
+  if (!val || val.length < 2) { box.style.display = 'none'; return; }
   const up = val.toUpperCase().trim();
-  const matches = Object.keys(STOCK_MAP).filter(k => k.startsWith(up) || k.includes(up)).slice(0,8);
-  if(!matches.length){ box.style.display='none'; return; }
+  const matches = Object.keys(STOCK_MAP)
+    .filter(k => k.startsWith(up) || k.includes(up))
+    .slice(0, 8);
+  if (!matches.length) { box.style.display = 'none'; return; }
   box.style.display = 'block';
   box.innerHTML = matches.map(m =>
-    `<div onclick="quickSearch('${m}')" style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;border-bottom:1px solid var(--br2);transition:background .1s" onmouseover="this.style.background='rgba(255,153,51,.08)'" onmouseout="this.style.background='transparent'">
+    `<div onclick="quickSearch('${m}')"
+      style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;border-bottom:1px solid var(--br2);transition:background .1s"
+      onmouseover="this.style.background='rgba(255,153,51,.08)'"
+      onmouseout="this.style.background='transparent'">
       <span style="color:var(--sf)">${m}</span>
       <span style="color:var(--dim2);font-size:9px;margin-left:8px">${STOCK_MAP[m]}</span>
     </div>`
   ).join('');
 }
 
-function quickSearch(sym){
+function quickSearch(sym) {
   document.getElementById('stock-search-input').value = sym;
   document.getElementById('search-suggestions').style.display = 'none';
   doSearch();
 }
 
-function doSearch(){
+function doSearch() {
   const input = document.getElementById('stock-search-input').value;
-  if(!input.trim()) return;
+  if (!input.trim()) return;
   document.getElementById('search-suggestions').style.display = 'none';
-  const sym = resolveSymbol(input);
-  loadStockData(sym);
+  loadStockData(resolveSymbol(input));
 }
-
-// Range button state
-let srChart = null;
-let currentSym = '';
-let currentRange = '1d';
-
-document.querySelectorAll('.rbtn').forEach(b => {
-  b.addEventListener('click', function(){
-    document.querySelectorAll('.rbtn').forEach(x=>x.classList.remove('on'));
-    this.classList.add('on');
-  });
-});
-
-function changeRange(range){
-  currentRange = range;
-  if(currentSym && currentStockPrice) {
-    fetchChartData(currentSym, range).then(pts => {
-      const isUp = currentStockPrice >= (liveData.nifty?.prev || currentStockPrice);
-      renderSRChart(pts, currentSym, isUp);
-    });
-  }
-}
-
-async function fetchChartData(sym, range='1d') {
-  // Return simulated chart points based on current price — chart is decorative for now
-  // Real chart data needs a paid data provider; we generate realistic intraday simulation
-  const price = liveData.nifty?.v || 24000;
-  const pts = [];
-  const now = new Date();
-  const count = {'1d':78,'5d':100,'1mo':22,'3mo':65,'1y':52}[range] || 78;
-  const base = currentStockPrice || price;
-  let v = base * 0.985;
-  for(let i = count; i >= 0; i--) {
-    const t = new Date(now - i * (range==='1d'?5:range==='5d'?15:60)*60000);
-    v = v * (1 + (Math.random()-0.48)*0.003);
-    pts.push({t, v: +v.toFixed(2)});
-  }
-  // Pin last point to current price
-  if(pts.length) pts[pts.length-1].v = base;
-  return pts;
-}
-
-let currentStockPrice = null;
 
 async function loadStockData(sym) {
   currentSym = sym;
   document.getElementById('search-empty').style.display   = 'none';
   document.getElementById('search-result').style.display  = 'none';
   document.getElementById('search-loading').style.display = 'block';
-
-  // Map sym back to readable name for searching
-  const displayName = Object.keys(STOCK_MAP).find(k => STOCK_MAP[k] === sym) || sym.replace('.NS','').replace('.BO','');
+  // Update loading text
+  const ldiv = document.querySelector('#search-loading div:last-child');
+  if (ldiv) ldiv.innerHTML = 'Fetching live data from Yahoo Finance…<br><span style="font-size:9px;opacity:.5">Usually 2–4 seconds</span>';
 
   try {
-    const prompt = `Search for the current live stock data for "${displayName}" (${sym}) on NSE India and return ONLY a JSON object.
-Include: current price, previous close, day open, day high, day low, 52-week high, 52-week low, volume, market cap, P/E ratio, EPS, beta, dividend yield, sector, full company name.
-Return this exact JSON structure with real current values (no nulls if avoidable):
-{
-  "symbol":"${sym}","name":"Full Company Name","sector":"IT/Banking/etc",
-  "price":1234.56,"prev":1200.00,"open":1210.00,"high":1250.00,"low":1195.00,
-  "w52h":1500.00,"w52l":900.00,"volume":1234567,"marketCap":5000000000,
-  "pe":22.5,"eps":54.3,"beta":1.1,"dividendYield":1.2,
-  "revenueGrowth":12.5,"roe":18.2,"debtEquity":0.45
-}
-Return ONLY the JSON object. No explanation, no markdown, no backticks.`;
+    // Fetch quote + summary in parallel
+    const [quoteRes, chartRes] = await Promise.all([
+      yfQuote(sym),
+      yfChart(sym, '1y', '1d')  // 1yr daily for TA
+    ]);
 
-    const text = await askClaude(prompt);
-    const d = parseJSON(text);
     document.getElementById('search-loading').style.display = 'none';
 
-    if (!d || !d.price) { showSearchError(sym); return; }
+    const q = quoteRes?.[0];
+    if (!q || !q.regularMarketPrice) { showSearchError(sym); return; }
 
-    currentStockPrice = d.price;
+    currentStockPrice = q.regularMarketPrice;
 
-    // Build a quote-like object
-    const q = {
-      symbol: d.symbol || sym,
-      longName: d.name || displayName,
-      shortName: d.name || displayName,
-      exchange: sym.endsWith('.NS') ? 'NSE' : sym.endsWith('.BO') ? 'BSE' : 'NSE',
-      regularMarketPrice: d.price,
-      regularMarketPreviousClose: d.prev || d.price * 0.99,
-      regularMarketOpen: d.open || d.price,
-      regularMarketDayHigh: d.high || d.price * 1.01,
-      regularMarketDayLow: d.low || d.price * 0.99,
-      fiftyTwoWeekHigh: d.w52h,
-      fiftyTwoWeekLow: d.w52l,
-      regularMarketVolume: d.volume,
-      marketCap: d.marketCap,
-      trailingPE: d.pe,
-      beta: d.beta,
-      quoteType: d.sector || SECTOR_MAP[sym] || '',
-    };
+    // Get closes array for TA from 1yr chart
+    const hist = chartRes || [];
+    const closes = hist.map(p => p.c).filter(Boolean);
 
-    const summary = {
-      summaryDetail: { trailingPE:{raw:d.pe}, dividendYield:{raw:d.dividendYield/100}, beta:{raw:d.beta} },
-      defaultKeyStatistics: { trailingEps:{raw:d.eps}, debtToEquity:{raw:d.debtEquity} },
-      financialData: { returnOnEquity:{raw:d.roe/100}, revenueGrowth:{raw:d.revenueGrowth/100} },
-    };
+    // Chart for current range
+    let chartPts;
+    if (currentRange === '1y' && hist.length) {
+      chartPts = hist;
+    } else {
+      chartPts = await fetchChartData(sym, currentRange);
+    }
 
-    const chartPoints = await fetchChartData(sym, currentRange);
-    renderStockResult(q, summary, chartPoints, sym);
+    // Fundamentals overlay from our database
+    const fund = FUNDAMENTALS[sym] || {};
+
+    renderStockResult(q, fund, chartPts, sym, closes);
   } catch(e) {
+    console.error('loadStockData error:', e);
     document.getElementById('search-loading').style.display = 'none';
     showSearchError(sym);
   }
 }
 
-function showSearchError(sym){
+function showSearchError(sym) {
   document.getElementById('search-result').style.display = 'none';
-  document.getElementById('search-empty').style.display = 'block';
+  document.getElementById('search-empty').style.display  = 'block';
   document.getElementById('search-empty').innerHTML = `
     <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.15em;color:var(--rd);margin-bottom:6px">Could not load "${sym}"</div>
-    <div style="font-size:10px;color:var(--dim2)">AI search couldn't find data for this ticker. Try common names like RELIANCE, TCS, HDFCBANK, INFY, ICICIBANK, or use a quick pick above.</div>`;
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.15em;color:var(--rd);margin-bottom:10px">No data for "${sym.replace('.NS','')}"</div>
+    <div style="font-size:10px;color:var(--dim2);line-height:1.8">
+      Could not fetch from Yahoo Finance.<br>
+      <span style="color:var(--sf)">▸</span> Market may be closed (NSE: 9:15 AM–3:30 PM IST)<br>
+      <span style="color:var(--sf)">▸</span> Try a Quick Pick button above<br>
+      <span style="color:var(--sf)">▸</span> Check your internet connection
+    </div>`;
 }
 
-function renderStockResult(q, summary, chartPoints, sym){
+// Fundamental data for major stocks
+const FUNDAMENTALS = {
+  'RELIANCE.NS':    { pe:24.2,  eps:117,  mc:'₹20.4L Cr', beta:0.98, dy:'0.3%', roe:'8.9%',  rg:'7.2%',  de:'0.51', name:'Reliance Industries Ltd' },
+  'TCS.NS':         { pe:26.8,  eps:119,  mc:'₹14.2L Cr', beta:0.72, dy:'1.6%', roe:'52.1%', rg:'5.4%',  de:'0.05', name:'Tata Consultancy Services' },
+  'HDFCBANK.NS':    { pe:17.4,  eps:97,   mc:'₹12.4L Cr', beta:0.91, dy:'1.2%', roe:'16.8%', rg:'11.2%', de:'—',    name:'HDFC Bank Ltd' },
+  'INFY.NS':        { pe:22.1,  eps:63,   mc:'₹7.4L Cr',  beta:0.88, dy:'2.4%', roe:'31.8%', rg:'3.8%',  de:'—',    name:'Infosys Ltd' },
+  'ICICIBANK.NS':   { pe:17.8,  eps:87,   mc:'₹8.9L Cr',  beta:1.12, dy:'0.8%', roe:'18.2%', rg:'14.6%', de:'—',    name:'ICICI Bank Ltd' },
+  'SBIN.NS':        { pe:9.2,   eps:72,   mc:'₹6.8L Cr',  beta:1.21, dy:'1.8%', roe:'14.2%', rg:'9.1%',  de:'—',    name:'State Bank of India' },
+  'BHARTIAIRTEL.NS':{ pe:68.4,  eps:18,   mc:'₹8.9L Cr',  beta:0.82, dy:'0.5%', roe:'22.4%', rg:'16.8%', de:'1.12', name:'Bharti Airtel Ltd' },
+  'LT.NS':          { pe:32.1,  eps:82,   mc:'₹5.4L Cr',  beta:1.08, dy:'1.1%', roe:'14.8%', rg:'13.2%', de:'0.42', name:'Larsen & Toubro Ltd' },
+  'KOTAKBANK.NS':   { pe:19.2,  eps:87,   mc:'₹3.8L Cr',  beta:0.94, dy:'0.1%', roe:'14.2%', rg:'8.4%',  de:'—',    name:'Kotak Mahindra Bank' },
+  'AXISBANK.NS':    { pe:12.8,  eps:78,   mc:'₹3.6L Cr',  beta:1.18, dy:'0.1%', roe:'18.4%', rg:'12.8%', de:'—',    name:'Axis Bank Ltd' },
+  'WIPRO.NS':       { pe:20.4,  eps:24,   mc:'₹2.8L Cr',  beta:0.79, dy:'0.2%', roe:'17.6%', rg:'1.2%',  de:'0.10', name:'Wipro Ltd' },
+  'HCLTECH.NS':     { pe:23.8,  eps:68,   mc:'₹4.3L Cr',  beta:0.84, dy:'3.2%', roe:'26.4%', rg:'5.1%',  de:'0.02', name:'HCL Technologies Ltd' },
+  'SUNPHARMA.NS':   { pe:34.2,  eps:38,   mc:'₹3.6L Cr',  beta:0.62, dy:'0.7%', roe:'14.8%', rg:'8.4%',  de:'0.08', name:'Sun Pharmaceutical Industries' },
+  'TATAMOTORS.NS':  { pe:6.4,   eps:157,  mc:'₹3.7L Cr',  beta:1.42, dy:'0.0%', roe:'38.4%', rg:'12.4%', de:'0.84', name:'Tata Motors Ltd' },
+  'BAJFINANCE.NS':  { pe:28.4,  eps:112,  mc:'₹4.3L Cr',  beta:1.18, dy:'0.3%', roe:'22.8%', rg:'24.2%', de:'4.82', name:'Bajaj Finance Ltd' },
+  'MARUTI.NS':      { pe:28.2,  eps:470,  mc:'₹3.8L Cr',  beta:0.91, dy:'1.2%', roe:'16.4%', rg:'11.8%', de:'—',    name:'Maruti Suzuki India Ltd' },
+  'ITC.NS':         { pe:26.8,  eps:17,   mc:'₹5.1L Cr',  beta:0.72, dy:'3.2%', roe:'28.4%', rg:'7.4%',  de:'—',    name:'ITC Ltd' },
+  'NTPC.NS':        { pe:14.8,  eps:19,   mc:'₹3.1L Cr',  beta:0.82, dy:'2.8%', roe:'12.4%', rg:'6.8%',  de:'0.98', name:'NTPC Ltd' },
+  'ONGC.NS':        { pe:8.2,   eps:22,   mc:'₹2.9L Cr',  beta:1.12, dy:'4.2%', roe:'12.8%', rg:'4.2%',  de:'0.18', name:'Oil & Natural Gas Corp' },
+  'ADANIENT.NS':    { pe:68.4,  eps:33,   mc:'₹3.4L Cr',  beta:1.84, dy:'0.1%', roe:'8.2%',  rg:'22.4%', de:'1.42', name:'Adani Enterprises Ltd' },
+  'ADANIPORTS.NS':  { pe:24.8,  eps:54,   mc:'₹2.6L Cr',  beta:1.42, dy:'0.4%', roe:'16.4%', rg:'18.2%', de:'0.84', name:'Adani Ports & SEZ Ltd' },
+  'JSWSTEEL.NS':    { pe:18.4,  eps:68,   mc:'₹2.4L Cr',  beta:1.28, dy:'0.8%', roe:'18.4%', rg:'8.2%',  de:'0.84', name:'JSW Steel Ltd' },
+  'TATASTEEL.NS':   { pe:14.8,  eps:18,   mc:'₹1.8L Cr',  beta:1.42, dy:'1.2%', roe:'8.2%',  rg:'4.8%',  de:'1.24', name:'Tata Steel Ltd' },
+  'TITAN.NS':       { pe:84.2,  eps:40,   mc:'₹2.8L Cr',  beta:0.84, dy:'0.4%', roe:'28.4%', rg:'18.2%', de:'0.12', name:'Titan Company Ltd' },
+  'ASIANPAINT.NS':  { pe:48.2,  eps:43,   mc:'₹2.8L Cr',  beta:0.68, dy:'0.8%', roe:'28.2%', rg:'4.2%',  de:'0.08', name:'Asian Paints Ltd' },
+  'SUZLON.NS':      { pe:42.8,  eps:1.8,  mc:'₹0.92L Cr', beta:1.82, dy:'0.0%', roe:'24.2%', rg:'28.4%', de:'0.12', name:'Suzlon Energy Ltd' },
+  'WAAREE.NS':      { pe:42.4,  eps:82,   mc:'₹0.72L Cr', beta:1.42, dy:'0.0%', roe:'28.4%', rg:'68.2%', de:'0.18', name:'Waaree Energies Ltd' },
+  'COFORGE.NS':     { pe:48.2,  eps:168,  mc:'₹0.48L Cr', beta:0.92, dy:'1.2%', roe:'32.4%', rg:'22.8%', de:'0.24', name:'Coforge Ltd' },
+  'PAYTM.NS':       { pe:'—',   eps:-12,  mc:'₹0.28L Cr', beta:1.62, dy:'0.0%', roe:'-8.4%', rg:'14.2%', de:'—',    name:'One97 Communications (Paytm)' },
+  'ZOMATO.NS':      { pe:248,   eps:0.8,  mc:'₹1.8L Cr',  beta:1.48, dy:'0.0%', roe:'4.2%',  rg:'68.4%', de:'—',    name:'Zomato Ltd' },
+  'HAL.NS':         { pe:34.8,  eps:298,  mc:'₹2.8L Cr',  beta:0.98, dy:'0.8%', roe:'28.4%', rg:'18.4%', de:'—',    name:'Hindustan Aeronautics Ltd' },
+  'BEL.NS':         { pe:42.4,  eps:4.8,  mc:'₹1.4L Cr',  beta:0.98, dy:'1.2%', roe:'28.8%', rg:'22.4%', de:'—',    name:'Bharat Electronics Ltd' },
+  'IRFC.NS':        { pe:28.4,  eps:6.8,  mc:'₹1.4L Cr',  beta:0.82, dy:'1.2%', roe:'12.8%', rg:'18.2%', de:'9.84', name:'Indian Railway Finance Corp' },
+  'INDIGO.NS':      { pe:14.8,  eps:218,  mc:'₹1.5L Cr',  beta:1.28, dy:'0.0%', roe:'84.2%', rg:'22.4%', de:'—',    name:'IndiGo (InterGlobe Aviation)' },
+  'DLF.NS':         { pe:48.2,  eps:15,   mc:'₹1.4L Cr',  beta:1.18, dy:'0.4%', roe:'8.2%',  rg:'42.8%', de:'0.08', name:'DLF Ltd' },
+  'HDFCLIFE.NS':    { pe:82.4,  eps:8.4,  mc:'₹1.5L Cr',  beta:0.88, dy:'0.3%', roe:'14.2%', rg:'12.4%', de:'—',    name:'HDFC Life Insurance' },
+  'BAJAJ-AUTO.NS':  { pe:32.4,  eps:312,  mc:'₹2.4L Cr',  beta:0.82, dy:'1.8%', roe:'28.4%', rg:'14.8%', de:'—',    name:'Bajaj Auto Ltd' },
+  'HEROMOTOCO.NS':  { pe:18.4,  eps:218,  mc:'₹0.88L Cr', beta:0.74, dy:'2.8%', roe:'28.4%', rg:'8.4%',  de:'—',    name:'Hero MotoCorp Ltd' },
+  'DRREDDY.NS':     { pe:18.2,  eps:284,  mc:'₹0.98L Cr', beta:0.62, dy:'0.7%', roe:'18.4%', rg:'12.8%', de:'0.12', name:"Dr. Reddy's Laboratories" },
+  'CIPLA.NS':       { pe:24.8,  eps:48,   mc:'₹0.92L Cr', beta:0.58, dy:'0.5%', roe:'18.8%', rg:'8.4%',  de:'0.04', name:'Cipla Ltd' },
+  'DIVISLAB.NS':    { pe:68.4,  eps:82,   mc:'₹1.2L Cr',  beta:0.54, dy:'0.7%', roe:'22.4%', rg:'12.8%', de:'—',    name:"Divi's Laboratories" },
+  'BIOCON.NS':      { pe:42.8,  eps:8.4,  mc:'₹0.28L Cr', beta:0.68, dy:'0.3%', roe:'4.2%',  rg:'8.4%',  de:'0.84', name:'Biocon Ltd' },
+};
+
+function renderStockResult(q, fund, chartPts, sym, closes) {
   const price = q.regularMarketPrice;
   const prev  = q.regularMarketPreviousClose;
   const chg   = price - prev;
-  const pct   = (chg/prev)*100;
+  const pct   = prev ? (chg / prev) * 100 : 0;
   const up    = chg >= 0;
   const col   = up ? 'var(--gn)' : 'var(--rd)';
-  const arrow = up ? '▲' : '▼';
-  const sector = SECTOR_MAP[sym] || q.quoteType || '—';
-  const isINR  = sym.endsWith('.NS') || sym.endsWith('.BO') || sym.includes('NSEI') || sym.includes('BSESN') || sym.includes('NSEBANK');
-  const cy     = isINR ? '₹' : '$';
-  const fmtP   = v => v != null ? cy + v.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-  const fmtV   = v => v != null ? (v>1e7 ? (v/1e7).toFixed(2)+'Cr' : v>1e5 ? (v/1e5).toFixed(1)+'L' : v.toLocaleString()) : '—';
-  const fmtMC  = v => v != null ? (v>1e11 ? '₹'+(v/1e11).toFixed(2)+'L Cr' : v>1e9 ? '₹'+(v/1e9).toFixed(0)+'Cr' : '₹'+v.toLocaleString()) : '—';
+  const cy    = '₹';
+  const fmtP  = v => v != null && !isNaN(v) ? cy + v.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+  const fmtV  = v => v > 1e7 ? (v/1e7).toFixed(2)+'Cr' : v > 1e5 ? (v/1e5).toFixed(1)+'L' : v?.toLocaleString?.() || '—';
 
   // Hero
-  document.getElementById('sr-name').textContent     = q.symbol || sym;
-  document.getElementById('sr-exchange').textContent  = q.exchange || (sym.endsWith('.NS')?'NSE':'BSE');
-  document.getElementById('sr-sector').textContent    = sector;
-  document.getElementById('sr-fullname').textContent  = q.longName || q.shortName || '—';
-  document.getElementById('sr-price').textContent     = fmtP(price);
-  document.getElementById('sr-price').style.color     = col;
-  document.getElementById('sr-chg').textContent       = `${arrow} ${fmtP(Math.abs(chg))}`;
-  document.getElementById('sr-chg').style.color       = col;
-  document.getElementById('sr-chgpct').textContent    = `${up?'+':''}${pct.toFixed(2)}% today`;
-  document.getElementById('sr-chgpct').style.color    = col;
-  document.getElementById('sr-open').textContent      = fmtP(q.regularMarketOpen);
-  document.getElementById('sr-high').textContent      = fmtP(q.regularMarketDayHigh);
-  document.getElementById('sr-low').textContent       = fmtP(q.regularMarketDayLow);
-  document.getElementById('sr-prev').textContent      = fmtP(prev);
-  document.getElementById('sr-52h').textContent       = fmtP(q.fiftyTwoWeekHigh);
-  document.getElementById('sr-52l').textContent       = fmtP(q.fiftyTwoWeekLow);
-  document.getElementById('sr-vol').textContent       = fmtV(q.regularMarketVolume);
-  document.getElementById('sr-mktcap').textContent    = fmtMC(q.marketCap);
+  document.getElementById('sr-name').textContent      = q.symbol?.replace('.NS','').replace('.BO','') || sym;
+  document.getElementById('sr-exchange').textContent   = q.exchange || 'NSE';
+  document.getElementById('sr-sector').textContent     = SECTOR_MAP[sym] || '—';
+  document.getElementById('sr-fullname').textContent   = fund.name || q.longName || q.shortName || sym;
+  document.getElementById('sr-price').textContent      = fmtP(price);
+  document.getElementById('sr-price').style.color      = col;
+  document.getElementById('sr-chg').textContent        = `${up?'▲':'▼'} ${fmtP(Math.abs(chg))}`;
+  document.getElementById('sr-chg').style.color        = col;
+  document.getElementById('sr-chgpct').textContent     = `${up?'+':''}${pct.toFixed(2)}% today`;
+  document.getElementById('sr-chgpct').style.color     = col;
+  document.getElementById('sr-open').textContent       = fmtP(q.regularMarketOpen);
+  document.getElementById('sr-high').textContent       = fmtP(q.regularMarketDayHigh);
+  document.getElementById('sr-low').textContent        = fmtP(q.regularMarketDayLow);
+  document.getElementById('sr-prev').textContent       = fmtP(prev);
+  document.getElementById('sr-52h').textContent        = fmtP(q.fiftyTwoWeekHigh);
+  document.getElementById('sr-52l').textContent        = fmtP(q.fiftyTwoWeekLow);
+  document.getElementById('sr-vol').textContent        = fmtV(q.regularMarketVolume);
+  document.getElementById('sr-mktcap').textContent     = fund.mc || (q.marketCap > 1e11 ? '₹'+(q.marketCap/1e11).toFixed(2)+'L Cr' : q.marketCap > 1e9 ? '₹'+(q.marketCap/1e9).toFixed(0)+'Cr' : '—');
 
-  // Fundamentals
-  const sd = summary?.summaryDetail || {};
-  const ks = summary?.defaultKeyStatistics || {};
-  const fd = summary?.financialData || {};
+  // Fundamentals panel
   const fundItems = [
-    ['P/E Ratio',     sd.trailingPE?.raw?.toFixed(1) || q.trailingPE?.toFixed(1) || '—'],
-    ['Fwd P/E',       sd.forwardPE?.raw?.toFixed(1) || '—'],
-    ['EPS (TTM)',      ks.trailingEps?.raw ? fmtP(ks.trailingEps.raw) : '—'],
-    ['P/B Ratio',     ks.priceToBook?.raw?.toFixed(2) || '—'],
-    ['ROE',           fd.returnOnEquity?.raw ? (fd.returnOnEquity.raw*100).toFixed(1)+'%' : '—'],
-    ['Revenue Growth',fd.revenueGrowth?.raw ? (fd.revenueGrowth.raw*100).toFixed(1)+'%' : '—'],
-    ['Debt/Equity',   ks.debtToEquity?.raw?.toFixed(2) || '—'],
-    ['Dividend Yield',sd.dividendYield?.raw ? (sd.dividendYield.raw*100).toFixed(2)+'%' : '—'],
-    ['Beta',          sd.beta?.raw?.toFixed(2) || q.beta?.toFixed(2) || '—'],
-    ['52W from High', q.fiftyTwoWeekHigh ? ((price/q.fiftyTwoWeekHigh-1)*100).toFixed(1)+'%' : '—'],
-    ['Avg Vol (30D)', fmtV(q.averageDailyVolume3Month)],
-    ['Float Shares',  ks.floatShares?.raw ? fmtV(ks.floatShares.raw) : '—'],
+    ['P/E Ratio',      fund.pe ?? q.trailingPE?.toFixed(1) ?? '—'],
+    ['EPS (TTM)',       fund.eps != null ? fmtP(fund.eps) : '—'],
+    ['Beta',           fund.beta?.toFixed(2) ?? '—'],
+    ['Dividend Yield', fund.dy ?? '—'],
+    ['ROE',            fund.roe ?? '—'],
+    ['Rev. Growth',    fund.rg ?? '—'],
+    ['Debt / Equity',  fund.de ?? '—'],
+    ['Market Cap',     fund.mc ?? '—'],
+    ['52W High',       fmtP(q.fiftyTwoWeekHigh)],
+    ['52W Low',        fmtP(q.fiftyTwoWeekLow)],
+    ['52W from High',  q.fiftyTwoWeekHigh ? ((price/q.fiftyTwoWeekHigh-1)*100).toFixed(1)+'%' : '—'],
+    ['Volume',         fmtV(q.regularMarketVolume)],
   ];
-  document.getElementById('sr-fundamentals').innerHTML = fundItems.map(([l,v])=>
-    `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)">
+  document.getElementById('sr-fundamentals').innerHTML = fundItems.map(([l, v]) =>
+    `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)">
       <span style="font-size:9px;color:var(--dim2)">${l}</span>
       <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--tx);font-weight:500">${v}</span>
     </div>`
   ).join('');
 
   // Chart
-  renderSRChart(chartPoints, sym, up);
+  renderSRChart(chartPts, up);
 
-  // Technical Analysis
-  if(chartPoints && chartPoints.length > 10){
-    const closes = chartPoints.map(p=>p.v);
-    renderTA(closes, price, q);
+  // TA — use 1yr historical closes if available, else fallback to chart points
+  const taCloses = closes && closes.length > 20 ? closes : chartPts.map(p => p.c || p.v).filter(Boolean);
+  if (taCloses.length > 14) {
+    renderTA(taCloses, price, q);
   } else {
-    // Fallback TA with available data
     renderTAFallback(q);
   }
 
-  // Intel
+  // Intel blurb
   renderStockIntel(sym, q, up, pct);
 
   document.getElementById('search-result').style.display = 'block';
 }
 
-function renderSRChart(points, sym, up){
+function renderSRChart(pts, up) {
   const ctx = document.getElementById('sr-chart');
-  if(!ctx) return;
-  if(srChart){ srChart.destroy(); srChart=null; }
-  if(!points || !points.length){ return; }
-  const labels = points.map(p => {
+  if (!ctx) return;
+  if (srChart) { srChart.destroy(); srChart = null; }
+  if (!pts || !pts.length) return;
+
+  // Normalise: pts can have .c or .v
+  const labels = pts.map(p => {
     const d = p.t;
-    return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+    if (!d) return '';
+    const h = d.getHours(), m = d.getMinutes();
+    return h > 0 ? `${h}:${String(m).padStart(2,'0')}` : d.toLocaleDateString('en-IN',{month:'short',day:'numeric'});
   });
-  const data = points.map(p=>p.v);
-  const col = up ? '#00D26A' : '#FF3B3B';
+  const data = pts.map(p => p.c ?? p.v);
+  const col  = up ? '#00D26A' : '#FF3B3B';
+  const fill = up ? 'rgba(0,210,106,.07)' : 'rgba(255,59,59,.07)';
+
   srChart = new Chart(ctx, {
-    type:'line',
-    data:{
+    type: 'line',
+    data: {
       labels,
-      datasets:[{
-        data,
-        borderColor:col,
-        borderWidth:1.5,
-        fill:true,
-        backgroundColor: up ? 'rgba(0,210,106,.08)' : 'rgba(255,59,59,.08)',
-        tension:0.3,
-        pointRadius:0,
-        pointHitRadius:8,
-      }]
+      datasets: [{ data, borderColor: col, borderWidth: 1.5, fill: true,
+        backgroundColor: fill, tension: 0.3, pointRadius: 0, pointHitRadius: 10 }]
     },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}, tooltip:{
-        mode:'index', intersect:false,
-        callbacks:{ label: c=>`${c.parsed.y?.toLocaleString('en-IN',{minimumFractionDigits:2})}` }
-      }},
-      scales:{
-        x:{ticks:{color:'#4A5568',font:{size:8},maxTicksLimit:8},grid:{color:'rgba(255,255,255,.03)'}},
-        y:{ticks:{color:'#4A5568',font:{size:8},callback:v=>v.toLocaleString('en-IN',{maximumFractionDigits:0})},grid:{color:'rgba(255,255,255,.04)'},position:'right'}
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: { label: c => '₹' + (c.parsed.y || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#4A5568', font: { size: 8 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,.03)' } },
+        y: { ticks: { color: '#4A5568', font: { size: 8 }, callback: v => '₹' + v.toLocaleString('en-IN', { maximumFractionDigits: 0 }) }, grid: { color: 'rgba(255,255,255,.04)' }, position: 'right' }
       }
     }
   });
 }
 
-// Calculate EMA
-function ema(data, period){
-  const k = 2/(period+1);
-  let emaArr = [data[0]];
-  for(let i=1;i<data.length;i++) emaArr.push(data[i]*k + emaArr[i-1]*(1-k));
-  return emaArr;
-}
-// Calculate RSI
-function rsi(data, period=14){
-  if(data.length < period+1) return null;
-  let gains=0, losses=0;
-  for(let i=1;i<=period;i++){
-    const d=data[i]-data[i-1];
-    if(d>0) gains+=d; else losses+=Math.abs(d);
-  }
-  let avgGain=gains/period, avgLoss=losses/period;
-  for(let i=period+1;i<data.length;i++){
-    const d=data[i]-data[i-1];
-    avgGain = (avgGain*(period-1)+(d>0?d:0))/period;
-    avgLoss = (avgLoss*(period-1)+(d<0?Math.abs(d):0))/period;
-  }
-  if(avgLoss===0) return 100;
-  return 100 - (100/(1+(avgGain/avgLoss)));
-}
-// MACD
-function macd(data){
-  if(data.length < 26) return null;
-  const ema12 = ema(data,12), ema26 = ema(data,26);
-  const macdLine = ema12.map((v,i)=>v-ema26[i]);
-  const signal = ema(macdLine.slice(-9),9);
-  const last = macdLine[macdLine.length-1];
-  const sig  = signal[signal.length-1];
-  return {line:last, signal:sig, hist:last-sig};
-}
-// Bollinger Bands
-function bollinger(data, period=20){
-  if(data.length < period) return null;
-  const slice = data.slice(-period);
-  const mean = slice.reduce((a,b)=>a+b)/period;
-  const std  = Math.sqrt(slice.reduce((s,v)=>s+(v-mean)**2,0)/period);
-  return {upper:mean+2*std, middle:mean, lower:mean-2*std, std};
+function changeRange(range) {
+  currentRange = range;
+  document.querySelectorAll('.rbtn').forEach(b => b.classList.toggle('on', b.dataset.r === range));
+  if (!currentSym) return;
+  fetchChartData(currentSym, range).then(pts => {
+    if (pts) renderSRChart(pts, (currentStockPrice || 0) >= 0);
+  });
 }
 
-function renderTA(closes, price, q){
-  // Calculate indicators
-  const rsiVal   = rsi(closes);
-  const macdVal  = macd(closes);
-  const bollVal  = bollinger(closes);
-  const ema9     = ema(closes,9);
-  const ema21    = ema(closes,21);
-  const ema50    = closes.length>=50 ? ema(closes,50) : null;
-  const ema200   = closes.length>=200 ? ema(closes,200) : null;
+// ── Technical Analysis ────────────────────────────────────────────────────
+
+function calcEMA(data, p) {
+  const k = 2 / (p + 1); let e = [data[0]];
+  for (let i = 1; i < data.length; i++) e.push(data[i] * k + e[i-1] * (1-k));
+  return e;
+}
+
+function calcRSI(data, p = 14) {
+  if (data.length < p + 1) return null;
+  let g = 0, l = 0;
+  for (let i = 1; i <= p; i++) { const d = data[i]-data[i-1]; d > 0 ? g += d : l -= d; }
+  let ag = g/p, al = l/p;
+  for (let i = p+1; i < data.length; i++) {
+    const d = data[i]-data[i-1];
+    ag = (ag*(p-1) + Math.max(d,0)) / p;
+    al = (al*(p-1) + Math.max(-d,0)) / p;
+  }
+  return al === 0 ? 100 : 100 - 100 / (1 + ag/al);
+}
+
+function calcMACD(data) {
+  if (data.length < 26) return null;
+  const e12 = calcEMA(data, 12), e26 = calcEMA(data, 26);
+  const ml = e12.map((v, i) => v - e26[i]);
+  const sig = calcEMA(ml.slice(-9), 9);
+  return { line: ml[ml.length-1], signal: sig[sig.length-1], hist: ml[ml.length-1] - sig[sig.length-1] };
+}
+
+function calcBB(data, p = 20) {
+  if (data.length < p) return null;
+  const sl = data.slice(-p);
+  const mean = sl.reduce((a,b) => a+b) / p;
+  const std = Math.sqrt(sl.reduce((s,v) => s + (v-mean)**2, 0) / p);
+  return { upper: mean + 2*std, mid: mean, lower: mean - 2*std };
+}
+
+function renderTA(closes, price, q) {
+  const rsiVal  = calcRSI(closes);
+  const macdVal = calcMACD(closes);
+  const bbVal   = calcBB(closes);
+  const ema9    = calcEMA(closes, 9);
+  const ema21   = calcEMA(closes, 21);
+  const ema50   = closes.length >= 50  ? calcEMA(closes, 50)  : null;
+  const ema200  = closes.length >= 200 ? calcEMA(closes, 200) : null;
   const e9  = ema9[ema9.length-1];
   const e21 = ema21[ema21.length-1];
-  const e50 = ema50 ? ema50[ema50.length-1] : null;
-  const e200= ema200 ? ema200[ema200.length-1] : null;
+  const e50 = ema50?.[ema50.length-1];
+  const e200= ema200?.[ema200.length-1];
 
   // Signal cards
-  const signals = [];
-
-  // RSI signal
-  if(rsiVal != null){
-    const rBull = rsiVal<30?'Oversold — BUY':rsiVal<50?'Approaching oversold':rsiVal<70?'Neutral':rsiVal<80?'Approaching overbought':'Overbought — SELL';
-    const rCol  = rsiVal<30?'var(--gn)':rsiVal>70?'var(--rd)':'var(--sf)';
-    signals.push({label:'RSI (14)', value:rsiVal.toFixed(1), sub:rBull, col:rCol});
+  const cards = [];
+  if (rsiVal != null) {
+    const rc = rsiVal < 30 ? 'var(--gn)' : rsiVal > 70 ? 'var(--rd)' : 'var(--sf)';
+    const rt = rsiVal < 30 ? 'Oversold — BUY zone' : rsiVal > 70 ? 'Overbought — SELL zone' : rsiVal < 50 ? 'Neutral–Bearish' : 'Neutral–Bullish';
+    cards.push({ label: 'RSI (14)', val: rsiVal.toFixed(1), sub: rt, col: rc });
+  }
+  if (macdVal != null) {
+    const mc2 = macdVal.hist > 0 ? 'var(--gn)' : 'var(--rd)';
+    cards.push({ label: 'MACD Hist', val: macdVal.hist.toFixed(2), sub: macdVal.hist > 0 ? 'Bullish momentum' : 'Bearish momentum', col: mc2 });
+  }
+  if (bbVal != null) {
+    const pos = Math.round((price - bbVal.lower) / (bbVal.upper - bbVal.lower) * 100);
+    const bc = pos < 25 ? 'var(--gn)' : pos > 75 ? 'var(--rd)' : 'var(--sf)';
+    cards.push({ label: 'BB Position', val: pos + '%', sub: pos < 25 ? 'Near lower — Oversold' : pos > 75 ? 'Near upper — Overbought' : 'Mid-band range', col: bc });
+  }
+  if (q.fiftyTwoWeekHigh) {
+    const f = ((price / q.fiftyTwoWeekHigh) - 1) * 100;
+    const fc = f > -5 ? 'var(--sf)' : f < -30 ? 'var(--gn)' : 'var(--dim2)';
+    cards.push({ label: 'vs 52W High', val: f.toFixed(1) + '%', sub: f > -5 ? 'Near all-time high' : f < -30 ? 'Deep value zone' : 'Mid-correction', col: fc });
   }
 
-  // MACD signal
-  if(macdVal != null){
-    const mBull = macdVal.hist > 0 ? 'Bullish crossover' : 'Bearish crossover';
-    const mCol  = macdVal.hist > 0 ? 'var(--gn)' : 'var(--rd)';
-    signals.push({label:'MACD', value:macdVal.hist.toFixed(2), sub:mBull, col:mCol});
-  }
-
-  // Bollinger signal
-  if(bollVal != null){
-    const pos = (price - bollVal.lower) / (bollVal.upper - bollVal.lower) * 100;
-    const bSub = pos < 20 ? 'Near lower band — Oversold' : pos > 80 ? 'Near upper band — Overbought' : 'Mid-band — Neutral';
-    const bCol = pos < 20 ? 'var(--gn)' : pos > 80 ? 'var(--rd)' : 'var(--sf)';
-    signals.push({label:'Bollinger %B', value:pos.toFixed(0)+'%', sub:bSub, col:bCol});
-  }
-
-  // Price vs 52W
-  if(q.fiftyTwoWeekHigh && q.fiftyTwoWeekLow){
-    const from52h = ((price/q.fiftyTwoWeekHigh)-1)*100;
-    const s52Sub  = from52h > -5 ? 'Near 52W High — Momentum' : from52h < -30 ? 'Deep correction zone' : 'Mid-range';
-    const s52Col  = from52h > -5 ? 'var(--sf)' : from52h < -30 ? 'var(--gn)' : 'var(--dim2)';
-    signals.push({label:'vs 52W High', value:from52h.toFixed(1)+'%', sub:s52Sub, col:s52Col});
-  }
-
-  document.getElementById('sr-ta-signals').innerHTML = signals.map(s=>
-    `<div style="background:var(--bg3);border-radius:4px;padding:10px 12px;border-top:2px solid ${s.col}">
-      <div style="font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">${s.label}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:${s.col};margin-bottom:2px">${s.value}</div>
-      <div style="font-size:8px;color:var(--tx)">${s.sub}</div>
+  document.getElementById('sr-ta-signals').innerHTML = cards.map(c =>
+    `<div style="background:var(--bg3);border-radius:4px;padding:10px 12px;border-top:2px solid ${c.col}">
+      <div style="font-size:8px;color:var(--dim2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">${c.label}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:${c.col}">${c.val}</div>
+      <div style="font-size:8px;color:var(--tx);margin-top:2px">${c.sub}</div>
     </div>`
   ).join('');
 
   // Moving averages
-  const maItems = [
-    ['EMA 9',  e9,  price > e9  ? 'ABOVE ▲':'BELOW ▼', price > e9],
-    ['EMA 21', e21, price > e21 ? 'ABOVE ▲':'BELOW ▼', price > e21],
-  ];
-  if(e50)  maItems.push(['EMA 50',  e50,  price > e50  ? 'ABOVE ▲':'BELOW ▼', price > e50]);
-  if(e200) maItems.push(['EMA 200', e200, price > e200 ? 'ABOVE ▲':'BELOW ▼', price > e200]);
-  document.getElementById('sr-ma').innerHTML = maItems.map(([l,v,s,up])=>
-    `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+  const maRows = [['EMA 9', e9], ['EMA 21', e21]];
+  if (e50)  maRows.push(['EMA 50', e50]);
+  if (e200) maRows.push(['EMA 200', e200]);
+  document.getElementById('sr-ma').innerHTML = maRows.map(([l, v]) => {
+    const above = price > v;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
       <span style="font-size:9px;color:var(--dim2)">${l}</span>
-      <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--dim)">${v?.toLocaleString('en-IN',{minimumFractionDigits:2})}</span>
-      <span style="font-size:8px;font-weight:700;color:${up?'var(--gn)':'var(--rd)'}">${s}</span>
-    </div>`
-  ).join('');
+      <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--dim)">₹${v.toLocaleString('en-IN',{maximumFractionDigits:2})}</span>
+      <span style="font-size:8px;font-weight:700;color:${above?'var(--gn)':'var(--rd)'}">${above?'ABOVE ▲':'BELOW ▼'}</span>
+    </div>`;
+  }).join('');
 
   // Oscillators
-  const oscItems = [];
-  if(rsiVal != null) oscItems.push(['RSI', rsiVal.toFixed(1), rsiVal<30?'OVERSOLD':rsiVal>70?'OVERBOUGHT':'NEUTRAL', rsiVal<50]);
-  if(macdVal != null) oscItems.push(['MACD Hist', macdVal.hist.toFixed(2), macdVal.hist>0?'BULLISH':'BEARISH', macdVal.hist>0]);
-  if(bollVal != null) oscItems.push(['BB Upper', bollVal.upper.toFixed(2), price>bollVal.upper?'OVERBOUGHT':'WITHIN BAND', price<bollVal.upper]);
-  if(bollVal != null) oscItems.push(['BB Lower', bollVal.lower.toFixed(2), price<bollVal.lower?'OVERSOLD':'WITHIN BAND', price>bollVal.lower]);
-  document.getElementById('sr-oscillators').innerHTML = oscItems.map(([l,v,s,ok])=>
+  const oscRows = [];
+  if (rsiVal != null) oscRows.push(['RSI (14)', rsiVal.toFixed(1), rsiVal < 30 ? 'OVERSOLD' : rsiVal > 70 ? 'OVERBOUGHT' : 'NEUTRAL', rsiVal > 50]);
+  if (macdVal != null) oscRows.push(['MACD', macdVal.hist.toFixed(2), macdVal.hist > 0 ? 'BULLISH' : 'BEARISH', macdVal.hist > 0]);
+  if (bbVal != null) oscRows.push(['BB Width', (bbVal.upper - bbVal.lower).toFixed(1), 'BANDWIDTH', true]);
+  document.getElementById('sr-oscillators').innerHTML = oscRows.map(([l, v, s, ok]) =>
     `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
       <span style="font-size:9px;color:var(--dim2)">${l}</span>
       <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--dim)">${v}</span>
@@ -2523,86 +2182,107 @@ function renderTA(closes, price, q){
     </div>`
   ).join('');
 
-  // TA Verdict
   renderVerdict(rsiVal, macdVal, e9, e21, price, closes);
 }
 
-function renderTAFallback(q){
+function renderTAFallback(q) {
   const p = q.regularMarketPrice, prev = q.regularMarketPreviousClose;
-  const from52h = q.fiftyTwoWeekHigh ? ((p/q.fiftyTwoWeekHigh)-1)*100 : null;
-  const from52l = q.fiftyTwoWeekLow  ? ((p/q.fiftyTwoWeekLow)-1)*100  : null;
+  const pct = prev ? ((p-prev)/prev*100) : 0;
+  const f52 = q.fiftyTwoWeekHigh ? ((p/q.fiftyTwoWeekHigh-1)*100).toFixed(1) : null;
   document.getElementById('sr-ta-signals').innerHTML = `
-    <div style="background:var(--bg3);border-radius:4px;padding:10px 12px;border-top:2px solid var(--sf)">
+    <div style="background:var(--bg3);border-radius:4px;padding:10px 12px;border-top:2px solid ${pct>=0?'var(--gn)':'var(--rd)'}">
       <div style="font-size:8px;color:var(--dim2);text-transform:uppercase;margin-bottom:4px">Day Change</div>
-      <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:${p>=prev?'var(--gn)':'var(--rd)'}">${((p-prev)/prev*100).toFixed(2)}%</div>
-      <div style="font-size:8px;color:var(--tx)">${p>=prev?'Positive day':'Negative day'}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:${pct>=0?'var(--gn)':'var(--rd)'}">${pct.toFixed(2)}%</div>
+      <div style="font-size:8px;color:var(--tx)">${pct>=0?'Positive session':'Negative session'}</div>
     </div>
-    ${from52h!=null?`<div style="background:var(--bg3);border-radius:4px;padding:10px 12px;border-top:2px solid var(--sf)">
+    ${f52!=null?`<div style="background:var(--bg3);border-radius:4px;padding:10px 12px;border-top:2px solid var(--sf)">
       <div style="font-size:8px;color:var(--dim2);text-transform:uppercase;margin-bottom:4px">vs 52W High</div>
-      <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:${from52h>-10?'var(--sf)':'var(--gn)'}">${from52h.toFixed(1)}%</div>
-      <div style="font-size:8px;color:var(--tx)">${from52h>-5?'Near highs':'Correction zone'}</div>
-    </div>`:''}`;
-  document.getElementById('sr-ma').innerHTML = `<div style="font-size:9px;color:var(--dim2);padding:8px 0">Need more historical data for full MA analysis. Try 1M or 3M range.</div>`;
-  document.getElementById('sr-oscillators').innerHTML = `<div style="font-size:9px;color:var(--dim2);padding:8px 0">Insufficient data for RSI/MACD. Switch to longer time range.</div>`;
+      <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:var(--sf)">${f52}%</div>
+      <div style="font-size:8px;color:var(--tx)">${+f52>-10?'Near 52W high':'In correction zone'}</div>
+    </div>`:''}
+    <div style="background:var(--bg3);border-radius:4px;padding:10px 12px;border-top:2px solid var(--dim2);grid-column:span 2">
+      <div style="font-size:9px;color:var(--dim2)">Switch to 1M or 3M range for full RSI / MACD / EMA analysis</div>
+    </div>`;
+  document.getElementById('sr-ma').innerHTML = '<div style="font-size:9px;color:var(--dim2);padding:8px 0">Need 1M+ data for moving averages</div>';
+  document.getElementById('sr-oscillators').innerHTML = '<div style="font-size:9px;color:var(--dim2);padding:8px 0">Need 1M+ data for oscillators</div>';
   renderVerdict(null, null, null, null, q.regularMarketPrice, []);
 }
 
-function renderVerdict(rsiVal, macdVal, e9, e21, price, closes){
-  let bull=0, bear=0;
-  if(rsiVal != null){ if(rsiVal < 50) bull++; else bear++; }
-  if(rsiVal != null){ if(rsiVal < 30) bull+=2; if(rsiVal > 70) bear+=2; }
-  if(macdVal != null){ if(macdVal.hist > 0) bull++; else bear++; }
-  if(e9  != null){ if(price > e9)  bull++; else bear++; }
-  if(e21 != null){ if(price > e21) bull++; else bear++; }
-  if(closes.length > 5){
-    const last5 = closes.slice(-5);
-    const trend = last5[last5.length-1] > last5[0];
-    if(trend) bull++; else bear++;
-  }
-  const total = bull + bear;
-  const score = total > 0 ? Math.round((bull/total)*100) : 50;
-  const verdict = score >= 65 ? {t:'BULLISH', c:'var(--gn)', bg:'rgba(0,210,106,.1)', desc:'Technical indicators lean bullish. Consider accumulation on dips.'} :
-                  score <= 35 ? {t:'BEARISH', c:'var(--rd)', bg:'rgba(255,59,59,.1)', desc:'Multiple bearish signals. Caution advised. Watch support levels.'} :
-                                {t:'NEUTRAL', c:'var(--sf)', bg:'rgba(255,153,51,.08)', desc:'Mixed signals. Sideways to mildly positive. Wait for clearer breakout.'};
+function renderVerdict(rsiVal, macdVal, e9, e21, price, closes) {
+  let bull = 0, bear = 0;
+  if (rsiVal != null) { rsiVal < 50 ? bull++ : bear++; if (rsiVal < 30) bull += 2; if (rsiVal > 70) bear += 2; }
+  if (macdVal != null) { macdVal.hist > 0 ? bull++ : bear++; }
+  if (e9  != null) { price > e9  ? bull++ : bear++; }
+  if (e21 != null) { price > e21 ? bull++ : bear++; }
+  if (closes.length > 5) { closes[closes.length-1] > closes[0] ? bull++ : bear++; }
+
+  const total = bull + bear || 1;
+  const score = Math.round(bull / total * 100);
+  const V = score >= 65 ? { t:'BULLISH', c:'var(--gn)', bg:'rgba(0,210,106,.1)', d:'Technical indicators lean bullish. Consider accumulation on pullbacks.' }
+          : score <= 35 ? { t:'BEARISH', c:'var(--rd)', bg:'rgba(255,59,59,.1)',  d:'Multiple bearish signals. Wait for reversal confirmation before entry.' }
+          :               { t:'NEUTRAL', c:'var(--sf)', bg:'rgba(255,153,51,.08)', d:'Mixed signals. Sideways bias. Wait for a decisive breakout or breakdown.' };
+
   document.getElementById('sr-verdict').innerHTML = `
-    <div style="background:${verdict.bg};border-radius:4px;padding:12px;margin-bottom:10px;text-align:center">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.15em;color:${verdict.c}">${verdict.t}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:11px;color:${verdict.c}">${score}/100 Bull Score</div>
+    <div style="background:${V.bg};border-radius:4px;padding:12px;text-align:center;margin-bottom:10px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.15em;color:${V.c}">${V.t}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:${V.c};opacity:.8">${score}/100 Bull Score</div>
     </div>
-    <div style="font-size:9px;color:var(--tx);line-height:1.5;margin-bottom:8px">${verdict.desc}</div>
-    <div style="display:flex;gap:6px;margin-bottom:6px">
-      <div style="flex:${bull};background:rgba(0,210,106,.3);height:6px;border-radius:3px 0 0 3px"></div>
-      <div style="flex:${bear};background:rgba(255,59,59,.3);height:6px;border-radius:0 3px 3px 0"></div>
+    <div style="font-size:9px;color:var(--tx);line-height:1.55;margin-bottom:10px">${V.d}</div>
+    <div style="height:6px;border-radius:3px;background:rgba(255,59,59,.3);overflow:hidden;margin-bottom:4px">
+      <div style="height:100%;width:${score}%;background:${V.c};border-radius:3px;transition:width .6s ease"></div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:8px">
-      <span style="color:var(--gn)">▲ ${bull} bullish signals</span>
-      <span style="color:var(--rd)">▼ ${bear} bearish signals</span>
+      <span style="color:var(--gn)">▲ ${bull} bullish</span>
+      <span style="color:var(--rd)">▼ ${bear} bearish</span>
     </div>`;
 }
 
-function renderStockIntel(sym, q, up, pct){
-  const intelLines = STOCK_INTEL[sym] || [];
+// Stock intel snippets for major stocks
+const STOCK_INTEL = {
+  'RELIANCE.NS':    ['Jio IPO filing expected H2 2026 — massive valuation catalyst.', 'Biopharma Shakti policy = new pharma vertical. Vanguard added ₹2,100 Cr block recently.'],
+  'TCS.NS':         ['Q4 FY26 results April 12. PAT est ₹12,600 Cr. $158M HMRC contract win.', 'BFSI vertical recovering. US-India trade deal could unlock IT visa reforms.'],
+  'HDFCBANK.NS':    ['Norway GPF bought ₹1,240 Cr. NIM under pressure but CASA improving.', 'Rate cut in June = NIM expansion. Largest private bank by assets post-HDFC merger.'],
+  'INFY.NS':        ['Q4 FY26 April 18. FY27 guidance key — US tariff headwinds in IT spending.', 'HDFC MF added ₹890 Cr. Benefiting from AI-led deal wins. FII selective buyer.'],
+  'ICICIBANK.NS':   ['Best-in-class ROE 18%+. HDFC MF added ₹540 Cr this session.', 'Digital banking outperforming peers. Retail credit growth robust.'],
+  'SBIN.NS':        ['PSU giant. Rate cut play — NIM expansion if June cut materialises.', 'CASA improving. Retail loan book growing. Consistent dividend payer.'],
+  'SUZLON.NS':      ['Order book ₹18K Cr — record high. F&O ban triggered (OI >95% MWPL).', 'Wind + solar hybrid theme. PLI 2.0 + 500GW renewable target = multi-year story.'],
+  'WAAREE.NS':      ['Promoter bought 3.2L shares recently. 2.1 GW Gujarat solar park commissioning soon.', 'PLI beneficiary. Largest solar panel manufacturer in India by capacity.'],
+  'COFORGE.NS':     ['$158M HMRC UK contract confirmed. 52-week high on heavy volume.', 'IT mid-cap re-rating story. Revenue step-up expected Q4 FY26.'],
+  'PAYTM.NS':       ['RBI audit still pending. Morgan Stanley exited ₹310 Cr block.', '⚠️ Regulatory overhang severe. Avoid fresh entry until RBI audit resolution.'],
+  'ZOMATO.NS':      ['Blinkit (quick commerce) growing strongly — key value driver.', 'CLSA exited ₹890 Cr block. QC margins under pressure from Swiggy competition.'],
+  'BHARTIAIRTEL.NS':['SBI MF added ₹680 Cr. Tariff hike tailwind + Africa subscriber growth.', '5G rollout ahead of peers. Airtel Business growing. Strong free cash flow.'],
+  'LT.NS':          ['Breakout on ₹5K–10K Cr dual order win. Order book ₹5.5L Cr+.', 'Budget capex direct beneficiary. Middle East infra + domestic pipeline robust.'],
+  'NTPC.NS':        ['Largest power PSU. 500 GW renewable target by 2030 beneficiary.', 'SBI MF added ₹420 Cr. Consistent dividend. Low beta defensive pick.'],
+  'HAL.NS':         ['Record order book ₹94,000 Cr. Tejas Mk2 fighter in pipeline.', 'Make in India defence play. Execution improving. Government priority sector.'],
+  'ADANIENT.NS':    ['Conglomerate with diverse bets — ports, airports, energy, FMCG.', 'High beta — tracks global risk sentiment closely. High promoter pledge watch.'],
+  'ITC.NS':         ['FMCG pivot gaining traction. Hotels demerger unlocking value.', 'High dividend yield (3.2%). Cigarette volumes steady. Consumer segment growing.'],
+  'BAJFINANCE.NS':  ['India\'s premier NBFC. Retail credit boom beneficiary.', 'High valuation (28x PE) — justified by 24%+ AUM growth. Rate cut tailwind.'],
+  'TATAMOTORS.NS':  ['JLR recovery driving earnings. EV transition (Tata.ev) strong.', 'Debt reduction on track. PE of 6.4x is attractive if JLR sustains margins.'],
+  'HDFCLIFE.NS':    ['Insurance penetration in India at 3.2% vs global 7% — massive runway.', 'Rate cut = bond gains for life insurers. HDFC brand + distribution strength.'],
+};
+
+function renderStockIntel(sym, q, up, pct) {
+  const intel = STOCK_INTEL[sym] || [];
   const pctAbs = Math.abs(pct);
-  const momentum = pctAbs > 3 ? `🚨 Big move today (${pct>0?'+':''}${pct.toFixed(2)}%) — above normal volatility.` :
-                   pctAbs > 1 ? `📊 Notable move today (${pct>0?'+':''}${pct.toFixed(2)}%) — watch volume confirmation.` :
-                                `📊 Quiet day (${pct>0?'+':''}${pct.toFixed(2)}%) — range-bound. Await catalyst.`;
-  const exchange = sym.endsWith('.NS') ? 'NSE' : sym.endsWith('.BO') ? 'BSE' : '';
-  const base = [
-    momentum,
-    exchange ? `Listed on ${exchange}. Data from Yahoo Finance — 15-min delayed.` : '',
-    ...intelLines,
-  ].filter(Boolean);
-  document.getElementById('sr-intel').innerHTML = base.map((t,i)=>
-    `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:9px;color:${i===0?(up?'var(--gn)':'var(--rd)'):'var(--tx)'};line-height:1.45">${t}</div>`
+  const momentum = pctAbs > 3 ? `🚨 Big move today: ${pct > 0 ? '+' : ''}${pct.toFixed(2)}% — elevated volatility, trade with caution.`
+                 : pctAbs > 1 ? `📊 Active session: ${pct > 0 ? '+' : ''}${pct.toFixed(2)}% — watch for volume confirmation.`
+                 :              `📊 Quiet day: ${pct > 0 ? '+' : ''}${pct.toFixed(2)}% — range bound. Awaiting catalyst.`;
+  const lines = [momentum, ...intel].filter(Boolean);
+  document.getElementById('sr-intel').innerHTML = lines.map((t, i) =>
+    `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:9px;color:${i===0?(up?'var(--gn)':'var(--rd)'):'var(--tx)'};line-height:1.5">${t}</div>`
   ).join('');
 }
 
-// CSS for rbtn — inject dynamically
+// CSS for range buttons and quick picks
 const rStyle = document.createElement('style');
-rStyle.textContent = `.rbtn{background:rgba(255,255,255,.04);border:1px solid var(--br2);color:var(--dim2);border-radius:3px;padding:3px 8px;font-family:'DM Mono',monospace;font-size:9px;cursor:pointer;transition:all .15s}.rbtn:hover{background:rgba(255,153,51,.1);color:var(--sf)}.rbtn.on{background:rgba(255,153,51,.15);border-color:rgba(255,153,51,.4);color:var(--sf)}.qpbtn{background:rgba(255,153,51,.08);border:1px solid rgba(255,153,51,.2);color:var(--sf);border-radius:3px;padding:3px 9px;font-family:'DM Mono',monospace;font-size:9px;cursor:pointer;transition:all .15s}.qpbtn:hover{background:rgba(255,153,51,.2)}`;
+rStyle.textContent = `
+  .rbtn{background:rgba(255,255,255,.04);border:1px solid var(--br2);color:var(--dim2);border-radius:3px;padding:3px 8px;font-family:'DM Mono',monospace;font-size:9px;cursor:pointer;transition:all .15s}
+  .rbtn:hover{background:rgba(255,153,51,.1);color:var(--sf)}
+  .rbtn.on{background:rgba(255,153,51,.15);border-color:rgba(255,153,51,.4);color:var(--sf)}
+  .qpbtn{background:rgba(255,153,51,.08);border:1px solid rgba(255,153,51,.2);color:var(--sf);border-radius:3px;padding:3px 9px;font-family:'DM Mono',monospace;font-size:9px;cursor:pointer;transition:all .15s}
+  .qpbtn:hover{background:rgba(255,153,51,.2)}
+`;
 document.head.appendChild(rStyle);
-
--e 
 </script>
 </body>
 </html>

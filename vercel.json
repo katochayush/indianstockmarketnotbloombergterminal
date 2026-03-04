@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/stock.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/stock", "destination": "/api/stock" }
+  ]
+}
