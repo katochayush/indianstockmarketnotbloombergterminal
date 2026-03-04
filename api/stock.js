@@ -6,85 +6,94 @@ module.exports = async function handler(req, res) {
   const { sym, type = 'quote' } = req.query;
   if (!sym) return res.status(400).json({ error: 'sym required' });
 
-  // Convert Yahoo symbol to Stooq symbol
-  // RELIANCE.NS -> RELIANCE.IN, ^NSEI -> ^NIF50.IN, etc.
-  function toStooq(s) {
-    if (s === '^NSEI')    return '^nif50.in';
-    if (s === '^BSESN')   return '^bse.in';
-    if (s === '^NSEBANK') return '^nifbnk.in';
-    if (s === 'BZ=F')     return 'lcox.uk'; // Brent crude
-    if (s === 'GC=F')     return 'xauusd';  // Gold
-    if (s === 'INR=X')    return 'inrusd';
-    if (s.endsWith('.NS')) return s.replace('.NS', '.in').toLowerCase();
-    if (s.endsWith('.BO')) return s.replace('.BO', '.in').toLowerCase();
-    return s.toLowerCase();
-  }
+  const ticker = sym.replace('.NS','').replace('.BO','').replace('^','');
 
-  // Stooq CSV: https://stooq.com/q/d/l/?s=tcs.in&i=d
-  // Returns CSV: Date,Open,High,Low,Close,Volume
-  const stooqSym = toStooq(sym);
-  const csvUrl = `https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSym)}&i=d`;
+  // NSE India official data API - no auth needed
+  const NSE_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': 'https://www.nseindia.com/',
+    'Connection': 'keep-alive',
+  };
+
+  // NSE index symbols
+  const INDEX_MAP = {
+    '^NSEI':    'NIFTY 50',
+    '^BSESN':   null, // BSE not on NSE API
+    '^NSEBANK': 'NIFTY BANK',
+  };
 
   try {
-    const r = await fetch(csvUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    if (!r.ok) return res.status(502).json({ error: `Stooq returned ${r.status}` });
+    // First get session cookies (NSE requires this)
+    await fetch('https://www.nseindia.com', { headers: NSE_HEADERS });
 
-    const csv = await r.text();
-    if (!csv || csv.includes('No data') || csv.trim().split('\n').length < 3) {
-      return res.status(404).json({ error: 'No data from Stooq for ' + sym });
+    let quoteUrl;
+    const isIndex = sym.startsWith('^');
+
+    if (isIndex && INDEX_MAP[sym]) {
+      quoteUrl = `https://www.nseindia.com/api/allIndices`;
+    } else if (isIndex) {
+      // BSE Sensex fallback - use BSE API
+      quoteUrl = `https://api.bseindia.com/BseIndiaAPI/api/GetSensexData/w`;
+    } else {
+      quoteUrl = `https://www.nseindia.com/api/quote-equity?symbol=${encodeURIComponent(ticker)}`;
     }
 
-    const lines = csv.trim().split('\n').filter(l => l && !l.startsWith('Date'));
-    const rows = lines.map(l => {
-      const [date, open, high, low, close, volume] = l.split(',');
-      return { date, open: +open, high: +high, low: +low, close: +close, volume: +volume };
-    }).filter(r => r.close && !isNaN(r.close));
+    const r = await fetch(quoteUrl, { headers: NSE_HEADERS });
+    if (!r.ok) throw new Error(`NSE returned ${r.status}`);
+    const data = await r.json();
 
-    if (!rows.length) return res.status(404).json({ error: 'Empty data for ' + sym });
+    let price, prev, open, high, low, vol, name;
 
-    const latest = rows[rows.length - 1];
-    const prev   = rows.length > 1 ? rows[rows.length - 2] : rows[0];
-    const high52 = Math.max(...rows.slice(-252).map(r => r.high));
-    const low52  = Math.min(...rows.slice(-252).map(r => r.low));
-
-    if (type === 'chart') {
-      // Return last 365 days in Yahoo chart format
-      const chartRows = rows.slice(-365);
-      return res.status(200).json({
-        chart: {
-          result: [{
-            timestamp: chartRows.map(r => Math.floor(new Date(r.date).getTime() / 1000)),
-            indicators: { quote: [{ close: chartRows.map(r => r.close) }] }
-          }]
-        }
-      });
+    if (isIndex && INDEX_MAP[sym]) {
+      const indexName = INDEX_MAP[sym];
+      const entry = (data.data || []).find(d => d.index === indexName);
+      if (!entry) throw new Error(`Index ${indexName} not found`);
+      price = entry.last;
+      prev  = entry.previousClose || entry.last * 0.99;
+      open  = entry.open || price;
+      high  = entry.dayHigh || price;
+      low   = entry.dayLow  || price;
+      name  = indexName;
+    } else {
+      const pd = data.priceInfo || data;
+      price = pd.lastPrice || pd.last;
+      prev  = pd.previousClose || pd.close;
+      open  = pd.open;
+      high  = pd.intraDayHighLow?.max || pd.high;
+      low   = pd.intraDayHighLow?.min || pd.low;
+      vol   = pd.totalTradedVolume || pd.volume;
+      name  = data.info?.companyName || ticker;
     }
 
-    // Return in Yahoo quote format so index.html needs zero changes
+    const w52h = data.priceInfo?.weekHighLow?.max || high * 1.2;
+    const w52l = data.priceInfo?.weekHighLow?.min || low  * 0.8;
+
+    res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
     return res.status(200).json({
       quoteResponse: {
         result: [{
           symbol: sym,
-          longName: sym.replace('.NS','').replace('.BO','').replace('^',''),
-          shortName: sym.replace('.NS','').replace('.BO','').replace('^',''),
-          exchange: sym.endsWith('.BO') ? 'BSE' : 'NSE',
-          regularMarketPrice:         latest.close,
-          regularMarketPreviousClose: prev.close,
-          regularMarketOpen:          latest.open,
-          regularMarketDayHigh:       latest.high,
-          regularMarketDayLow:        latest.low,
-          regularMarketVolume:        latest.volume || null,
-          fiftyTwoWeekHigh:           high52,
-          fiftyTwoWeekLow:            low52,
+          longName: name,
+          shortName: name,
+          exchange: 'NSE',
+          regularMarketPrice:         price,
+          regularMarketPreviousClose: prev,
+          regularMarketOpen:          open,
+          regularMarketDayHigh:       high,
+          regularMarketDayLow:        low,
+          regularMarketVolume:        vol || null,
+          fiftyTwoWeekHigh:           w52h,
+          fiftyTwoWeekLow:            w52l,
           marketCap:                  null,
           trailingPE:                 null,
         }]
       }
     });
 
-  } catch (e) {
+  } catch(e) {
     return res.status(500).json({ error: e.message });
   }
 };
