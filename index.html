@@ -1649,54 +1649,33 @@ const NOTIF_PRIORITY = new Set(['breakout','breakdown','circuit','whale','inside
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DATA ENGINE — Anthropic API with web_search
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA ENGINE — /api/stock serverless proxy
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function claudeSearch(prompt) {
+async function apiFetch(params, timeout) {
+  timeout = timeout || 10000;
+  var qs = new URLSearchParams(params).toString();
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-  } catch(e) { return null; }
-}
-
-function extractJSON(text) {
-  if (!text) return null;
-  try {
-    const m = text.match(/```json\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
-    return JSON.parse(m ? m[1] : text);
+    var r = await fetch('/api/stock?' + qs, { signal: AbortSignal.timeout(timeout) });
+    if (!r.ok) return null;
+    return await r.json();
   } catch(e) { return null; }
 }
 
 async function fetchLivePrices() {
-  const text = await claudeSearch(
-    'Search for current live Indian stock market prices RIGHT NOW and return ONLY this exact JSON with no extra text:\n' +
-    '{"nifty":24500,"nifty_prev":24400,"sensex":81000,"sensex_prev":80800,"banknifty":52500,"banknifty_prev":52200,"brent":75.5,"gold_usd":2350,"inrusd":83.9}\n' +
-    'Use real current values from NSE India or MoneyControl. Numbers only, no strings.'
-  );
-  const d = extractJSON(text);
-  if (d) {
-    if (d.nifty)     liveData.nifty  = { v: d.nifty,     prev: d.nifty_prev     || d.nifty*0.995 };
-    if (d.sensex)    liveData.sensex = { v: d.sensex,    prev: d.sensex_prev    || d.sensex*0.995 };
-    if (d.banknifty) liveData.bank   = { v: d.banknifty, prev: d.banknifty_prev || d.banknifty*0.995 };
-    if (d.brent)     liveData.brent  = { v: d.brent };
-    if (d.gold_usd)  liveData.gold   = { v: Math.round(d.gold_usd * (d.inrusd || 84) / 31.1) };
-    if (d.inrusd)    liveData.inrusd = { v: d.inrusd };
-  }
+  var j = await apiFetch({ sym: '^NSEI,^BSESN,^NSEBANK,BZ=F,GC=F,INR=X', type: 'batch' });
+  var results = (j && j.quoteResponse && j.quoteResponse.result) || [];
+  results.forEach(function(q) {
+    var p = q.regularMarketPrice, prev = q.regularMarketPreviousClose, s = q.symbol;
+    var base = { v: p, prev: prev, open: q.regularMarketOpen||p, high: q.regularMarketDayHigh||p, low: q.regularMarketDayLow||p };
+    if (s==='^NSEI')    liveData.nifty  = base;
+    if (s==='^BSESN')   liveData.sensex = base;
+    if (s==='^NSEBANK') liveData.bank   = base;
+    if (s==='BZ=F')     liveData.brent  = { v: p };
+    if (s==='GC=F')     liveData.gold   = { v: Math.round(p * ((liveData.inrusd && liveData.inrusd.v)||84) / 31.1) };
+    if (s==='INR=X')    liveData.inrusd = { v: p };
+  });
   updateAllDisplays();
 }
 
@@ -1704,68 +1683,53 @@ async function fetchLivePrices() {
 // STOCK SEARCH ENGINE
 // ═══════════════════════════════════════════════════════════════════════════
 
-let currentStockPrice = null;
-let srChart = null;
-let currentSym = '';
-let currentRange = '1d';
+var currentStockPrice = null;
+var srChart = null;
+var currentSym = '';
+var currentRange = '1d';
 
-function genSimChart(base, range) {
-  const counts = { '1d': 78, '5d': 100, '1mo': 22, '3mo': 65, '1y': 52 };
-  const n = counts[range] || 22;
-  const pts = []; let v = base * 0.97;
-  const now = Date.now();
-  const step = range === '1d' ? 5 * 60000 : 24 * 3600000;
-  for (let i = n; i >= 0; i--) {
-    v = v * (1 + (Math.random() - 0.478) * 0.008);
-    pts.push({ t: new Date(now - i * step), c: +v.toFixed(2) });
-  }
-  pts[pts.length - 1].c = base;
-  return pts;
-}
-
-// ── STOCK MAP ─────────────────────────────────────────────────────────────
 const STOCK_MAP = {
-  'NIFTY':'^NSEI','NIFTY50':'^NSEI','NIFTY 50':'^NSEI',
-  'SENSEX':'^BSESN','BANKNIFTY':'^NSEBANK','BANK NIFTY':'^NSEBANK',
-  'RELIANCE':'RELIANCE.NS','TCS':'TCS.NS','HDFCBANK':'HDFCBANK.NS',
-  'HDFC BANK':'HDFCBANK.NS','HDFC':'HDFCBANK.NS',
+  'NIFTY':'^NSEI','NIFTY50':'^NSEI','SENSEX':'^BSESN',
+  'BANKNIFTY':'^NSEBANK','BANK NIFTY':'^NSEBANK',
+  'RELIANCE':'RELIANCE.NS','TCS':'TCS.NS',
+  'HDFCBANK':'HDFCBANK.NS','HDFC BANK':'HDFCBANK.NS','HDFC':'HDFCBANK.NS',
   'INFOSYS':'INFY.NS','INFY':'INFY.NS',
   'ICICIBANK':'ICICIBANK.NS','ICICI':'ICICIBANK.NS',
   'SBIN':'SBIN.NS','SBI':'SBIN.NS',
   'BHARTIAIRTEL':'BHARTIAIRTEL.NS','AIRTEL':'BHARTIAIRTEL.NS',
   'KOTAKBANK':'KOTAKBANK.NS','KOTAK':'KOTAKBANK.NS',
   'AXISBANK':'AXISBANK.NS','AXIS':'AXISBANK.NS',
-  'LT':'LT.NS','L&T':'LT.NS',
-  'WIPRO':'WIPRO.NS','HCLTECH':'HCLTECH.NS','HCL':'HCLTECH.NS',
+  'LT':'LT.NS','L&T':'LT.NS','WIPRO':'WIPRO.NS',
+  'HCLTECH':'HCLTECH.NS','HCL':'HCLTECH.NS',
   'SUNPHARMA':'SUNPHARMA.NS','TATAMOTORS':'TATAMOTORS.NS',
   'BAJFINANCE':'BAJFINANCE.NS','MARUTI':'MARUTI.NS',
   'TITAN':'TITAN.NS','ASIANPAINT':'ASIANPAINT.NS',
   'NTPC':'NTPC.NS','ONGC':'ONGC.NS','ITC':'ITC.NS',
   'ADANIENT':'ADANIENT.NS','ADANI':'ADANIENT.NS',
   'ADANIPORTS':'ADANIPORTS.NS','JSWSTEEL':'JSWSTEEL.NS',
-  'TATASTEEL':'TATASTEEL.NS','HINDALCO':'HINDALCO.NS',
-  'DRREDDY':'DRREDDY.NS','CIPLA':'CIPLA.NS',
-  'DIVISLAB':'DIVISLAB.NS','APOLLOHOSP':'APOLLOHOSP.NS',
-  'TECHM':'TECHM.NS','EICHERMOT':'EICHERMOT.NS',
-  'BAJAJ-AUTO':'BAJAJ-AUTO.NS','BAJAJ AUTO':'BAJAJ-AUTO.NS',
-  'HEROMOTOCO':'HEROMOTOCO.NS','HERO':'HEROMOTOCO.NS',
-  'M&M':'M&M.NS','MAHINDRA':'M&M.NS',
+  'TATASTEEL':'TATASTEEL.NS','DRREDDY':'DRREDDY.NS',
+  'CIPLA':'CIPLA.NS','DIVISLAB':'DIVISLAB.NS',
+  'TECHM':'TECHM.NS','BAJAJ-AUTO':'BAJAJ-AUTO.NS',
+  'BAJAJ AUTO':'BAJAJ-AUTO.NS','HEROMOTOCO':'HEROMOTOCO.NS',
+  'HERO':'HEROMOTOCO.NS','M&M':'M&M.NS','MAHINDRA':'M&M.NS',
   'HINDUNILVR':'HINDUNILVR.NS','HUL':'HINDUNILVR.NS',
-  'ULTRACEMCO':'ULTRACEMCO.NS','ULTRATECH':'ULTRACEMCO.NS',
-  'BPCL':'BPCL.NS','HPCL':'HPCL.NS','IOC':'IOC.NS',
-  'SUZLON':'SUZLON.NS','WAAREE':'WAAREE.NS','COFORGE':'COFORGE.NS',
-  'PAYTM':'PAYTM.NS','ZOMATO':'ZOMATO.NS','SWIGGY':'SWIGGY.NS',
-  'NYKAA':'NYKAA.NS','IEX':'IEX.NS','IRFC':'IRFC.NS',
-  'RVNL':'RVNL.NS','BHEL':'BHEL.NS','HAL':'HAL.NS','BEL':'BEL.NS',
-  'DIXON':'DIXON.NS','INDIGO':'INDIGO.NS','DLF':'DLF.NS',
-  'GODREJPROP':'GODREJPROP.NS','HDFCLIFE':'HDFCLIFE.NS',
+  'ULTRACEMCO':'ULTRACEMCO.NS','BPCL':'BPCL.NS',
+  'HPCL':'HPCL.NS','IOC':'IOC.NS','COALINDIA':'COALINDIA.NS',
+  'POWERGRID':'POWERGRID.NS','SUZLON':'SUZLON.NS',
+  'WAAREE':'WAAREE.NS','COFORGE':'COFORGE.NS',
+  'PAYTM':'PAYTM.NS','ZOMATO':'ZOMATO.NS',
+  'HAL':'HAL.NS','BEL':'BEL.NS','IRFC':'IRFC.NS',
+  'RVNL':'RVNL.NS','BHEL':'BHEL.NS','IEX':'IEX.NS',
+  'INDIGO':'INDIGO.NS','DLF':'DLF.NS','HDFCLIFE':'HDFCLIFE.NS',
   'SBILIFE':'SBILIFE.NS','PERSISTENT':'PERSISTENT.NS',
   'MPHASIS':'MPHASIS.NS','LTIM':'LTIM.NS','BIOCON':'BIOCON.NS',
-  'BANKBARODA':'BANKBARODA.NS','BOB':'BANKBARODA.NS',
-  'PNB':'PNB.NS','YESBANK':'YESBANK.NS','COALINDIA':'COALINDIA.NS',
-  'POWERGRID':'POWERGRID.NS','TATACONSUM':'TATACONSUM.NS',
-  'BRITANNIA':'BRITANNIA.NS','NESTLEIND':'NESTLEIND.NS','NESTLE':'NESTLEIND.NS',
-  'ANGELONE':'ANGELONE.NS','JFSL':'JFSL.NS','LODHA':'LODHA.NS',
+  'YESBANK':'YESBANK.NS','PNB':'PNB.NS','BANKBARODA':'BANKBARODA.NS',
+  'NESTLEIND':'NESTLEIND.NS','NESTLE':'NESTLEIND.NS',
+  'TATACONSUM':'TATACONSUM.NS','BRITANNIA':'BRITANNIA.NS',
+  'APOLLOHOSP':'APOLLOHOSP.NS','EICHERMOT':'EICHERMOT.NS',
+  'HINDALCO':'HINDALCO.NS','VEDL':'VEDL.NS','GRASIM':'GRASIM.NS',
+  'SWIGGY':'SWIGGY.NS','NYKAA':'NYKAA.NS','ANGELONE':'ANGELONE.NS',
+  'LODHA':'LODHA.NS','GODREJPROP':'GODREJPROP.NS',
 };
 
 const SECTOR_MAP = {
@@ -1785,40 +1749,28 @@ const SECTOR_MAP = {
   'IRFC.NS':'PSU Finance','INDIGO.NS':'Aviation',
   'DLF.NS':'Real Estate','ITC.NS':'FMCG','MARUTI.NS':'Auto',
   'TITAN.NS':'Jewellery / Consumer','ASIANPAINT.NS':'Paints',
-  'HDFCLIFE.NS':'Insurance','SBILIFE.NS':'Insurance',
-  'JSWSTEEL.NS':'Steel','TATASTEEL.NS':'Steel',
+  'HDFCLIFE.NS':'Insurance','JSWSTEEL.NS':'Steel',
   'HINDUNILVR.NS':'FMCG','KOTAKBANK.NS':'Private Banking',
   'AXISBANK.NS':'Private Banking','LT.NS':'Infra / Engineering',
-  'BAJAJ-AUTO.NS':'Auto','HEROMOTOCO.NS':'Auto',
-  'M&M.NS':'Auto','COALINDIA.NS':'Mining PSU',
-  'POWERGRID.NS':'Power PSU','ADANIPORTS.NS':'Ports',
 };
 
 function resolveSymbol(input) {
-  const up = input.toUpperCase().trim();
+  var up = input.toUpperCase().trim();
   if (STOCK_MAP[up]) return STOCK_MAP[up];
-  for (const [k, v] of Object.entries(STOCK_MAP)) {
-    if (k.startsWith(up)) return v;
-  }
+  for (var k in STOCK_MAP) { if (k.startsWith(up)) return STOCK_MAP[k]; }
   return up + '.NS';
 }
 
 function searchSuggest(val) {
-  const box = document.getElementById('search-suggestions');
+  var box = document.getElementById('search-suggestions');
   if (!val || val.length < 2) { box.style.display = 'none'; return; }
-  const up = val.toUpperCase().trim();
-  const matches = Object.keys(STOCK_MAP).filter(k => k.startsWith(up) || k.includes(up)).slice(0, 8);
+  var up = val.toUpperCase().trim();
+  var matches = Object.keys(STOCK_MAP).filter(function(k){ return k.startsWith(up) || k.includes(up); }).slice(0,8);
   if (!matches.length) { box.style.display = 'none'; return; }
   box.style.display = 'block';
-  box.innerHTML = matches.map(m =>
-    `<div onclick="quickSearch('${m}')"
-      style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;border-bottom:1px solid var(--br2)"
-      onmouseover="this.style.background='rgba(255,153,51,.08)'"
-      onmouseout="this.style.background='transparent'">
-      <span style="color:var(--sf)">${m}</span>
-      <span style="color:var(--dim2);font-size:9px;margin-left:8px">${STOCK_MAP[m]}</span>
-    </div>`
-  ).join('');
+  box.innerHTML = matches.map(function(m){
+    return '<div onclick="quickSearch(\''+m+'\')" style="padding:7px 12px;font-family:\'DM Mono\',monospace;font-size:10px;cursor:pointer;border-bottom:1px solid var(--br2)" onmouseover="this.style.background=\'rgba(255,153,51,.08)\'" onmouseout="this.style.background=\'transparent\'"><span style="color:var(--sf)">'+m+'</span><span style="color:var(--dim2);font-size:9px;margin-left:8px">'+STOCK_MAP[m]+'</span></div>';
+  }).join('');
 }
 
 function quickSearch(sym) {
@@ -1828,10 +1780,23 @@ function quickSearch(sym) {
 }
 
 function doSearch() {
-  const input = document.getElementById('stock-search-input').value;
+  var input = document.getElementById('stock-search-input').value;
   if (!input.trim()) return;
   document.getElementById('search-suggestions').style.display = 'none';
   loadStockData(resolveSymbol(input));
+}
+
+function genSimChart(base, range) {
+  var counts = { '1d': 78, '5d': 100, '1mo': 22, '3mo': 65, '1y': 52 };
+  var n = counts[range] || 22;
+  var pts = [], v = base * 0.97, now = Date.now();
+  var step = range === '1d' ? 5*60000 : 24*3600000;
+  for (var i = n; i >= 0; i--) {
+    v = v * (1 + (Math.random()-0.478)*0.008);
+    pts.push({ t: new Date(now - i*step), c: +v.toFixed(2) });
+  }
+  pts[pts.length-1].c = base;
+  return pts;
 }
 
 async function loadStockData(sym) {
@@ -1839,45 +1804,35 @@ async function loadStockData(sym) {
   document.getElementById('search-empty').style.display   = 'none';
   document.getElementById('search-result').style.display  = 'none';
   document.getElementById('search-loading').style.display = 'block';
-  const ldiv = document.querySelector('#search-loading div:last-child');
-  if (ldiv) ldiv.innerHTML = 'Searching live price via AI…<br><span style="font-size:9px;opacity:.5">5–10 seconds</span>';
+  var ldiv = document.querySelector('#search-loading div:last-child');
+  if (ldiv) ldiv.innerHTML = 'Fetching live data…<br><span style="font-size:9px;opacity:.5">2–4 seconds</span>';
 
-  const ticker = sym.replace('.NS','').replace('.BO','');
-  const fund = FUNDAMENTALS[sym] || {};
-  const name = fund.name || ticker;
+  try {
+    var qj = await apiFetch({ sym: sym, type: 'quote' });
+    var cj = await apiFetch({ sym: sym, type: 'chart', range: '1y', interval: '1d' }, 14000);
 
-  const text = await claudeSearch(
-    'Search for the current live NSE stock price of ' + name + ' (' + ticker + ') right now on NSE India or MoneyControl.\n' +
-    'Return ONLY this JSON with real current INR values, no markdown, no extra text:\n' +
-    '{"price":1234.50,"prev_close":1220.00,"open":1225.00,"high":1245.00,"low":1218.00,"volume":2500000,"week52_high":1450.00,"week52_low":950.00}'
-  );
+    document.getElementById('search-loading').style.display = 'none';
 
-  document.getElementById('search-loading').style.display = 'none';
+    var q = qj && qj.quoteResponse && qj.quoteResponse.result && qj.quoteResponse.result[0];
+    if (!q || !q.regularMarketPrice) { showSearchError(sym); return; }
 
-  const d = extractJSON(text);
-  if (!d || !d.price) { showSearchError(sym); return; }
+    currentStockPrice = q.regularMarketPrice;
 
-  currentStockPrice = d.price;
-
-  const q = {
-    symbol: ticker,
-    longName: name,
-    exchange: 'NSE',
-    regularMarketPrice:         d.price,
-    regularMarketPreviousClose: d.prev_close || d.price * 0.99,
-    regularMarketOpen:          d.open       || d.price,
-    regularMarketDayHigh:       d.high       || d.price * 1.01,
-    regularMarketDayLow:        d.low        || d.price * 0.99,
-    fiftyTwoWeekHigh:           d.week52_high || d.price * 1.2,
-    fiftyTwoWeekLow:            d.week52_low  || d.price * 0.75,
-    regularMarketVolume:        d.volume || null,
-    marketCap:                  null,
-  };
-
-  const chartPts = genSimChart(d.price, currentRange);
-  const closes   = genSimChart(d.price, '1y').map(p => p.c);
-  renderStockResult(q, fund, chartPts, sym, closes);
+    var res  = cj && cj.chart && cj.chart.result && cj.chart.result[0];
+    var ts   = (res && res.timestamp) || [];
+    var q0   = (res && res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
+    var hist = ts.map(function(t,i){ return { t: new Date(t*1000), c: q0.close && q0.close[i] }; }).filter(function(p){ return p.c; });
+    var closes = hist.map(function(p){ return p.c; });
+    var chartPts = hist.length > 2 ? hist : genSimChart(q.regularMarketPrice, currentRange);
+    var fund = FUNDAMENTALS[sym] || {};
+    renderStockResult(q, fund, chartPts, sym, closes);
+  } catch(e) {
+    console.error(e);
+    document.getElementById('search-loading').style.display = 'none';
+    showSearchError(sym);
+  }
 }
+
 
 function showSearchError(sym) {
   document.getElementById('search-result').style.display = 'none';
