@@ -1561,6 +1561,8 @@ function updateAllDisplays(){
   triggerSmartAlerts();
   // Rebuild live ticker with fresh prices
   buildLiveTicker();
+  // Refresh portfolio P&L if open
+  if (typeof renderPortfolioTab === 'function' && document.getElementById('pg-portfolio')?.classList.contains('on')) renderPortfolioTab();
 }
 
 function buildLiveTicker() {
@@ -1737,14 +1739,18 @@ function tab(n,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));
   document.getElementById('pg-'+n).classList.add('on');
-  el.classList.add('on');
-  if(n==='social')  setTimeout(updateSocialTab,50);
-  if(n==='insider') setTimeout(updateInsiderTab,50);
-  if(n==='whale')   setTimeout(function(){
+  if(el) el.classList.add('on');
+  if(n==='social')      setTimeout(updateSocialTab,50);
+  if(n==='insider')     setTimeout(updateInsiderTab,50);
+  if(n==='whale')       setTimeout(function(){
     const stocks=Object.values(window.liveStocks||{});
     const sorted=[...stocks].sort((a,b)=>b.pct-a.pct);
     updateWhaleTab(sorted.filter(s=>s.up).slice(0,5),sorted.filter(s=>!s.up).reverse().slice(0,5),sorted);
   },50);
+  if(n==='commodities') setTimeout(function(){ if(typeof renderCommoditiesTab==='function') renderCommoditiesTab(); },50);
+  if(n==='fno')         setTimeout(function(){ if(typeof loadFno==='function') loadFno(window._fnoSym||'NIFTY',null); },50);
+  if(n==='portfolio')   setTimeout(function(){ if(typeof renderPortfolioTab==='function') renderPortfolioTab(); },50);
+  if(n==='alerts')      setTimeout(function(){ if(typeof renderAlertsTab==='function') renderAlertsTab(); },50);
 }
 
 
@@ -1777,6 +1783,7 @@ function storeStock(sym, price, prev, vol, high, low, name) {
     vol: vol||null, high: high||price, low: low||price,
     name: (name||tick).replace(' Limited','').replace(' Ltd','').slice(0,20),
   };
+  if (typeof checkPriceAlerts === 'function') checkPriceAlerts();
 }
 
 // Fetch via NSE market endpoints (bulk — one call per endpoint)
@@ -3136,15 +3143,7 @@ function toggleTheme() {
   try { if (_cmxChart) { _cmxChart.destroy(); _cmxChart = null; } renderCmxChart(_cmxSel); } catch(e){}
 }
 
-// Hook new tabs into tab switcher
-const _origTab = tab;
-function tab(n, el) {
-  _origTab(n, el);
-  if (n === 'commodities') setTimeout(renderCommoditiesTab, 50);
-  if (n === 'fno')         setTimeout(() => loadFno(_fnoSym, null), 50);
-  if (n === 'portfolio')   setTimeout(renderPortfolioTab, 50);
-  if (n === 'alerts')      setTimeout(renderAlertsTab, 50);
-}
+// new tabs hooked directly into original tab() below
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COMMODITIES — MCX Gold, Silver, Crude, USD/INR
@@ -3811,22 +3810,7 @@ function checkPriceAlerts() {
   }
 }
 
-// Hook into existing live price update cycle
-const _origUpdateAll = updateAllDisplays;
-function updateAllDisplays_hooked() {
-  _origUpdateAll();
-  checkPriceAlerts();
-  if (document.getElementById('pg-portfolio')?.classList.contains('on')) renderPortfolioTab();
-}
-// Override updateAllDisplays globally
-window.updateAllDisplays = updateAllDisplays_hooked;
-
-// Check alerts every time stocks update too
-const _origStoreStock = storeStock;
-function storeStock(sym, price, prev, vol, high, low, name) {
-  _origStoreStock(sym, price, prev, vol, high, low, name);
-  checkPriceAlerts();
-}
+// Portfolio + alert checks are patched directly into updateAllDisplays and storeStock above
 
 // Request notification permission proactively (silent - only if already granted)
 if (Notification.permission === 'granted') _notifGranted = true;
