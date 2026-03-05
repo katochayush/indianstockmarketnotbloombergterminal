@@ -684,6 +684,80 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
   .ind-btns { display:none; }
 }
 
+
+/* ══ SCREENER ══════════════════════════════════════════════════════════════ */
+.scr-wrap{display:flex;flex-direction:column;height:calc(100vh - 140px);min-height:600px;overflow:hidden}
+.scr-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--br2);gap:12px;flex-wrap:wrap}
+.scr-bar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.scr-bar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.scr-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.15em;color:var(--sf);white-space:nowrap}
+.scr-seg{display:flex;background:rgba(0,0,0,.3);border-radius:5px;padding:2px;gap:1px}
+.scr-seg-btn{background:transparent;border:none;color:var(--dim2);cursor:pointer;padding:4px 10px;border-radius:4px;font-size:9px;font-family:DM Mono,monospace;letter-spacing:.08em;transition:all .15s;white-space:nowrap}
+.scr-seg-btn.on{background:rgba(255,153,51,.2);color:var(--sf)}
+.scr-presets{display:flex;gap:4px;flex-wrap:wrap}
+.scr-preset{background:rgba(255,255,255,.04);border:1px solid var(--br2);color:var(--dim2);cursor:pointer;padding:4px 10px;border-radius:20px;font-size:9px;font-family:DM Mono,monospace;transition:all .15s;white-space:nowrap}
+.scr-preset:hover{color:var(--tx);border-color:rgba(255,153,51,.3);background:rgba(255,153,51,.06)}
+.scr-preset.active{background:rgba(255,153,51,.15);border-color:rgba(255,153,51,.4);color:var(--sf)}
+.scr-view-btns{display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:4px;padding:2px}
+.scr-view-btn{background:transparent;border:none;color:var(--dim2);cursor:pointer;padding:4px 10px;border-radius:3px;font-size:9px;font-family:DM Mono,monospace;transition:all .15s}
+.scr-view-btn.on{background:rgba(255,153,51,.2);color:var(--sf)}
+.scr-run-btn{background:linear-gradient(135deg,rgba(255,153,51,.3),rgba(255,153,51,.15));border:1px solid rgba(255,153,51,.5);color:var(--sf);cursor:pointer;padding:7px 18px;border-radius:5px;font-size:10px;font-family:DM Mono,monospace;font-weight:700;letter-spacing:.1em;transition:all .2s;white-space:nowrap}
+.scr-run-btn:hover{background:linear-gradient(135deg,rgba(255,153,51,.45),rgba(255,153,51,.25));box-shadow:0 0 12px rgba(255,153,51,.2)}
+.scr-run-btn:disabled{opacity:.4;cursor:not-allowed}
+.scr-filters{display:flex;gap:8px;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--br2);flex-wrap:wrap;align-items:flex-end}
+.scr-filter-group{display:flex;flex-direction:column;gap:4px;min-width:120px}
+.scr-fg-label{font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:.12em;font-family:DM Mono,monospace}
+.scr-range-row{display:flex;align-items:center;gap:4px}
+.scr-inp{background:var(--bg);border:1px solid var(--br2);color:var(--tx);border-radius:4px;padding:5px 7px;font-family:DM Mono,monospace;font-size:10px;width:64px;outline:none;transition:border-color .15s}
+.scr-inp:focus{border-color:rgba(255,153,51,.4)}
+.scr-dash{color:var(--dim2);font-size:10px}
+.scr-sel{background:var(--bg);border:1px solid var(--br2);color:var(--tx);border-radius:4px;padding:5px 7px;font-family:DM Mono,monospace;font-size:10px;outline:none;cursor:pointer;min-width:160px}
+.scr-status{padding:8px 16px;font-size:10px;color:var(--dim2);font-family:DM Mono,monospace;background:var(--bg2);border-bottom:1px solid var(--br2);min-height:34px;display:flex;align-items:center;gap:8px}
+.scr-status strong{color:var(--sf)}
+.scr-spinner{width:10px;height:10px;border:2px solid rgba(255,153,51,.2);border-top-color:var(--sf);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scr-results-wrap{flex:1;overflow-y:auto;padding:0}
+
+/* Table view */
+.scr-table{width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:10px}
+.scr-table th{padding:8px 12px;text-align:left;font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid var(--br2);background:var(--bg2);cursor:pointer;white-space:nowrap;user-select:none;position:sticky;top:0;z-index:2}
+.scr-table th:hover{color:var(--tx)}
+.scr-table th.sort-asc::after{content:" ▲";color:var(--sf)}
+.scr-table th.sort-desc::after{content:" ▼";color:var(--sf)}
+.scr-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap;vertical-align:middle}
+.scr-table tr:hover td{background:rgba(255,255,255,.02)}
+.scr-table tr{cursor:pointer}
+.scr-sym-cell{color:var(--sf);font-weight:600;font-size:11px}
+.scr-name-cell{color:var(--dim2);font-size:9px;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.scr-price-cell{color:var(--tx);font-weight:500}
+.scr-up{color:var(--gn)}.scr-dn{color:var(--rd)}
+.scr-badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:8px;font-weight:700;letter-spacing:.06em}
+.scr-badge-bull{background:rgba(0,210,106,.12);color:var(--gn);border:1px solid rgba(0,210,106,.2)}
+.scr-badge-bear{background:rgba(255,59,59,.12);color:var(--rd);border:1px solid rgba(255,59,59,.2)}
+.scr-badge-neu{background:rgba(255,255,255,.06);color:var(--dim2);border:1px solid var(--br2)}
+.scr-rsi-bar{width:48px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;display:inline-block;vertical-align:middle;margin-left:4px;position:relative;overflow:hidden}
+.scr-rsi-fill{height:100%;border-radius:2px;position:absolute;left:0;top:0}
+
+/* Card view */
+.scr-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;padding:12px 16px}
+.scr-card{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;padding:12px;cursor:pointer;transition:all .2s}
+.scr-card:hover{border-color:rgba(255,153,51,.3);background:var(--bg3)}
+.scr-card-sym{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.1em;color:var(--sf)}
+.scr-card-name{font-size:9px;color:var(--dim2);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scr-card-price{font-family:DM Mono,monospace;font-size:14px;font-weight:600;color:var(--tx)}
+.scr-card-chg{font-family:DM Mono,monospace;font-size:10px;font-weight:700}
+.scr-card-metrics{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--br2)}
+.scr-card-metric{display:flex;flex-direction:column;gap:1px}
+.scr-card-metric-label{font-size:7px;color:var(--dim2);text-transform:uppercase;letter-spacing:.1em;font-family:DM Mono,monospace}
+.scr-card-metric-val{font-size:10px;color:var(--tx);font-family:DM Mono,monospace}
+
+/* No results */
+.scr-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:8px;color:var(--dim2)}
+.scr-empty-icon{font-size:36px;opacity:.4}
+.scr-filter-section-label{font-size:8px;color:var(--sf);text-transform:uppercase;letter-spacing:.18em;font-family:DM Mono,monospace;font-weight:700;align-self:flex-end;padding-bottom:6px;white-space:nowrap}
+.scr-filter-sep{width:1px;background:var(--br2);margin:0 4px;align-self:stretch}
+#pg-screener.on{display:flex;flex-direction:column}
+
 </style>
 </head>
 <body>
@@ -788,6 +862,7 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
     <div class="nav-group-label">Live</div>
     <div class="nav-group-tabs">
       <div class="nt on" data-tab="markets"  onclick="tab('markets',this)">📊 Markets</div>
+      <div class="nt"    data-tab="screener"   onclick="tab('screener',this)">🔬 Screener</div>
       <div class="nt"    data-tab="commodities" onclick="tab('commodities',this)">🥇 Commodities</div>
       <div class="nt"    data-tab="fno"      onclick="tab('fno',this)">📈 F&amp;O</div>
       <div class="nt"    data-tab="oil"      onclick="tab('oil',this)">🛢️ Oil</div>
@@ -1692,6 +1767,116 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
   </div>
 </div>
 
+<!-- ══ TAB: SCREENER ════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-screener">
+  <div class="scr-wrap">
+    <div class="scr-bar">
+      <div class="scr-bar-left">
+        <span class="scr-title">🔬 STOCK SCREENER</span>
+        <div class="scr-seg" id="scr-universe">
+          <button class="scr-seg-btn on" data-u="nifty50"  onclick="scrSetUniverse('nifty50',this)">Nifty 50</button>
+          <button class="scr-seg-btn"    data-u="nifty100" onclick="scrSetUniverse('nifty100',this)">Nifty 100</button>
+          <button class="scr-seg-btn"    data-u="nifty200" onclick="scrSetUniverse('nifty200',this)">Nifty 200</button>
+          <button class="scr-seg-btn"    data-u="all"      onclick="scrSetUniverse('all',this)" title="All NSE listed stocks — uses bulk snapshot, fastest">All NSE</button>
+        </div>
+        <div class="scr-presets">
+          <button class="scr-preset" onclick="scrPreset('oversold')">📉 Oversold RSI</button>
+          <button class="scr-preset" onclick="scrPreset('overbought')">📈 Overbought RSI</button>
+          <button class="scr-preset" onclick="scrPreset('breakout')">🚀 Near 52W High</button>
+          <button class="scr-preset" onclick="scrPreset('dip')">💎 Near 52W Low</button>
+          <button class="scr-preset" onclick="scrPreset('volume')">🔊 Volume Surge</button>
+          <button class="scr-preset" onclick="scrPreset('ema_bull')">📊 EMA Bullish</button>
+          <button class="scr-preset" onclick="scrPreset('gainers')">🟢 Top Gainers</button>
+          <button class="scr-preset" onclick="scrPreset('losers')">🔴 Top Losers</button>
+          <button class="scr-preset" onclick="scrPreset('long_build')">🎯 Long Buildup</button>
+          <button class="scr-preset" onclick="scrPreset('short_build')">⚠️ Short Buildup</button>
+          <button class="scr-preset" onclick="scrPreset('high_div')">💰 High Dividend</button>
+          <button class="scr-preset" onclick="scrPreset('week_up')">📅 Strong Week</button>
+          <button class="scr-preset" onclick="scrPreset('clear')" style="opacity:.5">✕ Clear</button>
+        </div>
+      </div>
+      <div class="scr-bar-right">
+        <div class="scr-view-btns">
+          <button class="scr-view-btn on" onclick="scrSetView('table',this)">☰ Table</button>
+          <button class="scr-view-btn"    onclick="scrSetView('cards',this)">⊞ Cards</button>
+        </div>
+        <button class="scr-run-btn" id="scr-run-btn" onclick="runScreener()">▶ Run Screen</button>
+      </div>
+    </div>
+    <div class="scr-filters" id="scr-filters">
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">RSI (14)</div>
+        <div class="scr-range-row">
+          <input type="number" class="scr-inp" id="scr-rsi-min" placeholder="Min" min="0" max="100">
+          <span class="scr-dash">—</span>
+          <input type="number" class="scr-inp" id="scr-rsi-max" placeholder="Max" min="0" max="100">
+        </div>
+      </div>
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">Change % (day)</div>
+        <div class="scr-range-row">
+          <input type="number" class="scr-inp" id="scr-chg-min" placeholder="Min" step="0.1">
+          <span class="scr-dash">—</span>
+          <input type="number" class="scr-inp" id="scr-chg-max" placeholder="Max" step="0.1">
+        </div>
+      </div>
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">Price (₹)</div>
+        <div class="scr-range-row">
+          <input type="number" class="scr-inp" id="scr-price-min" placeholder="Min">
+          <span class="scr-dash">—</span>
+          <input type="number" class="scr-inp" id="scr-price-max" placeholder="Max">
+        </div>
+      </div>
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">% from 52W High</div>
+        <div class="scr-range-row">
+          <input type="number" class="scr-inp" id="scr-52h-min" placeholder="Min" step="0.1">
+          <span class="scr-dash">—</span>
+          <input type="number" class="scr-inp" id="scr-52h-max" placeholder="Max" step="0.1">
+        </div>
+      </div>
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">Vol vs Avg (×)</div>
+        <div class="scr-range-row">
+          <input type="number" class="scr-inp" id="scr-vol-min" placeholder="Min" step="0.1">
+          <span class="scr-dash">—</span>
+          <input type="number" class="scr-inp" id="scr-vol-max" placeholder="Max" step="0.1">
+        </div>
+      </div>
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">P/E Ratio</div>
+        <div class="scr-range-row">
+          <input type="number" class="scr-inp" id="scr-pe-min" placeholder="Min" step="0.1">
+          <span class="scr-dash">—</span>
+          <input type="number" class="scr-inp" id="scr-pe-max" placeholder="Max" step="0.1">
+        </div>
+      </div>
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">EMA Signal</div>
+        <select class="scr-sel" id="scr-ema-sig">
+          <option value="">Any</option>
+          <option value="bull">Price > EMA20 (Bullish)</option>
+          <option value="bear">Price &lt; EMA20 (Bearish)</option>
+          <option value="cross_up">EMA20 > EMA50 (Golden Cross)</option>
+          <option value="cross_dn">EMA20 &lt; EMA50 (Death Cross)</option>
+        </select>
+      </div>
+      <div class="scr-filter-group">
+        <div class="scr-fg-label">Market Cap</div>
+        <select class="scr-sel" id="scr-mcap">
+          <option value="">Any</option>
+          <option value="large">Large Cap (&gt;₹20,000 Cr)</option>
+          <option value="mid">Mid Cap (₹5,000–20,000 Cr)</option>
+          <option value="small">Small Cap (&lt;₹5,000 Cr)</option>
+        </select>
+      </div>
+    </div>
+    <div class="scr-status" id="scr-status">Pick a preset or set filters above — then press <strong>▶ Run Screen</strong></div>
+    <div id="scr-results" class="scr-results-wrap"></div>
+  </div>
+</div>
+
 <!-- ══ TAB: PRICE ALERTS ════════════════════════════════════════════ -->
 <div class="pg" id="pg-alerts">
   <div class="bbg" style="padding:14px">
@@ -2089,6 +2274,7 @@ function tab(n,el){
   if(n==='earnings')    setTimeout(function(){ if(typeof fetchLiveEarnings==='function') fetchLiveEarnings(); },50);
   if(n==='oil')         setTimeout(function(){ if(typeof renderOilTab==='function') renderOilTab(); },50);
   if(n==='charts')      setTimeout(function(){ if(typeof initChartsTab==='function') initChartsTab(); },60);
+  if(n==='screener')     setTimeout(function(){ if(typeof initScreener==='function') initScreener(); },60);
   if(n==='fno')         setTimeout(function(){ if(typeof loadFno==='function') loadFno(window._fnoSym||'NIFTY',null); },50);
   if(n==='portfolio')   setTimeout(function(){ if(typeof renderPortfolioTab==='function') renderPortfolioTab(); },50);
   if(n==='alerts')      setTimeout(function(){ if(typeof renderAlertsTab==='function') renderAlertsTab(); },50);
@@ -5125,6 +5311,573 @@ function loadTVWidget(sym) {
 }
 
 // charts tab is hooked directly into the main tab() function above
+
+// ══ SCREENER ENGINE ══════════════════════════════════════════════════════════
+
+const SCR_NIFTY50 = WATCH_SYMS.slice(0, 30);
+const SCR_NIFTY100 = [...new Set([...SCR_NIFTY50, ...['ADANIPORTS','ADANIENT','APOLLOHOSP','ASIANPAINT','BAJAJ-AUTO','BAJAJFINSV','BPCL','BRITANNIA','CIPLA','COALINDIA','DIVISLAB','DRREDDY','EICHERMOT','GRASIM','HCLTECH','HEROMOTOCO','HINDALCO','HINDUNILVR','INDUSINDBK','JSWSTEEL','KOTAKBANK','LT','M&M','NESTLEIND','NTPC','ONGC','POWERGRID','SBILIFE','SHRIRAMFIN','SUNPHARMA','TATACONSUM','TATAMOTORS','TATASTEEL','TECHM','TITAN','TRENT','ULTRACEMCO','UPL','VEDL','WIPRO']])];
+const SCR_NIFTY200 = [...new Set([...SCR_NIFTY100, ...['ABCAPITAL','ABFRL','ACC','APLAPOLLO','AUBANK','AUROPHARMA','BALKRISIND','BANDHANBNK','BANKBARODA','BANKINDIA','BEL','BERGEPAINT','BHEL','BIOCON','CANBK','CHOLAFIN','COLPAL','CONCOR','COROMANDEL','CUMMINSIND','DABUR','DALBHARAT','DEEPAKNTR','DIXON','DLF','ESCORTS','FEDERALBNK','GAIL','GMRINFRA','GODREJCP','GODREJPROP','HAVELLS','HDFCLIFE','HINDPETRO','IDFCFIRSTB','IEX','INDHOTEL','INDUSTOWER','IRCTC','IRFC','ITC','JINDALSTEL','JSWENERGY','JUBLFOOD','LICHSGFIN','LTIM','LTTS','LUPIN','MFSL','MPHASIS','MRF','MUTHOOTFIN','NAUKRI','NAVINFLUOR','NMDC','OBEROIRLTY','OFSS','PAGEIND','PEL','PERSISTENT','PETRONET','PIDILITIND','PIIND','PNB','POLYCAB','RECLTD','SAILSTEEL','SBICARD','SIEMENS','SRF','SUNTV','SUPREMEIND','TORNTPHARM','TORNTPOWER','TVSMOTOR','UBL','UNIONBANK','VBL','VOLTAS','WHIRLPOOL','ZYDUSLIFE']])];
+
+let _scrUniverse     = 'nifty50';
+let _scrView         = 'table';
+let _scrRunning      = false;
+let _scrResults      = [];
+let _scrSort         = { col: 'chgPct', dir: 'desc' };
+let _scrInited       = false;
+let _scrActivePreset = null;
+let _scrBulkCache    = null;   // { rows, ts } — cached bulk market snapshot
+let _scrFnoBulkCache = null;   // { rows, ts } — cached F&O OI data
+let _scrChartCache   = {};     // sym → { rsi, ema20, ema50, chgWeek, chgMonth }
+
+function initScreener() {
+  if (_scrInited) return;
+  _scrInited = true;
+  // Rebuild filter UI to include ALL filter types
+  renderScrFilterUI();
+  scrSetStatus('Pick a preset or set filters — then press ▶ Run Screen');
+}
+
+// ── Render extended filter UI ─────────────────────────────────────────────────
+function renderScrFilterUI() {
+  const wrap = document.getElementById('scr-filters');
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <!-- Row 1: Technical -->
+    <div class="scr-filter-section-label">📊 Technical</div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">RSI (14)</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-rsi-min" placeholder="Min" min="0" max="100">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-rsi-max" placeholder="Max" min="0" max="100">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">EMA Signal</div>
+      <select class="scr-sel" id="scr-ema-sig">
+        <option value="">Any</option>
+        <option value="bull">Price > EMA20 ↑</option>
+        <option value="bear">Price &lt; EMA20 ↓</option>
+        <option value="cross_up">Golden Cross (EMA20>50)</option>
+        <option value="cross_dn">Death Cross (EMA20&lt;50)</option>
+      </select>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">% from 52W High</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-52h-min" placeholder="Min" step="0.1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-52h-max" placeholder="Max" step="0.1">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Vol vs Avg (×)</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-vol-min" placeholder="Min" step="0.1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-vol-max" placeholder="Max" step="0.1">
+      </div>
+    </div>
+
+    <div class="scr-filter-sep"></div>
+
+    <!-- Row 2: Price Action -->
+    <div class="scr-filter-section-label">💹 Price Action</div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Change % (today)</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-chg-min" placeholder="Min" step="0.1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-chg-max" placeholder="Max" step="0.1">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Change % (1 week)</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-chgw-min" placeholder="Min" step="0.1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-chgw-max" placeholder="Max" step="0.1">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Change % (1 month)</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-chgm-min" placeholder="Min" step="0.1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-chgm-max" placeholder="Max" step="0.1">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Price (₹)</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-price-min" placeholder="Min">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-price-max" placeholder="Max">
+      </div>
+    </div>
+
+    <div class="scr-filter-sep"></div>
+
+    <!-- Row 3: Fundamental -->
+    <div class="scr-filter-section-label">📈 Fundamental</div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">P/E Ratio</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-pe-min" placeholder="Min" step="0.1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-pe-max" placeholder="Max" step="0.1">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Dividend Yield %</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-dy-min" placeholder="Min" step="0.1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-dy-max" placeholder="Max" step="0.1">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Market Cap</div>
+      <select class="scr-sel" id="scr-mcap">
+        <option value="">Any</option>
+        <option value="large">Large Cap (&gt;₹20,000 Cr)</option>
+        <option value="mid">Mid Cap (₹5,000–20,000 Cr)</option>
+        <option value="small">Small Cap (&lt;₹5,000 Cr)</option>
+      </select>
+    </div>
+
+    <div class="scr-filter-sep"></div>
+
+    <!-- Row 4: F&O -->
+    <div class="scr-filter-section-label">🎯 F&amp;O</div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">F&amp;O Stock Only</div>
+      <select class="scr-sel" id="scr-fno-only">
+        <option value="">All stocks</option>
+        <option value="yes">F&amp;O stocks only</option>
+      </select>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">OI Change %</div>
+      <div class="scr-range-row">
+        <input type="number" class="scr-inp" id="scr-oichg-min" placeholder="Min" step="1">
+        <span class="scr-dash">—</span>
+        <input type="number" class="scr-inp" id="scr-oichg-max" placeholder="Max" step="1">
+      </div>
+    </div>
+    <div class="scr-filter-group">
+      <div class="scr-fg-label">Long/Short Build</div>
+      <select class="scr-sel" id="scr-fno-signal">
+        <option value="">Any</option>
+        <option value="long_build">Long Buildup (price↑ OI↑)</option>
+        <option value="short_build">Short Buildup (price↓ OI↑)</option>
+        <option value="long_unwind">Long Unwinding (price↓ OI↓)</option>
+        <option value="short_cover">Short Covering (price↑ OI↓)</option>
+      </select>
+    </div>
+  `;
+}
+
+function scrGetFilters() {
+  const gv = id => { const el=document.getElementById(id); return el ? el.value : ''; };
+  const gn = id => { const v=parseFloat(gv(id)); return isNaN(v) ? null : v; };
+  return {
+    rsiMin: gn('scr-rsi-min'), rsiMax: gn('scr-rsi-max'),
+    emaSig: gv('scr-ema-sig') || null,
+    h52Min: gn('scr-52h-min'), h52Max: gn('scr-52h-max'),
+    volMin: gn('scr-vol-min'), volMax: gn('scr-vol-max'),
+    chgMin: gn('scr-chg-min'), chgMax: gn('scr-chg-max'),
+    chgwMin:gn('scr-chgw-min'),chgwMax:gn('scr-chgw-max'),
+    chgmMin:gn('scr-chgm-min'),chgmMax:gn('scr-chgm-max'),
+    priceMin:gn('scr-price-min'),priceMax:gn('scr-price-max'),
+    peMin:  gn('scr-pe-min'),  peMax:  gn('scr-pe-max'),
+    dyMin:  gn('scr-dy-min'),  dyMax:  gn('scr-dy-max'),
+    mcap:   gv('scr-mcap')  || null,
+    fnoOnly:gv('scr-fno-only') === 'yes',
+    oiChgMin:gn('scr-oichg-min'),oiChgMax:gn('scr-oichg-max'),
+    fnoSignal:gv('scr-fno-signal') || null,
+  };
+}
+
+function scrNeedsChart(f) {
+  return f.rsiMin!==null || f.rsiMax!==null || f.emaSig ||
+         f.chgwMin!==null || f.chgwMax!==null ||
+         f.chgmMin!==null || f.chgmMax!==null;
+}
+
+function scrNeedsFno(f) {
+  return f.fnoOnly || f.oiChgMin!==null || f.oiChgMax!==null || f.fnoSignal;
+}
+
+function scrSetUniverse(u, btn) {
+  _scrUniverse = u;
+  document.querySelectorAll('.scr-seg-btn').forEach(b => b.classList.toggle('on', b.dataset.u === u));
+}
+
+function scrSetView(v, btn) {
+  _scrView = v;
+  document.querySelectorAll('.scr-view-btn').forEach(b =>
+    b.classList.toggle('on', b.textContent.toLowerCase().includes(v==='table'?'table':'card'))
+  );
+  if (_scrResults.length) renderScrResults(_scrResults);
+}
+
+function scrClearInputs() {
+  document.querySelectorAll('.scr-inp').forEach(el => el.value = '');
+  document.querySelectorAll('.scr-sel').forEach(el => el.selectedIndex = 0);
+  document.querySelectorAll('.scr-preset').forEach(b => b.classList.remove('active'));
+  _scrActivePreset = null;
+}
+
+function scrPreset(name) {
+  scrClearInputs();
+  if (name === 'clear') return;
+
+  const set = (id, v) => { const el=document.getElementById(id); if(el) el.value=v; };
+  const presets = {
+    oversold:    () => { set('scr-rsi-max', 35); },
+    overbought:  () => { set('scr-rsi-min', 65); },
+    breakout:    () => { set('scr-52h-min', -3); set('scr-52h-max', 0); },
+    dip:         () => { set('scr-52h-min', -60); set('scr-52h-max', -40); },
+    volume:      () => { set('scr-vol-min', 2); },
+    ema_bull:    () => { set('scr-ema-sig', 'bull'); document.getElementById('scr-ema-sig').value='bull'; },
+    gainers:     () => { set('scr-chg-min', 2); },
+    losers:      () => { set('scr-chg-max', -2); },
+    long_build:  () => { document.getElementById('scr-fno-signal').value='long_build'; document.getElementById('scr-fno-only').value='yes'; },
+    short_build: () => { document.getElementById('scr-fno-signal').value='short_build'; document.getElementById('scr-fno-only').value='yes'; },
+    high_div:    () => { set('scr-dy-min', 3); },
+    week_up:     () => { set('scr-chgw-min', 5); },
+  };
+
+  if (!presets[name]) return;
+  presets[name]();
+  _scrActivePreset = name;
+  document.querySelectorAll('.scr-preset').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick')?.includes(`'${name}'`));
+  });
+  runScreener();
+}
+
+function scrSetStatus(msg, loading=false) {
+  const el = document.getElementById('scr-status');
+  if (!el) return;
+  el.innerHTML = (loading ? '<div class="scr-spinner"></div> ' : '') + msg;
+}
+
+async function runScreener() {
+  if (_scrRunning) return;
+  _scrRunning = true;
+  const btn = document.getElementById('scr-run-btn');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ Screening…'; }
+
+  const f = scrGetFilters();
+  const needsChart = scrNeedsChart(f);
+  const needsFno   = scrNeedsFno(f);
+
+  try {
+    // ── Step 1: Bulk market snapshot ─────────────────────────────────────
+    scrSetStatus('Fetching market snapshot…', true);
+    let bulkRows;
+
+    // Use cache if < 90 seconds old
+    if (_scrBulkCache && (Date.now() - _scrBulkCache.ts < 90000)) {
+      bulkRows = _scrBulkCache.rows;
+    } else {
+      const bj = await apiFetch({ type: 'screener' }, 15000);
+      bulkRows = bj?.rows || [];
+      if (bulkRows.length) _scrBulkCache = { rows: bulkRows, ts: Date.now() };
+    }
+
+    // Filter to selected universe if not "all"
+    if (_scrUniverse !== 'all') {
+      const universe = _scrUniverse === 'nifty50'  ? new Set(SCR_NIFTY50)
+                     : _scrUniverse === 'nifty100' ? new Set(SCR_NIFTY100)
+                     : new Set(SCR_NIFTY200);
+      bulkRows = bulkRows.filter(r => universe.has(r.sym));
+    }
+
+    scrSetStatus(`Got ${bulkRows.length} stocks. Applying filters…`, true);
+
+    // ── Step 2: F&O bulk OI data if needed ───────────────────────────────
+    let fnoMap = {};
+    if (needsFno) {
+      scrSetStatus('Fetching F&O OI data…', true);
+      try {
+        let fnoRows;
+        if (_scrFnoBulkCache && (Date.now() - _scrFnoBulkCache.ts < 90000)) {
+          fnoRows = _scrFnoBulkCache.rows;
+        } else {
+          const fj = await apiFetch({ type: 'fno_bulk' }, 12000);
+          fnoRows = fj?.rows || [];
+          if (fnoRows.length) _scrFnoBulkCache = { rows: fnoRows, ts: Date.now() };
+        }
+        fnoRows.forEach(r => { fnoMap[r.sym] = r; });
+      } catch(e) { /* F&O data not critical */ }
+    }
+
+    // ── Step 3: Merge F&O data into bulk rows ────────────────────────────
+    let rows = bulkRows.map(r => ({
+      ...r,
+      oi:        fnoMap[r.sym]?.oi        || null,
+      oiChgPct:  fnoMap[r.sym]?.oiChg     || null,
+      isFno:     r.isFno || !!fnoMap[r.sym],
+    }));
+
+    // ── Step 4: Pre-filter WITHOUT chart data (fast filters first) ───────
+    const preFiltered = rows.filter(r => scrApplyFastFilters(r, f));
+    scrSetStatus(`${preFiltered.length} stocks after fast filters. ${needsChart ? 'Fetching chart data for RSI/EMA…' : 'Done!'}`, true);
+
+    // ── Step 5: Chart data (RSI/EMA/week/month change) only if needed ────
+    let enriched = preFiltered;
+    if (needsChart && preFiltered.length > 0) {
+      const BATCH = 8;
+      enriched = [];
+      for (let i = 0; i < preFiltered.length; i += BATCH) {
+        const batch = preFiltered.slice(i, i + BATCH);
+        scrSetStatus(`Computing RSI/EMA: ${Math.min(i+BATCH, preFiltered.length)} / ${preFiltered.length}…`, true);
+        const withChart = await Promise.all(batch.map(r => scrEnrichWithChart(r)));
+        enriched.push(...withChart);
+      }
+    }
+
+    // ── Step 6: Apply chart-based filters ────────────────────────────────
+    const matched = enriched.filter(r => scrApplyAllFilters(r, f));
+
+    // ── Step 7: Sort & render ─────────────────────────────────────────────
+    matched.sort((a, b) => {
+      const av = a[_scrSort.col] ?? (_scrSort.dir==='asc'?Infinity:-Infinity);
+      const bv = b[_scrSort.col] ?? (_scrSort.dir==='asc'?Infinity:-Infinity);
+      return _scrSort.dir === 'asc' ? av - bv : bv - av;
+    });
+
+    _scrResults = matched;
+    renderScrResults(matched);
+    scrSetStatus(`✅ ${matched.length} stocks matched from ${rows.length} screened${_scrBulkCache ? ' (snapshot cached)' : ''}`);
+
+  } catch(e) {
+    scrSetStatus(`⚠️ Error: ${e.message} — try again`);
+    console.error('Screener error:', e);
+  }
+
+  if (btn) { btn.disabled=false; btn.textContent='▶ Run Screen'; }
+  _scrRunning = false;
+}
+
+// Fast filters — use bulk data only (no chart needed)
+function scrApplyFastFilters(r, f) {
+  if (f.priceMin !== null && r.price < f.priceMin) return false;
+  if (f.priceMax !== null && r.price > f.priceMax) return false;
+  if (f.chgMin   !== null && r.chgPct < f.chgMin)  return false;
+  if (f.chgMax   !== null && r.chgPct > f.chgMax)  return false;
+  if (f.h52Min   !== null && (r.from52h === null || r.from52h < f.h52Min)) return false;
+  if (f.h52Max   !== null && (r.from52h === null || r.from52h > f.h52Max)) return false;
+  if (f.peMin    !== null && (r.pe === null || r.pe < f.peMin)) return false;
+  if (f.peMax    !== null && (r.pe === null || r.pe > f.peMax)) return false;
+  if (f.mcap) {
+    const cr = r.mcap ? r.mcap / 1e7 : null;
+    if (cr === null) return false;
+    if (f.mcap === 'large' && cr < 20000) return false;
+    if (f.mcap === 'mid'   && (cr < 5000 || cr >= 20000)) return false;
+    if (f.mcap === 'small' && cr >= 5000) return false;
+  }
+  if (f.fnoOnly && !r.isFno) return false;
+  if (f.oiChgMin !== null && (r.oiChgPct === null || r.oiChgPct < f.oiChgMin)) return false;
+  if (f.oiChgMax !== null && (r.oiChgPct === null || r.oiChgPct > f.oiChgMax)) return false;
+  if (f.fnoSignal) {
+    const pUp = r.chgPct >= 0, oiUp = (r.oiChgPct || 0) >= 0;
+    if (f.fnoSignal === 'long_build'  && !(pUp  && oiUp))  return false;
+    if (f.fnoSignal === 'short_build' && !((!pUp) && oiUp)) return false;
+    if (f.fnoSignal === 'long_unwind' && !((!pUp) && !oiUp)) return false;
+    if (f.fnoSignal === 'short_cover' && !(pUp  && !oiUp)) return false;
+  }
+  return true;
+}
+
+// All filters — including chart-derived fields
+function scrApplyAllFilters(r, f) {
+  if (!scrApplyFastFilters(r, f)) return false;
+  if (f.rsiMin   !== null && (r.rsi  === null || r.rsi  < f.rsiMin))  return false;
+  if (f.rsiMax   !== null && (r.rsi  === null || r.rsi  > f.rsiMax))  return false;
+  if (f.chgwMin  !== null && (r.chgWeek  === null || r.chgWeek  < f.chgwMin)) return false;
+  if (f.chgwMax  !== null && (r.chgWeek  === null || r.chgWeek  > f.chgwMax)) return false;
+  if (f.chgmMin  !== null && (r.chgMonth === null || r.chgMonth < f.chgmMin)) return false;
+  if (f.chgmMax  !== null && (r.chgMonth === null || r.chgMonth > f.chgmMax)) return false;
+  if (f.dyMin    !== null && (r.divYield === null || r.divYield < f.dyMin)) return false;
+  if (f.dyMax    !== null && (r.divYield === null || r.divYield > f.dyMax)) return false;
+  if (f.volMin   !== null && (r.volRatio === null || r.volRatio < f.volMin)) return false;
+  if (f.volMax   !== null && (r.volRatio === null || r.volRatio > f.volMax)) return false;
+  if (f.emaSig) {
+    if (f.emaSig === 'bull'     && (r.ema20 === null || r.price  < r.ema20)) return false;
+    if (f.emaSig === 'bear'     && (r.ema20 === null || r.price  > r.ema20)) return false;
+    if (f.emaSig === 'cross_up' && (r.ema20 === null || r.ema50 === null || r.ema20 < r.ema50)) return false;
+    if (f.emaSig === 'cross_dn' && (r.ema20 === null || r.ema50 === null || r.ema20 > r.ema50)) return false;
+  }
+  return true;
+}
+
+async function scrEnrichWithChart(r) {
+  // Use cache
+  if (_scrChartCache[r.sym]) return { ...r, ..._scrChartCache[r.sym] };
+  try {
+    const cj = await apiFetch({ sym: r.sym+'.NS', type:'chart', range:'3mo', interval:'1d' }, 8000);
+    const res = cj?.chart?.result?.[0];
+    const cls = res?.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
+    const ts  = res?.timestamp || [];
+    let rsi=null, ema20=null, ema50=null, chgWeek=null, chgMonth=null, divYield=null, volRatio=null;
+
+    if (cls.length >= 15) {
+      rsi   = calcScrRSI(cls, 14);
+      ema20 = calcScrEMA(cls, 20);
+      ema50 = cls.length >= 50 ? calcScrEMA(cls, 50) : null;
+      // Week change: compare last close vs ~5 bars ago
+      if (cls.length >= 6)  chgWeek  = ((cls[cls.length-1] - cls[cls.length-6])  / cls[cls.length-6])  * 100;
+      // Month change: compare last close vs ~22 bars ago
+      if (cls.length >= 23) chgMonth = ((cls[cls.length-1] - cls[cls.length-23]) / cls[cls.length-23]) * 100;
+    }
+
+    // Dividend yield from quote
+    try {
+      const qj = await apiFetch({ sym: r.sym+'.NS', type:'quote' }, 5000);
+      const q  = qj?.quoteResponse?.result?.[0];
+      if (q?.trailingAnnualDividendYield) divYield = +(q.trailingAnnualDividendYield * 100).toFixed(2);
+      if (q?.averageDailyVolume3Month && r.vol) volRatio = +(r.vol / q.averageDailyVolume3Month).toFixed(2);
+    } catch(e) {}
+
+    const enriched = { rsi, ema20, ema50, chgWeek: chgWeek ? +chgWeek.toFixed(2) : null, chgMonth: chgMonth ? +chgMonth.toFixed(2) : null, divYield, volRatio };
+    _scrChartCache[r.sym] = enriched;
+    return { ...r, ...enriched };
+  } catch(e) {
+    return { ...r, rsi:null, ema20:null, ema50:null, chgWeek:null, chgMonth:null, divYield:null, volRatio:null };
+  }
+}
+
+function calcScrRSI(closes, period=14) {
+  if (closes.length < period+1) return null;
+  let gains=0, losses=0;
+  for (let i=1; i<=period; i++) { const d=closes[i]-closes[i-1]; d>0?gains+=d:losses-=d; }
+  let ag=gains/period, al=losses/period;
+  for (let i=period+1; i<closes.length; i++) {
+    const d=closes[i]-closes[i-1];
+    ag=(ag*(period-1)+Math.max(d,0))/period;
+    al=(al*(period-1)+Math.max(-d,0))/period;
+  }
+  return al===0 ? 100 : +(100-100/(1+ag/al)).toFixed(1);
+}
+
+function calcScrEMA(closes, period) {
+  if (closes.length < period) return null;
+  const k=2/(period+1); let e=closes[0];
+  closes.forEach((v,i) => { e = i===0 ? v : v*k+e*(1-k); });
+  return +e.toFixed(2);
+}
+
+function scrSortBy(col) {
+  _scrSort.dir = _scrSort.col === col ? (_scrSort.dir==='asc'?'desc':'asc') : 'desc';
+  _scrSort.col = col;
+  document.querySelectorAll('.scr-table th').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.dataset.col === col) th.classList.add(_scrSort.dir==='asc'?'sort-asc':'sort-desc');
+  });
+  const sorted = [..._scrResults].sort((a,b) => {
+    const av = a[col] ?? (_scrSort.dir==='asc'?Infinity:-Infinity);
+    const bv = b[col] ?? (_scrSort.dir==='asc'?Infinity:-Infinity);
+    return _scrSort.dir==='asc' ? av-bv : bv-av;
+  });
+  renderScrResults(sorted);
+}
+
+function renderScrResults(results) {
+  const wrap = document.getElementById('scr-results');
+  if (!wrap) return;
+
+  if (!results.length) {
+    wrap.innerHTML = '<div class="scr-empty"><div class="scr-empty-icon">🔍</div><div style="font-size:12px;color:var(--tx)">No stocks matched</div><div style="font-size:10px;opacity:.6;margin-top:4px">Try relaxing your criteria or pick a preset</div></div>';
+    return;
+  }
+
+  if (_scrView === 'cards') {
+    wrap.innerHTML = '<div class="scr-cards">' + results.map(s => {
+      const up = s.chgPct >= 0;
+      const rsiCol = s.rsi ? (s.rsi<35?'var(--gn)':s.rsi>65?'var(--rd)':'var(--tx)') : 'var(--dim2)';
+      const fnoTag = s.isFno ? '<span style="font-size:7px;background:rgba(100,120,255,.15);color:#8899ff;border:1px solid rgba(100,120,255,.25);padding:1px 5px;border-radius:2px;letter-spacing:.06em">F&O</span>' : '';
+      return `<div class="scr-card" onclick="tab('search',null);quickSearch('${s.sym}.NS')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="scr-card-sym">${s.sym}</div>${fnoTag}
+        </div>
+        <div class="scr-card-name">${s.name||s.sym}</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+          <div class="scr-card-price">₹${s.price?.toLocaleString('en-IN',{minimumFractionDigits:2})}</div>
+          <div class="scr-card-chg ${up?'scr-up':'scr-dn'}">${up?'▲':'▼'} ${Math.abs(s.chgPct).toFixed(2)}%</div>
+        </div>
+        <div class="scr-card-metrics">
+          <div class="scr-card-metric"><div class="scr-card-metric-label">RSI</div><div class="scr-card-metric-val" style="color:${rsiCol}">${s.rsi??'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">P/E</div><div class="scr-card-metric-val">${s.pe?.toFixed(1)??'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">52W High</div><div class="scr-card-metric-val ${s.from52h>-5?'scr-up':''}">${s.from52h!==null?s.from52h.toFixed(1)+'%':'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">1W Chg</div><div class="scr-card-metric-val ${(s.chgWeek||0)>=0?'scr-up':'scr-dn'}">${s.chgWeek!==null?(s.chgWeek>=0?'+':'')+s.chgWeek.toFixed(1)+'%':'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">Div Yield</div><div class="scr-card-metric-val">${s.divYield!==null?s.divYield+'%':'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">OI Chg</div><div class="scr-card-metric-val ${(s.oiChgPct||0)>=0?'scr-up':'scr-dn'}">${s.oiChgPct!==null?(s.oiChgPct>=0?'+':'')+s.oiChgPct.toFixed(1)+'%':'—'}</div></div>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+    return;
+  }
+
+  // Table view
+  const sc = col => _scrSort.col===col ? (_scrSort.dir==='asc'?'sort-asc':'sort-desc') : '';
+  const fmtPct = (v, good='up') => v===null ? '<span style="color:var(--dim2)">—</span>'
+    : `<span class="${v>=0?'scr-up':'scr-dn'}">${v>=0?'+':''}${v.toFixed(2)}%</span>`;
+  const rsiBar = v => {
+    if (v===null) return '<span style="color:var(--dim2)">—</span>';
+    const col = v<35?'var(--gn)':v>65?'var(--rd)':'var(--sf)';
+    return `<span style="color:${col};font-weight:600">${v}</span><span class="scr-rsi-bar"><span class="scr-rsi-fill" style="width:${Math.round(v)}%;background:${col}"></span></span>`;
+  };
+
+  wrap.innerHTML = `<table class="scr-table">
+    <thead><tr>
+      <th data-col="sym"       class="${sc('sym')}"      onclick="scrSortBy('sym')">Symbol</th>
+      <th data-col="name"                                                           >Name</th>
+      <th data-col="price"     class="${sc('price')}"    onclick="scrSortBy('price')">Price</th>
+      <th data-col="chgPct"    class="${sc('chgPct')}"   onclick="scrSortBy('chgPct')">Day %</th>
+      <th data-col="chgWeek"   class="${sc('chgWeek')}"  onclick="scrSortBy('chgWeek')">Week %</th>
+      <th data-col="chgMonth"  class="${sc('chgMonth')}" onclick="scrSortBy('chgMonth')">Month %</th>
+      <th data-col="rsi"       class="${sc('rsi')}"      onclick="scrSortBy('rsi')">RSI 14</th>
+      <th data-col="from52h"   class="${sc('from52h')}"  onclick="scrSortBy('from52h')">vs 52W H</th>
+      <th data-col="volRatio"  class="${sc('volRatio')}" onclick="scrSortBy('volRatio')">Vol×</th>
+      <th data-col="pe"        class="${sc('pe')}"       onclick="scrSortBy('pe')">P/E</th>
+      <th data-col="divYield"  class="${sc('divYield')}" onclick="scrSortBy('divYield')">Div%</th>
+      <th data-col="oiChgPct"  class="${sc('oiChgPct')}" onclick="scrSortBy('oiChgPct')">OI Chg%</th>
+      <th>Signal</th>
+      <th>Action</th>
+    </tr></thead>
+    <tbody>
+      ${results.map(s => {
+        const up = s.chgPct >= 0;
+        const oiUp = (s.oiChgPct||0) >= 0;
+        const fnoSignal = !s.isFno ? '—' :
+          (up && oiUp)   ? '<span class="scr-badge scr-badge-bull">Long Build</span>' :
+          (!up && oiUp)  ? '<span class="scr-badge scr-badge-bear">Short Build</span>' :
+          (!up && !oiUp) ? '<span class="scr-badge scr-badge-neu">Long Unwind</span>' :
+                           '<span class="scr-badge scr-badge-bull">Short Cover</span>';
+        return `<tr onclick="tab('search',null);quickSearch('${s.sym}.NS')">
+          <td><span class="scr-sym-cell">${s.sym}</span>${s.isFno?'<span style="font-size:7px;color:#8899ff;margin-left:4px">F&O</span>':''}</td>
+          <td><span class="scr-name-cell">${(s.name||s.sym).slice(0,22)}</span></td>
+          <td><span class="scr-price-cell">₹${s.price?.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></td>
+          <td>${fmtPct(s.chgPct)}</td>
+          <td>${fmtPct(s.chgWeek)}</td>
+          <td>${fmtPct(s.chgMonth)}</td>
+          <td>${rsiBar(s.rsi)}</td>
+          <td>${s.from52h!==null?`<span class="${s.from52h>-5?'scr-up':''}">${s.from52h.toFixed(1)}%</span>`:'—'}</td>
+          <td>${s.volRatio!==null?`<span class="${s.volRatio>2?'scr-up':''}">${s.volRatio.toFixed(1)}×</span>`:'—'}</td>
+          <td>${s.pe?.toFixed(1)||'—'}</td>
+          <td>${s.divYield!==null?`<span class="scr-up">${s.divYield}%</span>`:'—'}</td>
+          <td>${s.oiChgPct!==null?fmtPct(s.oiChgPct):'—'}</td>
+          <td>${fnoSignal}</td>
+          <td><span onclick="event.stopPropagation();tab('search',null);quickSearch('${s.sym}.NS')" style="color:var(--ac);cursor:pointer;font-size:9px">View →</span></td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
 </script>
 </body>
 </html>
