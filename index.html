@@ -6070,11 +6070,20 @@ async function runScreener() {
     }
 
     // ── Step 3: Merge F&O data into bulk rows ────────────────────────────
-    let rows = bulkRows.map(r => ({
+    const sn = (v, fb=null) => (v!=null && isFinite(+v)) ? +v : fb;
+    rows = bulkRows.map(r => ({
       ...r,
-      oi:        fnoMap[r.sym]?.oi        || null,
-      oiChgPct:  fnoMap[r.sym]?.oiChg     || null,
-      isFno:     r.isFno || !!fnoMap[r.sym],
+      price:    sn(r.price, 0),
+      prev:     sn(r.prev,  r.price),
+      chgPct:   sn(r.chgPct, 0),
+      from52h:  sn(r.from52h),
+      from52l:  sn(r.from52l),
+      vol:      sn(r.vol, 0),
+      mcap:     sn(r.mcap),
+      pe:       sn(r.pe),
+      oi:       sn(fnoMap[r.sym]?.oi),
+      oiChgPct: sn(fnoMap[r.sym]?.oiChg),
+      isFno:    r.isFno || !!fnoMap[r.sym],
     }));
 
     // ── Step 4: Pre-filter WITHOUT chart data (fast filters first) ───────
@@ -6197,7 +6206,15 @@ async function scrEnrichWithChart(r) {
       if (q?.averageDailyVolume3Month && r.vol) volRatio = +(r.vol / q.averageDailyVolume3Month).toFixed(2);
     } catch(e) {}
 
-    const enriched = { rsi, ema20, ema50, chgWeek: chgWeek ? +chgWeek.toFixed(2) : null, chgMonth: chgMonth ? +chgMonth.toFixed(2) : null, divYield, volRatio };
+    const enriched = {
+      rsi:      (rsi!=null&&isFinite(rsi))       ? rsi      : null,
+      ema20:    (ema20!=null&&isFinite(ema20))    ? ema20    : null,
+      ema50:    (ema50!=null&&isFinite(ema50))    ? ema50    : null,
+      chgWeek:  (chgWeek!=null&&isFinite(chgWeek)) ? +chgWeek.toFixed(2) : null,
+      chgMonth: (chgMonth!=null&&isFinite(chgMonth)) ? +chgMonth.toFixed(2) : null,
+      divYield: (divYield!=null&&isFinite(divYield)) ? divYield : null,
+      volRatio: (volRatio!=null&&isFinite(volRatio)) ? volRatio : null,
+    };
     _scrChartCache[r.sym] = enriched;
     return { ...r, ...enriched };
   } catch(e) {
@@ -6261,15 +6278,15 @@ function renderScrResults(results) {
         <div class="scr-card-name">${s.name||s.sym}</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
           <div class="scr-card-price">₹${s.price?.toLocaleString('en-IN',{minimumFractionDigits:2})}</div>
-          <div class="scr-card-chg ${up?'scr-up':'scr-dn'}">${up?'▲':'▼'} ${Math.abs(s.chgPct).toFixed(2)}%</div>
+          <div class="scr-card-chg ${up?'scr-up':'scr-dn'}">${up?'▲':'▼'} ${(s.chgPct!=null?Math.abs(s.chgPct):0).toFixed(2)}%</div>
         </div>
         <div class="scr-card-metrics">
           <div class="scr-card-metric"><div class="scr-card-metric-label">RSI</div><div class="scr-card-metric-val" style="color:${rsiCol}">${s.rsi??'—'}</div></div>
           <div class="scr-card-metric"><div class="scr-card-metric-label">P/E</div><div class="scr-card-metric-val">${s.pe?.toFixed(1)??'—'}</div></div>
-          <div class="scr-card-metric"><div class="scr-card-metric-label">52W High</div><div class="scr-card-metric-val ${s.from52h>-5?'scr-up':''}">${s.from52h!==null?s.from52h.toFixed(1)+'%':'—'}</div></div>
-          <div class="scr-card-metric"><div class="scr-card-metric-label">1W Chg</div><div class="scr-card-metric-val ${(s.chgWeek||0)>=0?'scr-up':'scr-dn'}">${s.chgWeek!==null?(s.chgWeek>=0?'+':'')+s.chgWeek.toFixed(1)+'%':'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">52W High</div><div class="scr-card-metric-val ${s.from52h>-5?'scr-up':''}">${s.from52h!=null&&!isNaN(s.from52h)?s.from52h.toFixed(1)+'%':'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">1W Chg</div><div class="scr-card-metric-val ${(s.chgWeek||0)>=0?'scr-up':'scr-dn'}">${s.chgWeek!=null&&!isNaN(s.chgWeek)?(s.chgWeek>=0?'+':'')+s.chgWeek.toFixed(1)+'%':'—'}</div></div>
           <div class="scr-card-metric"><div class="scr-card-metric-label">Div Yield</div><div class="scr-card-metric-val">${s.divYield!==null?s.divYield+'%':'—'}</div></div>
-          <div class="scr-card-metric"><div class="scr-card-metric-label">OI Chg</div><div class="scr-card-metric-val ${(s.oiChgPct||0)>=0?'scr-up':'scr-dn'}">${s.oiChgPct!==null?(s.oiChgPct>=0?'+':'')+s.oiChgPct.toFixed(1)+'%':'—'}</div></div>
+          <div class="scr-card-metric"><div class="scr-card-metric-label">OI Chg</div><div class="scr-card-metric-val ${(s.oiChgPct||0)>=0?'scr-up':'scr-dn'}">${s.oiChgPct!=null&&!isNaN(s.oiChgPct)?(s.oiChgPct>=0?'+':'')+s.oiChgPct.toFixed(1)+'%':'—'}</div></div>
         </div>
       </div>`;
     }).join('') + '</div>';
@@ -6278,10 +6295,10 @@ function renderScrResults(results) {
 
   // Table view
   const sc = col => _scrSort.col===col ? (_scrSort.dir==='asc'?'sort-asc':'sort-desc') : '';
-  const fmtPct = (v, good='up') => v===null ? '<span style="color:var(--dim2)">—</span>'
-    : `<span class="${v>=0?'scr-up':'scr-dn'}">${v>=0?'+':''}${v.toFixed(2)}%</span>`;
+  const fmtPct = (v) => (v==null||isNaN(v)) ? '<span style="color:var(--dim2)">—</span>'
+    : `<span class="${v>=0?'scr-up':'scr-dn'}">${v>=0?'+':''}${(+v).toFixed(2)}%</span>`;
   const rsiBar = v => {
-    if (v===null) return '<span style="color:var(--dim2)">—</span>';
+    if (v==null||isNaN(v)) return '<span style="color:var(--dim2)">—</span>';
     const col = v<35?'var(--gn)':v>65?'var(--rd)':'var(--sf)';
     return `<span style="color:${col};font-weight:600">${v}</span><span class="scr-rsi-bar"><span class="scr-rsi-fill" style="width:${Math.round(v)}%;background:${col}"></span></span>`;
   };
@@ -6320,11 +6337,11 @@ function renderScrResults(results) {
           <td>${fmtPct(s.chgWeek)}</td>
           <td>${fmtPct(s.chgMonth)}</td>
           <td>${rsiBar(s.rsi)}</td>
-          <td>${s.from52h!==null?`<span class="${s.from52h>-5?'scr-up':''}">${s.from52h.toFixed(1)}%</span>`:'—'}</td>
-          <td>${s.volRatio!==null?`<span class="${s.volRatio>2?'scr-up':''}">${s.volRatio.toFixed(1)}×</span>`:'—'}</td>
-          <td>${s.pe?.toFixed(1)||'—'}</td>
-          <td>${s.divYield!==null?`<span class="scr-up">${s.divYield}%</span>`:'—'}</td>
-          <td>${s.oiChgPct!==null?fmtPct(s.oiChgPct):'—'}</td>
+          <td>${s.from52h!=null&&!isNaN(s.from52h)?`<span class="${s.from52h>-5?'scr-up':''}">${s.from52h.toFixed(1)}%</span>`:'—'}</td>
+          <td>${s.volRatio!=null&&!isNaN(s.volRatio)?`<span class="${s.volRatio>2?'scr-up':''}">${s.volRatio.toFixed(1)}×</span>`:'—'}</td>
+          <td>${(s.pe!=null&&!isNaN(s.pe))?s.pe.toFixed(1):'—'}</td>
+          <td>${s.divYield!=null&&!isNaN(s.divYield)?`<span class="scr-up">${s.divYield}%</span>`:'—'}</td>
+          <td>${s.oiChgPct!=null&&!isNaN(s.oiChgPct)?fmtPct(s.oiChgPct):'—'}</td>
           <td>${fnoSignal}</td>
           <td><span onclick="event.stopPropagation();tab('search',null);quickSearch('${s.sym}.NS')" style="color:var(--ac);cursor:pointer;font-size:9px">View →</span></td>
         </tr>`;
