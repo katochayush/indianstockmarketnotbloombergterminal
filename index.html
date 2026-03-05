@@ -85,6 +85,16 @@ body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-
 
 /* ── TICKER ── */
 .tkr{background:#000;border-bottom:1px solid var(--br2);padding:4px 0;overflow:hidden;white-space:nowrap;position:sticky;top:68px;z-index:290}
+/* ── PORTFOLIO STRIP ── */
+.pf-strip{background:var(--bg2);border-bottom:1px solid var(--br2);position:sticky;top:90px;z-index:285;padding:0 16px}
+.pf-strip-inner{display:flex;align-items:center;gap:10px;height:24px;font-family:DM Mono,monospace;font-size:9px}
+.pf-strip-label{color:var(--dim2);letter-spacing:.15em;text-transform:uppercase;font-size:8px}
+.pf-strip-val{color:var(--tx);font-weight:600}
+.pf-strip-pnl{font-weight:700;font-size:10px}
+.pf-strip-pct{font-size:9px}
+.pf-strip-link{margin-left:auto;color:var(--sf);cursor:pointer;opacity:.7;font-size:9px}
+.pf-strip-link:hover{opacity:1}
+@media(max-width:768px){.pf-strip{display:none!important}}
 .tki{display:inline-block;animation:tk 45s linear infinite}
 .tki:hover{animation-play-state:paused}
 @keyframes tk{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
@@ -94,11 +104,62 @@ body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-
 .tc.up{color:var(--gn)}.tc.dn{color:var(--rd)}
 
 /* ── NAV ── */
-.nav{background:var(--bg2);border-bottom:1px solid var(--br2);display:flex;padding:0 16px;position:sticky;top:96px;z-index:280;overflow-x:auto}
+.nav{background:var(--bg2);border-bottom:1px solid var(--br2);display:flex;align-items:stretch;padding:0 8px;position:sticky;top:96px;z-index:280;overflow-x:auto;gap:0}
 .nav::-webkit-scrollbar{height:0}
-.nt{font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:9px 14px;color:var(--dim2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;font-weight:500}
+.nav-group{display:flex;flex-direction:column;padding:0 8px}
+.nav-group-label{font-size:7px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim2);padding:4px 6px 0;opacity:.55;font-family:DM Mono,monospace}
+.nav-group-tabs{display:flex;align-items:stretch}
+.nav-divider{width:1px;background:var(--br2);margin:6px 4px;flex-shrink:0}
+.nt{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:6px 11px 8px;color:var(--dim2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;font-weight:500;display:flex;align-items:center;gap:4px}
 .nt.on{color:var(--sf);border-bottom-color:var(--sf)}
-.nt:hover:not(.on){color:var(--tx)}
+.nt:hover:not(.on){color:var(--tx);background:rgba(255,255,255,.02);border-radius:4px 4px 0 0}
+
+/* ── MOBILE BOTTOM NAV ── */
+.mob-nav{display:none}
+@media(max-width:768px){
+  /* Hide desktop nav, show mobile */
+  .nav{display:none!important}
+  .mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--bg2);border-top:1px solid var(--br2);z-index:500;padding:0;padding-bottom:env(safe-area-inset-bottom)}
+  .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:6px 4px;transition:all .2s;border-top:2px solid transparent}
+  .mob-tab.active{border-top-color:var(--sf)}
+  .mob-tab.active .mob-icon{filter:none;opacity:1}
+  .mob-tab.active .mob-label{color:var(--sf)}
+  .mob-icon{font-size:18px;opacity:.55;transition:all .2s}
+  .mob-label{font-size:9px;color:var(--dim2);font-family:DM Mono,monospace;letter-spacing:.05em;transition:all .2s}
+  /* Add bottom padding to content so it clears the nav */
+  .pg.on{padding-bottom:70px!important}
+  /* Compact the header on mobile */
+  .hdr{height:auto;padding:8px 12px;flex-wrap:wrap;gap:6px;top:22px}
+  .hdr-center{display:none}
+  .logo{font-size:18px}
+  .logo-tag{font-size:7px}
+  /* Ticker becomes more compact */
+  .tkr{top:60px}
+  /* Content padding */
+  .sw{padding:10px 12px}
+}
+
+/* ── MOBILE DRAWER ── */
+.mob-drawer{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-radius:20px 20px 0 0;z-index:600;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:85vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)}
+.mob-drawer.open{transform:translateY(0)}
+.mob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:590;opacity:0;pointer-events:none;transition:opacity .3s}
+.mob-overlay.show{opacity:1;pointer-events:all}
+.mob-drawer-inner{padding:16px}
+.mob-drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--br2)}
+.mob-drawer-section{margin-bottom:16px}
+.mob-drawer-group-label{font-size:9px;color:var(--dim2);letter-spacing:.15em;text-transform:uppercase;font-family:DM Mono,monospace;margin-bottom:8px}
+.mob-drawer-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mob-drawer-item{background:var(--bg3);border:1px solid var(--br2);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--tx);cursor:pointer;transition:all .2s;font-weight:500}
+.mob-drawer-item:active{background:rgba(255,153,51,.1);border-color:rgba(255,153,51,.3);color:var(--sf)}
+
+/* ── RESPONSIVE HEADER ON TABLET ── */
+@media(max-width:1100px){
+  .hdr-center .hdr-idx:nth-child(n+5){display:none}
+}
+@media(max-width:860px){
+  .hdr-center .hdr-idx:nth-child(n+4){display:none}
+  .logo-tag{display:none}
+}
 
 /* ── TABS ── */
 .pg{display:none}.pg.on{display:block}
@@ -593,22 +654,116 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 <!-- ══ TICKER ══════════════════════════════════════════════════════════════ -->
 <div class="tkr"><div class="tki" id="tkr"></div></div>
 
+<!-- ══ PORTFOLIO STRIP (shows only if portfolio has holdings) ════════════ -->
+<div class="pf-strip" id="pf-strip" style="display:none">
+  <div class="pf-strip-inner">
+    <span class="pf-strip-label">MY PORTFOLIO</span>
+    <span id="pf-strip-val" class="pf-strip-val">—</span>
+    <span id="pf-strip-pnl" class="pf-strip-pnl">—</span>
+    <span id="pf-strip-pct" class="pf-strip-pct">—</span>
+    <span style="font-size:8px;color:var(--dim2);margin-left:8px" id="pf-strip-count"></span>
+    <span onclick="tab('portfolio', document.querySelector('.nt[data-tab=portfolio]'))" class="pf-strip-link">View →</span>
+  </div>
+</div>
+
 <!-- ══ NAV ════════════════════════════════════════════════════════════════ -->
-<nav class="nav">
-  <div class="nt on"  onclick="tab('markets',this)">📊 Markets</div>
-  <div class="nt"     onclick="tab('whale',this)">🐋 Whale Trades</div>
-  <div class="nt"     onclick="tab('social',this)">📱 Social Buzz</div>
-  <div class="nt"     onclick="tab('insider',this)">🔍 Insider Intel</div>
-  <div class="nt"     onclick="tab('earnings',this)">📅 Earnings</div>
-  <div class="nt"     onclick="tab('oil',this)">🛢️ Oil &amp; Trade</div>
-  <div class="nt"     onclick="tab('intel',this)">🧠 Intelligence Feed</div>
-  <div class="nt"     onclick="tab('search',this)">🔎 Stock Search</div>
-  <div class="nt"     onclick="tab('commodities',this)">🥇 Commodities</div>
-  <div class="nt"     onclick="tab('fno',this)">📈 F&amp;O</div>
-  <div class="nt"     onclick="tab('portfolio',this)">💼 Portfolio</div>
-  <div class="nt"     onclick="tab('alerts',this)">🔔 Price Alerts</div>
-  <div class="nt" id="theme-btn" onclick="toggleTheme()" style="margin-left:auto;opacity:.7">☀️ Light</div>
+<nav class="nav" id="main-nav">
+  <!-- GROUP: LIVE -->
+  <div class="nav-group">
+    <div class="nav-group-label">Live</div>
+    <div class="nav-group-tabs">
+      <div class="nt on" data-tab="markets"  onclick="tab('markets',this)">📊 Markets</div>
+      <div class="nt"    data-tab="commodities" onclick="tab('commodities',this)">🥇 Commodities</div>
+      <div class="nt"    data-tab="fno"      onclick="tab('fno',this)">📈 F&amp;O</div>
+      <div class="nt"    data-tab="oil"      onclick="tab('oil',this)">🛢️ Oil</div>
+    </div>
+  </div>
+  <div class="nav-divider"></div>
+  <!-- GROUP: INTEL -->
+  <div class="nav-group">
+    <div class="nav-group-label">Intel</div>
+    <div class="nav-group-tabs">
+      <div class="nt"    data-tab="intel"    onclick="tab('intel',this)">🧠 Feed</div>
+      <div class="nt"    data-tab="earnings" onclick="tab('earnings',this)">📅 Earnings</div>
+      <div class="nt"    data-tab="whale"    onclick="tab('whale',this)">🐋 Whale</div>
+      <div class="nt"    data-tab="social"   onclick="tab('social',this)">📱 Buzz</div>
+      <div class="nt"    data-tab="insider"  onclick="tab('insider',this)">🔍 Insider</div>
+    </div>
+  </div>
+  <div class="nav-divider"></div>
+  <!-- GROUP: YOU -->
+  <div class="nav-group">
+    <div class="nav-group-label">You</div>
+    <div class="nav-group-tabs">
+      <div class="nt"    data-tab="search"   onclick="tab('search',this)">🔎 Search</div>
+      <div class="nt"    data-tab="portfolio" onclick="tab('portfolio',this)">💼 Portfolio</div>
+      <div class="nt"    data-tab="alerts"   onclick="tab('alerts',this)">🔔 Alerts</div>
+    </div>
+  </div>
+  <div class="nt" id="theme-btn" onclick="toggleTheme()" style="margin-left:auto;opacity:.7;align-self:center;border-bottom:none">☀️</div>
 </nav>
+
+<!-- ══ MOBILE BOTTOM NAV ══════════════════════════════════════════════════ -->
+<nav class="mob-nav" id="mob-nav">
+  <div class="mob-tab active" onclick="mobTab('markets',this)" data-tab="markets">
+    <span class="mob-icon">📊</span>
+    <span class="mob-label">Markets</span>
+  </div>
+  <div class="mob-tab" onclick="mobTab('search',this)" data-tab="search">
+    <span class="mob-icon">🔎</span>
+    <span class="mob-label">Search</span>
+  </div>
+  <div class="mob-tab" onclick="mobTab('intel',this)" data-tab="intel">
+    <span class="mob-icon">🧠</span>
+    <span class="mob-label">Intel</span>
+  </div>
+  <div class="mob-tab" onclick="mobTab('portfolio',this)" data-tab="portfolio">
+    <span class="mob-icon">💼</span>
+    <span class="mob-label">Portfolio</span>
+  </div>
+  <div class="mob-tab" onclick="openMobMore()" data-tab="more">
+    <span class="mob-icon">⋯</span>
+    <span class="mob-label">More</span>
+  </div>
+</nav>
+
+<!-- ══ MOBILE MORE DRAWER ══════════════════════════════════════════════════ -->
+<div class="mob-drawer" id="mob-drawer">
+  <div class="mob-drawer-inner">
+    <div class="mob-drawer-header">
+      <span style="font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:.12em;color:var(--sf)">All Sections</span>
+      <div onclick="closeMobMore()" style="cursor:pointer;font-size:20px;color:var(--dim2)">✕</div>
+    </div>
+    <div class="mob-drawer-section">
+      <div class="mob-drawer-group-label">🔴 Live Markets</div>
+      <div class="mob-drawer-grid">
+        <div class="mob-drawer-item" onclick="mobTabDrawer('commodities')">🥇 Commodities</div>
+        <div class="mob-drawer-item" onclick="mobTabDrawer('fno')">📈 F&amp;O</div>
+        <div class="mob-drawer-item" onclick="mobTabDrawer('oil')">🛢️ Oil &amp; Trade</div>
+      </div>
+    </div>
+    <div class="mob-drawer-section">
+      <div class="mob-drawer-group-label">🟡 Intelligence</div>
+      <div class="mob-drawer-grid">
+        <div class="mob-drawer-item" onclick="mobTabDrawer('earnings')">📅 Earnings</div>
+        <div class="mob-drawer-item" onclick="mobTabDrawer('whale')">🐋 Whale</div>
+        <div class="mob-drawer-item" onclick="mobTabDrawer('social')">📱 Buzz</div>
+        <div class="mob-drawer-item" onclick="mobTabDrawer('insider')">🔍 Insider</div>
+      </div>
+    </div>
+    <div class="mob-drawer-section">
+      <div class="mob-drawer-group-label">🟢 Your Account</div>
+      <div class="mob-drawer-grid">
+        <div class="mob-drawer-item" onclick="mobTabDrawer('alerts')">🔔 Alerts</div>
+      </div>
+    </div>
+    <div style="padding:16px;border-top:1px solid var(--br2);margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:var(--dim2)">Theme</span>
+      <div onclick="toggleTheme()" style="background:rgba(255,153,51,.1);border:1px solid rgba(255,153,51,.25);border-radius:20px;padding:6px 16px;color:var(--sf);font-size:10px;cursor:pointer" id="mob-theme-btn">☀️ Light Mode</div>
+    </div>
+  </div>
+</div>
+<div class="mob-overlay" id="mob-overlay" onclick="closeMobMore()"></div>
 
 <!-- ══ ALERT DOCK (toast container) ══════════════════════════════════════ -->
 <div id="alert-dock"></div>
@@ -1544,6 +1699,8 @@ function updateAllDisplays(){
   buildLiveTicker();
   // Refresh portfolio P&L if open
   if (typeof renderPortfolioTab === 'function' && document.getElementById('pg-portfolio')?.classList.contains('on')) renderPortfolioTab();
+  // Always refresh portfolio strip
+  if (typeof updatePortfolioStrip === 'function') updatePortfolioStrip();
   // Refresh oil tab if open
   if (typeof renderOilTab === 'function' && document.getElementById('pg-oil')?.classList.contains('on')) renderOilTab();
 }
@@ -1722,7 +1879,11 @@ function tab(n,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));
   document.getElementById('pg-'+n).classList.add('on');
-  if(el) el.classList.add('on');
+  // Mark active in both desktop nav (by data-tab) and passed element
+  document.querySelectorAll('.nt[data-tab="'+n+'"]').forEach(t=>t.classList.add('on'));
+  if(el && !el.dataset.tab) el.classList.add('on'); // legacy support
+  // Sync mobile bottom nav
+  document.querySelectorAll('.mob-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===n));
   if(n==='social')      setTimeout(updateSocialTab,50);
   if(n==='insider')     setTimeout(updateInsiderTab,50);
   if(n==='whale')       setTimeout(function(){
@@ -3180,9 +3341,11 @@ function toggleTheme() {
   document.documentElement.classList.toggle('light', _isLight);
   const btn = document.getElementById('theme-btn');
   if (btn) btn.textContent = _isLight ? '🌙 Dark' : '☀️ Light';
+  const mobBtn = document.getElementById('mob-theme-btn');
+  if (mobBtn) mobBtn.textContent = _isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
   // Redraw charts on theme change
   try { if (srChart) { srChart.destroy(); srChart = null; } } catch(e){}
-  try { if (_cmxChart) { _cmxChart.destroy(); _cmxChart = null; } renderCmxChart(_cmxSel); } catch(e){}
+  try { if (_cmxChart) { _cmxChart.destroy(); _cmxChart = null; renderCmxChart(_cmxSel); } } catch(e){}
 }
 
 // new tabs hooked directly into original tab() below
@@ -4128,6 +4291,89 @@ function renderOilTab() {
   el.querySelectorAll('.news-ext-row').forEach(function(r){ r.addEventListener('click', function(){ if(r.dataset.href) window.open(r.dataset.href,'_blank'); }); });
 }
 
+
+
+// ── MOBILE NAV FUNCTIONS ──────────────────────────────────────────────────
+function mobTab(n, el) {
+  // Close drawer if open
+  closeMobMore();
+  // Activate tab
+  tab(n, null);
+  // Sync bottom nav active state
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === n));
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openMobMore() {
+  document.getElementById('mob-drawer').classList.add('open');
+  document.getElementById('mob-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMobMore() {
+  document.getElementById('mob-drawer')?.classList.remove('open');
+  document.getElementById('mob-overlay')?.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function mobTabDrawer(n) {
+  closeMobMore();
+  setTimeout(() => {
+    tab(n, null);
+    document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+    // Highlight "More" tab when in a drawer sub-tab
+    const moreTab = document.querySelector('.mob-tab[data-tab="more"]');
+    if (moreTab) moreTab.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 200);
+}
+
+// Swipe to dismiss drawer
+(function(){
+  let startY = 0;
+  const drawer = document.getElementById('mob-drawer');
+  if (!drawer) return;
+  drawer.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+  drawer.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 60) closeMobMore();
+  }, { passive: true });
+})();
+
+
+// ── PORTFOLIO STRIP — always-visible P&L bar ──────────────────────────────
+function updatePortfolioStrip() {
+  const strip = document.getElementById('pf-strip');
+  if (!strip) return;
+  const holdings = JSON.parse(localStorage.getItem('bt_portfolio') || '[]');
+  if (!holdings.length) { strip.style.display = 'none'; return; }
+
+  let totalCost = 0, totalVal = 0, count = 0;
+  holdings.forEach(h => {
+    const live = window.liveStocks && (window.liveStocks[h.sym] || window.liveStocks[h.sym + '.NS']);
+    if (live && live.price) {
+      totalCost += (h.avgCost || 0) * (h.qty || 0);
+      totalVal  += live.price * (h.qty || 0);
+      count++;
+    }
+  });
+
+  if (!count) { strip.style.display = 'none'; return; }
+
+  const pnl = totalVal - totalCost;
+  const pct = totalCost > 0 ? (pnl / totalCost * 100) : 0;
+  const up  = pnl >= 0;
+  const fmt = v => '₹' + Math.abs(v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  document.getElementById('pf-strip-val').textContent  = fmt(totalVal);
+  document.getElementById('pf-strip-pnl').textContent  = (up ? '▲ +' : '▼ ') + fmt(pnl);
+  document.getElementById('pf-strip-pnl').style.color  = up ? 'var(--gn)' : 'var(--rd)';
+  document.getElementById('pf-strip-pct').textContent  = (up ? '+' : '') + pct.toFixed(2) + '%';
+  document.getElementById('pf-strip-pct').style.color  = up ? 'var(--gn)' : 'var(--rd)';
+  document.getElementById('pf-strip-count').textContent = count + ' holdings';
+  strip.style.display = 'block';
+}
 
 </script>
 </body>
