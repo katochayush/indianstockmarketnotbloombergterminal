@@ -815,6 +815,7 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 }
 
 </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -4336,11 +4337,16 @@ function addHolding() {
   }
   localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
   ['pf-sym','pf-qty','pf-avg','pf-buy-date'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // Switch to Overview tab so charts are visible immediately after adding
+  document.querySelectorAll('.pfa-tab').forEach(b => b.classList.toggle('on', b.dataset.pft === 'overview'));
+  document.querySelectorAll('.pfa-panel').forEach(p => p.classList.toggle('on', p.id === 'pft-overview'));
+  _pfChartDataCache = {}; // invalidate chart cache
   renderPortfolioTab();
 }
 function removeHolding(sym) {
   portfolio = portfolio.filter(h => h.sym !== sym);
   localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
+  _pfChartDataCache = {}; // invalidate chart cache
   renderPortfolioTab();
 }
 
@@ -4381,7 +4387,8 @@ function pfGetSector(sym) {
 function pfTab(name, btn) {
   document.querySelectorAll('.pfa-tab').forEach(b => b.classList.toggle('on', b.dataset.pft === name));
   document.querySelectorAll('.pfa-panel').forEach(p => p.classList.toggle('on', p.id === 'pft-'+name));
-  if (!_pfData && portfolio.length) computePfData(); // ensure data is ready
+  if (!_pfData && portfolio.length) computePfData();
+  // Always render requested panel immediately
   if (name==='overview')   renderPfOverview();
   if (name==='holdings')   renderPfHoldings();
   if (name==='analytics')  renderPfAnalytics();
@@ -4406,15 +4413,53 @@ function calcXIRR(cashflows) {
 }
 
 let _pfData=null, _pfSectorChart=null, _pfPnlChart=null, _pfPnlRange='1mo';
+let _pfChartDataCache={}; // cache: sym+range → {ts,cls}
 
 function renderPortfolioTab() {
-  computePfData();  // sync part runs immediately; async price fetch triggers re-render when done
-  if (!_pfData) return; // empty portfolio
-  const active = document.querySelector('.pfa-panel.on')?.id?.replace('pft-','') || 'overview';
-  if (active==='overview')   renderPfOverview();
-  if (active==='holdings')   renderPfHoldings();
-  if (active==='analytics')  renderPfAnalytics();
-  if (active==='performers') renderPfPerformers();
+  // Always ensure Overview tab is active on first load
+  const currentActive = document.querySelector('.pfa-panel.on')?.id;
+  if (!currentActive || currentActive === 'pft-overview') {
+    // Make sure overview tab is visually selected
+    document.querySelectorAll('.pfa-tab').forEach(b => b.classList.toggle('on', b.dataset.pft === 'overview'));
+    document.querySelectorAll('.pfa-panel').forEach(p => p.classList.toggle('on', p.id === 'pft-overview'));
+  }
+
+  computePfData(); // sync: builds _pfData from cached prices + fires async price fetch
+
+  if (!_pfData) {
+    // No holdings — show empty states
+    renderPfOverview();
+    return;
+  }
+
+  // Render everything immediately with whatever prices we have cached
+  renderPfOverview();
+  renderPfHoldings();
+  renderPfAnalytics();
+  renderPfPerformers();
+  // computePfData's async .then() will re-render again once live prices arrive
+  if (_pfData && _pfData.holdings.length) prefetchPfChartData(_pfPnlRange);
+}
+
+// Pre-warm P&L chart cache so Overview tab loads instantly
+async function prefetchPfChartData(range) {
+  if (!_pfData || !_pfData.holdings.length) return;
+  await Promise.all(_pfData.holdings.map(async h => {
+    const key = 'pnl_' + h.sym + '_' + range;
+    if (_pfChartDataCache[key]) return;
+    try {
+      const j   = await apiFetch({ sym: h.sym+'.NS', type:'chart', range, interval:'1d' }, 8000);
+      const res = j?.chart?.result?.[0];
+      _pfChartDataCache[key] = {
+        ts:  res?.timestamp || [],
+        cls: res?.indicators?.quote?.[0]?.close || [],
+      };
+    } catch(e) {}
+  }));
+  // Re-render chart if Overview is still visible
+  if (document.getElementById('pft-overview')?.classList.contains('on') && _pfData) {
+    renderPnlChart(range);
+  }
 }
 
 function computePfData() {
@@ -4486,13 +4531,15 @@ function computePfData() {
         }
       } catch(e) {}
     })).then(() => {
-      // Re-run full render after prices arrive
+      // Prices arrived — recompute and re-render active panel with live data
       computePfData();
+      if (!_pfData) return;
       const active = document.querySelector('.pfa-panel.on')?.id?.replace('pft-','') || 'overview';
-      if (active==='overview')   renderPfOverview();
-      if (active==='holdings')   renderPfHoldings();
-      if (active==='analytics')  renderPfAnalytics();
-      if (active==='performers') renderPfPerformers();
+      // Always refresh overview charts with live data
+      renderPfOverview();
+      if (active === 'holdings')   renderPfHoldings();
+      if (active === 'analytics')  renderPfAnalytics();
+      if (active === 'performers') renderPfPerformers();
     });
   }
 }
@@ -4518,16 +4565,26 @@ function renderPfSummary(){
 }
 
 function renderPfOverview(){
-  if(!_pfData){document.getElementById('pf-sector-legend').innerHTML='<div style="color:var(--dim2);font-size:10px;padding:10px">Add holdings to see analytics</div>';return;}
-  renderSectorPie(); renderPnlChart(_pfPnlRange);
+  const legendEl  = document.getElementById('pf-sector-legend');
+  const statusEl  = document.getElementById('pf-pnl-status');
+  if(!_pfData){
+    if(legendEl) legendEl.innerHTML='<div style="color:var(--dim2);font-size:10px;padding:10px">Add holdings to see analytics</div>';
+    return;
+  }
+  // Render sector pie immediately — it uses already-computed _pfData (no extra fetch needed)
+  renderSectorPie();
+  // Show loading state for P&L chart while historical data loads
+  if(statusEl) statusEl.textContent='⏳ Loading portfolio history…';
+  // Render P&L chart async (fetches historical prices)
+  renderPnlChart(_pfPnlRange);
 }
 
 function renderSectorPie(){
   const{sectorMap,totalCurrent}=_pfData;
   const sectors=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
   const canvas=document.getElementById('pf-sector-chart'); if(!canvas)return;
-  if(_pfSectorChart){try{_pfSectorChart.destroy();}catch(e){}} 
-  if(!window.Chart){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';s.onload=()=>renderSectorPie();document.head.appendChild(s);return;}
+  if(_pfSectorChart){try{_pfSectorChart.destroy();}catch(e){}}
+  if(!window.Chart){ const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';s.onload=()=>renderSectorPie();document.head.appendChild(s);return; }
   const colors=sectors.map((_,i)=>SECTOR_COLORS[i%SECTOR_COLORS.length]);
   const isDark=!document.documentElement.classList.contains('light');
   _pfSectorChart=new Chart(canvas.getContext('2d'),{
@@ -4549,13 +4606,20 @@ async function renderPnlChart(range){
   const canvas=document.getElementById('pf-pnl-chart');
   const status=document.getElementById('pf-pnl-status');
   if(!canvas||!_pfData)return;
-  if(!window.Chart){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';s.onload=()=>renderPnlChart(range);document.head.appendChild(s);return;}
+  if(!window.Chart){ const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';s.onload=()=>renderPnlChart(range);document.head.appendChild(s);return; }
   if(status)status.textContent='⏳ Loading…';
   if(_pfPnlChart){try{_pfPnlChart.destroy();_pfPnlChart=null;}catch(e){}}
   try{
     const allSeries=await Promise.all(_pfData.holdings.map(async h=>{
-      try{const j=await apiFetch({sym:h.sym+'.NS',type:'chart',range,interval:'1d'},8000);const res=j?.chart?.result?.[0];return{h,ts:res?.timestamp||[],cls:res?.indicators?.quote?.[0]?.close||[]};}catch(e){return{h,ts:[],cls:[]};}
-    }));
+      const key='pnl_'+h.sym+'_'+range;
+      if(_pfChartDataCache[key]) return {h,..._pfChartDataCache[key]};
+      try{
+        const j=await apiFetch({sym:h.sym+'.NS',type:'chart',range,interval:'1d'},8000);
+        const res=j?.chart?.result?.[0];
+        const data={ts:res?.timestamp||[],cls:res?.indicators?.quote?.[0]?.close||[]};
+        _pfChartDataCache[key]=data;
+        return {h,...data};
+      }catch(e){return{h,ts:[],cls:[]};}}));
     const dayMap={};
     allSeries.forEach(({h,ts,cls})=>{ts.forEach((t,i)=>{const cv=cls[i];if(!cv)return;const key=new Date(t*1000).toISOString().slice(0,10);dayMap[key]=(dayMap[key]||0)+h.qty*cv;});});
     const dates=Object.keys(dayMap).sort();
@@ -4652,6 +4716,9 @@ function addHolding() {
   }
   localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
   ['pf-sym','pf-qty','pf-avg','pf-buy-date'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // Switch to Overview tab so charts are visible immediately after adding
+  document.querySelectorAll('.pfa-tab').forEach(b => b.classList.toggle('on', b.dataset.pft === 'overview'));
+  document.querySelectorAll('.pfa-panel').forEach(p => p.classList.toggle('on', p.id === 'pft-overview'));
   renderPortfolioTab();
 }
 function removeHolding(sym) {
