@@ -255,9 +255,67 @@ module.exports = async function handler(req, res) {
     // ── CHART ──────────────────────────────────────────────────────────────
     if (type === 'chart') {
       const tk=toNSETicker(sym);
-      const d=await nseGet(`/api/historical/cm/equity?symbol=${encodeURIComponent(tk)}&series=["EQ"]&from=${getFromDate(range)}&to=${getToDate()}`,9000);
-      const rows=(d.data||[]).reverse();
-      return res.status(200).json({chart:{result:[{timestamp:rows.map(x=>Math.floor(new Date(x.CH_TIMESTAMP||x.mTIMESTAMP).getTime()/1000)),indicators:{quote:[{close:rows.map(x=>x.CH_CLOSING_PRICE||x.CH_LAST_TRADED_PRICE)}]}}]}});
+      const interval = req.query.interval || '1d';
+      const isIntraday = ['1m','5m','15m','30m','60m'].includes(interval);
+
+      if (isIntraday) {
+        // Yahoo Finance for intraday OHLCV — NSE historical doesn't support intraday
+        const yhInterval = interval === '60m' ? '60m' : interval;
+        const yhRange    = interval === '5m' ? '1d' : interval === '15m' ? '5d' : interval === '60m' ? '1mo' : '1d';
+        const yhSym      = tk + '.NS';
+        try {
+          const r = await fetch(
+            `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yhSym)}?interval=${yhInterval}&range=${yhRange}`,
+            { headers:{'User-Agent':'Mozilla/5.0'}, signal:AbortSignal.timeout(8000) }
+          );
+          if (!r.ok) throw new Error('YH ' + r.status);
+          const d = await r.json();
+          const result = d?.chart?.result?.[0];
+          if (!result) throw new Error('no result');
+          const ts  = result.timestamp || [];
+          const q0  = result.indicators?.quote?.[0] || {};
+          res.setHeader('Cache-Control','s-maxage=30, stale-while-revalidate=15');
+          return res.status(200).json({ chart:{ result:[{
+            timestamp: ts,
+            indicators:{ quote:[{
+              open:  q0.open  || [],
+              high:  q0.high  || [],
+              low:   q0.low   || [],
+              close: q0.close || [],
+              volume:q0.volume|| [],
+            }]}
+          }]}});
+        } catch(e) {
+          // fall through to daily NSE chart below
+        }
+      }
+
+      // Daily/weekly — NSE historical
+      try {
+        const d=await nseGet(`/api/historical/cm/equity?symbol=${encodeURIComponent(tk)}&series=["EQ"]&from=${getFromDate(range)}&to=${getToDate()}`,9000);
+        const rows=(d.data||[]).reverse();
+        res.setHeader('Cache-Control','s-maxage=60, stale-while-revalidate=30');
+        return res.status(200).json({chart:{result:[{
+          timestamp:rows.map(x=>Math.floor(new Date(x.CH_TIMESTAMP||x.mTIMESTAMP).getTime()/1000)),
+          indicators:{quote:[{
+            open:  rows.map(x=>x.CH_OPENING_PRICE||x.CH_LAST_TRADED_PRICE),
+            high:  rows.map(x=>x.CH_TRADE_HIGH_PRICE||x.CH_LAST_TRADED_PRICE),
+            low:   rows.map(x=>x.CH_TRADE_LOW_PRICE||x.CH_LAST_TRADED_PRICE),
+            close: rows.map(x=>x.CH_CLOSING_PRICE||x.CH_LAST_TRADED_PRICE),
+            volume:rows.map(x=>x.CH_TOT_TRADED_QTY||0),
+          }]}
+        }]}});
+      } catch(e) {
+        // Final fallback — Yahoo Finance daily
+        const r = await fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(tk+'.NS')}?interval=1d&range=${range||'1y'}`,
+          { headers:{'User-Agent':'Mozilla/5.0'}, signal:AbortSignal.timeout(8000) }
+        );
+        if (!r.ok) throw new Error('chart fallback failed');
+        const d = await r.json();
+        res.setHeader('Cache-Control','s-maxage=60, stale-while-revalidate=30');
+        return res.status(200).json(d);
+      }
     }
 
     // ── SINGLE QUOTE ───────────────────────────────────────────────────────
