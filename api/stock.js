@@ -192,18 +192,86 @@ module.exports = async function handler(req, res) {
 
   // ── F&O OPTION CHAIN ──────────────────────────────────────────────────────
   if (type === 'fno') {
-    const fnoSym = (sym||'NIFTY').toUpperCase();
+    const fnoSym = (sym || 'NIFTY').toUpperCase();
+
+    // ── Source 1: Yahoo Finance option chain (most reliable from server) ──
     try {
-      const d = await nseGet(`/api/option-chain-indices?symbol=${encodeURIComponent(fnoSym)}`, 12000);
-      res.setHeader('Cache-Control','s-maxage=30, stale-while-revalidate=15');
-      return res.status(200).json(d);
-    } catch(e) {
+      const yhSym = fnoSym === 'NIFTY'     ? '^NSEI'
+                  : fnoSym === 'BANKNIFTY' ? '^NSEBANK'
+                  : fnoSym === 'FINNIFTY'  ? '^NSMIDCP'
+                  : fnoSym + '.NS';
+
+      const r = await fetch(
+        `https://query2.finance.yahoo.com/v7/finance/options/${encodeURIComponent(yhSym)}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) throw new Error('YH options ' + r.status);
+      const d = await r.json();
+      const result  = d?.optionChain?.result?.[0];
+      if (!result)  throw new Error('no option chain result');
+
+      const spot    = result.quote?.regularMarketPrice || 0;
+      const expiries = result.expirationDates || [];
+      const options  = result.options?.[0] || {};
+      const calls    = options.calls || [];
+      const puts     = options.puts  || [];
+
+      // Normalise to NSE-style records format
+      const records = {
+        underlyingValue: spot,
+        expiryDates: expiries.map(ts => new Date(ts * 1000).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })),
+        data: [],
+      };
+
+      // Merge calls + puts by strike
+      const strikeMap = {};
+      calls.forEach(c => {
+        const s = c.strike;
+        if (!strikeMap[s]) strikeMap[s] = { strikePrice: s };
+        strikeMap[s].CE = {
+          openInterest:       c.openInterest       || 0,
+          changeinOpenInterest: c.change            || 0,
+          totalTradedVolume:  c.volume              || 0,
+          impliedVolatility:  c.impliedVolatility   || 0,
+          lastPrice:          c.lastPrice           || 0,
+          change:             c.change              || 0,
+          pChange:            c.percentChange       || 0,
+          bidQty: c.bid || 0, askQty: c.ask || 0,
+          strikePrice: s, expiryDate: c.expiration ? new Date(c.expiration*1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '',
+        };
+      });
+      puts.forEach(p => {
+        const s = p.strike;
+        if (!strikeMap[s]) strikeMap[s] = { strikePrice: s };
+        strikeMap[s].PE = {
+          openInterest:       p.openInterest       || 0,
+          changeinOpenInterest: p.change            || 0,
+          totalTradedVolume:  p.volume              || 0,
+          impliedVolatility:  p.impliedVolatility   || 0,
+          lastPrice:          p.lastPrice           || 0,
+          change:             p.change              || 0,
+          pChange:            p.percentChange       || 0,
+          bidQty: p.bid || 0, askQty: p.ask || 0,
+          strikePrice: s, expiryDate: p.expiration ? new Date(p.expiration*1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '',
+        };
+      });
+
+      records.data = Object.values(strikeMap).sort((a,b) => a.strikePrice - b.strikePrice);
+
+      res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=15');
+      return res.status(200).json({ records, source: 'yahoo' });
+    } catch(yhErr) {
+      // ── Source 2: NSE (may fail from Vercel IPs due to bot detection) ──
       try {
-        const d = await nseGet(`/api/option-chain-equities?symbol=${encodeURIComponent(fnoSym)}`, 12000);
-        res.setHeader('Cache-Control','s-maxage=30, stale-while-revalidate=15');
-        return res.status(200).json(d);
-      } catch(e2) {
-        return res.status(500).json({error:e.message, fallback:true});
+        const endpoint = ['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY'].includes(fnoSym)
+          ? `/api/option-chain-indices?symbol=${encodeURIComponent(fnoSym)}`
+          : `/api/option-chain-equities?symbol=${encodeURIComponent(fnoSym)}`;
+        const d = await nseGet(endpoint, 12000);
+        res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=15');
+        return res.status(200).json({ ...d, source: 'nse' });
+      } catch(nseErr) {
+        // Both failed — return error so frontend uses its model with a clear label
+        return res.status(500).json({ error: 'Both Yahoo and NSE unavailable: ' + nseErr.message, fallback: true });
       }
     }
   }
