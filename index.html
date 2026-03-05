@@ -971,35 +971,39 @@ body{padding-bottom:28px}
 ══════════════════════════════════════════════════════════════════════════ -->
 <div class="pg" id="pg-whale">
   <div class="sw">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.15em;color:var(--tx);display:flex;align-items:center;gap:10px;margin-bottom:14px">🐋 Whale Trades &amp; Institutional Flow <span style="font-size:9px;color:var(--dim2);letter-spacing:.2em;font-family:'DM Mono',monospace;font-weight:400">MAR 2, 2026</span></div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.15em;color:var(--tx);display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      🐋 Institutional Flow &amp; Market Intelligence
+      <span style="font-size:9px;color:var(--dim2);letter-spacing:.2em;font-family:'DM Mono',monospace" id="whale-updated">LOADING…</span>
+    </div>
     <div class="g4">
       <div>
-        <div class="ph">FII / DII Breakdown</div>
-        <div class="fb"><div class="fr2"><span class="fl2">FII Net Today</span><span class="fv2 s">▼ −₹1,072 Cr</span></div><div class="fbt"><div class="fbb" style="width:28%"></div><div class="fbs"></div></div><div style="display:flex;justify-content:space-between;font-size:8px;color:var(--dim);margin-bottom:3px"><span>Sold ₹3,912 Cr</span><span>Bought ₹2,840 Cr</span></div><div class="fn" style="color:var(--rd)">NET: −₹1,072 Cr today</div></div>
-        <div class="fb"><div class="fr2"><span class="fl2">DII Net Today</span><span class="fv2 b">▲ +₹3,364 Cr</span></div><div class="fbt"><div class="fbb" style="width:71%"></div><div class="fbs"></div></div><div style="display:flex;justify-content:space-between;font-size:8px;color:var(--dim);margin-bottom:3px"><span>Sold ₹9,840 Cr</span><span>Bought ₹13,204 Cr</span></div><div class="fn" style="color:var(--gn)">NET: +₹3,364 Cr · SIP ₹29K Cr/mo</div></div>
-        <div class="fb" style="background:rgba(255,153,51,.04);border-color:rgba(255,153,51,.2)"><div style="font-size:8px;color:var(--dim2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em">Dec '25 Context</div><div style="font-size:9px;color:var(--tx);line-height:1.5">FIIs sold ₹14,845 Cr · DIIs bought ₹36,097 Cr. INR −5% in 2025 primary FII caution driver.</div></div>
+        <div class="ph">📰 Live Market News</div>
+        <div id="whale-news-feed" style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</div>
+        </div>
       </div>
       <div>
-        <div class="ph">Bulk / Block Deals <span class="badge bg-lv">RECENT</span></div>
-        <div class="ii b"><div class="is">HDFC BANK</div><div class="iw">Norway GPF · Sovereign Wealth · Feb 28</div><div class="ia b">▲ BUY ~₹1,240 Cr · 73.2L sh @ ₹1,694</div><div class="ig">Consistent accumulation. Long-term sovereign hold signal.</div></div>
-        <div class="ii s"><div class="is">ZOMATO</div><div class="iw">CLSA / Credit Suisse · Feb 28</div><div class="ia s">▼ SELL ~₹890 Cr · 4.1 Cr sh @ ₹214</div><div class="ig">Profit booking after 34% run. Cautious QC margin guidance.</div></div>
-        <div class="ii b"><div class="is">RELIANCE INDUSTRIES</div><div class="iw">Vanguard EM · Passive Rebalance · Feb 26</div><div class="ia b">▲ BUY ~₹2,100 Cr · 70.3L sh @ ₹2,991</div><div class="ig">Jio IPO timeline firming + Biopharma entry driving weight expansion.</div></div>
-        <div class="ii s"><div class="is">PAYTM (ONE97)</div><div class="iw">Morgan Stanley Asia · Feb 25</div><div class="ia s">▼ SELL ~₹310 Cr · Partial exit</div><div class="ig">Ahead of RBI audit conclusion. Fintech risk elevated.</div></div>
+        <div class="ph">📈 Top Movers Today</div>
+        <div id="whale-movers" style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</div>
+        </div>
       </div>
       <div>
-        <div class="ph">Major Fund Activity</div>
-        <div class="c" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:10px;font-weight:700;color:#fff">SBI MUTUAL FUND</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gn);font-weight:600">▲ NET BUY</span></div><div style="font-size:8px;color:var(--dim2);margin-bottom:4px">AUM ₹10.8L Cr · Largest Indian MF</div><div style="display:flex;flex-direction:column;gap:3px;font-size:9px"><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">BHARTI AIRTEL</span><span style="color:var(--gn)">+₹680 Cr</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">NTPC</span><span style="color:var(--gn)">+₹420 Cr</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">ITC</span><span style="color:var(--rd)">−₹210 Cr</span></div></div></div>
-        <div class="c" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:10px;font-weight:700;color:#fff">HDFC MUTUAL FUND</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gn);font-weight:600">▲ NET BUY</span></div><div style="font-size:8px;color:var(--dim2);margin-bottom:4px">AUM ₹7.2L Cr · Private MF</div><div style="display:flex;flex-direction:column;gap:3px;font-size:9px"><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">INFOSYS</span><span style="color:var(--gn)">+₹890 Cr</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">ICICI BANK</span><span style="color:var(--gn)">+₹540 Cr</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">BAJAJ FIN</span><span style="color:var(--rd)">−₹180 Cr</span></div></div></div>
-        <div class="c"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:10px;font-weight:700;color:#fff">BLACKROCK / iSHARES</span><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--rd);font-weight:600">▼ NET SELL</span></div><div style="font-size:8px;color:var(--dim2);margin-bottom:4px">Global FII · India ETF Flows</div><div style="display:flex;flex-direction:column;gap:3px;font-size:9px"><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">NIFTY ETF</span><span style="color:var(--rd)">−$240M</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">SENSEX ETF</span><span style="color:var(--rd)">−$88M</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">INDIA SC</span><span style="color:var(--gn)">+$32M</span></div></div></div>
+        <div class="ph">🔥 Biggest Gainers</div>
+        <table style="width:100%;border-collapse:collapse" id="whale-gainers-tbl">
+          <tr><td style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</td></tr>
+        </table>
       </div>
       <div>
-        <div class="ph">Superstar Investors</div>
-        <div class="c" style="margin-bottom:6px"><div style="font-size:9px;font-weight:700;color:#fff;margin-bottom:2px">RJ ESTATE (Rare Enterprises)</div><div style="font-size:8px;color:var(--dim2);margin-bottom:4px">Rakesh Jhunjhunwala Legacy</div><div style="display:flex;flex-direction:column;gap:3px;font-size:9px"><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">TATA MOTORS</span><span style="background:rgba(255,153,51,.12);color:var(--sf);font-size:8px;padding:1px 4px;border-radius:2px">HOLD 7.8Cr</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">STAR HEALTH</span><span style="background:rgba(255,153,51,.12);color:var(--sf);font-size:8px;padding:1px 4px;border-radius:2px">HOLD</span></div></div></div>
-        <div class="c" style="margin-bottom:6px"><div style="font-size:9px;font-weight:700;color:#fff;margin-bottom:2px">ASHISH KACHOLIA</div><div style="font-size:8px;color:var(--dim2);margin-bottom:4px">Lucky Investments · Small/Mid</div><div style="display:flex;flex-direction:column;gap:3px;font-size:9px"><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">FROG CELLSAT</span><span style="color:var(--gn);font-size:8px">BUY Fresh</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">WAAREE</span><span style="color:var(--gn);font-size:8px">ADD +0.4%</span></div></div></div>
-        <div class="c"><div style="font-size:9px;font-weight:700;color:#fff;margin-bottom:2px">VIJAY KEDIA</div><div style="font-size:8px;color:var(--dim2);margin-bottom:4px">Kedia Securities · Conviction</div><div style="display:flex;flex-direction:column;gap:3px;font-size:9px"><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">ATUL AUTO</span><span style="background:rgba(255,153,51,.12);color:var(--sf);font-size:8px;padding:1px 4px;border-radius:2px">HOLD</span></div><div style="display:flex;justify-content:space-between"><span style="font-family:'DM Mono',monospace;color:var(--tx)">REPCO HOME</span><span style="color:var(--gn);font-size:8px">ADD Rate play</span></div></div></div>
+        <div class="ph">💧 Biggest Losers</div>
+        <table style="width:100%;border-collapse:collapse" id="whale-losers-tbl">
+          <tr><td style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</td></tr>
+        </table>
       </div>
     </div>
   </div>
+</div>
+</div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
@@ -1007,31 +1011,19 @@ body{padding-bottom:28px}
 ══════════════════════════════════════════════════════════════════════════ -->
 <div class="pg" id="pg-social">
   <div class="sw">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.15em;color:var(--tx);display:flex;align-items:center;gap:10px;margin-bottom:14px">📱 Social Buzz — X · Reddit · Instagram · Stocktwits</div>
-    <div class="g3">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.15em;color:var(--tx);display:flex;align-items:center;gap:10px;margin-bottom:14px">📱 Social Buzz &amp; Sentiment</div>
+    <div class="g2">
       <div>
-        <div class="ph">🔥 Trending Now</div>
-        <div class="si"><div class="sk hot">1</div><div class="sb"><div class="ss">JIOFINANCIAL (JFSL)</div><div class="sw2">Jio IPO date rumours · 22K+ X posts today</div></div><div class="sr2"><div class="src">X·Reddit·ST</div><div class="hb"><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div></div></div></div>
-        <div class="si"><div class="sk hot">2</div><div class="sb"><div class="ss">WAAREE ENERGIES</div><div class="sw2">Solar PLI leak · Promoter buying flagged</div></div><div class="sr2"><div class="src">X·Insta·ST</div><div class="hb"><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd"></div></div></div></div>
-        <div class="si"><div class="sk hot">3</div><div class="sb"><div class="ss">ADANI ENTERPRISES</div><div class="sw2">AAHL stake sale · High volatility</div></div><div class="sr2"><div class="src">X·Reddit</div><div class="hb"><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd"></div></div></div></div>
-        <div class="si"><div class="sk">4</div><div class="sb"><div class="ss">TATA MOTORS</div><div class="sw2">JLR Q4 delivery beat — EV pivot</div></div><div class="sr2"><div class="src">Reddit·ST</div><div class="hb"><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd"></div><div class="hd"></div></div></div></div>
-        <div class="si"><div class="sk">5</div><div class="sb"><div class="ss">COFORGE</div><div class="sw2">$158M UK contract confirmed · 5yr</div></div><div class="sr2"><div class="src">X·ST</div><div class="hb"><div class="hd on"></div><div class="hd on"></div><div class="hd on"></div><div class="hd"></div><div class="hd"></div></div></div></div>
-        <div class="si"><div class="sk">6</div><div class="sb"><div class="ss">NTPC</div><div class="sw2">Sinnar Thermal acquisition complete</div></div><div class="sr2"><div class="src">X·Filing</div><div class="hb"><div class="hd on"></div><div class="hd on"></div><div class="hd"></div><div class="hd"></div><div class="hd"></div></div></div></div>
-        <div class="si"><div class="sk">7</div><div class="sb"><div class="ss">SUZLON ENERGY</div><div class="sw2">Record ₹18K Cr order book · 52wk high</div></div><div class="sr2"><div class="src">ST·Insta</div><div class="hb"><div class="hd on"></div><div class="hd on"></div><div class="hd"></div><div class="hd"></div><div class="hd"></div></div></div></div>
+        <div class="ph">📰 Latest Headlines</div>
+        <div id="social-news" style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</div>
+        </div>
       </div>
       <div>
-        <div class="ph">Story Behind the Move</div>
-        <div class="c ch" style="margin-bottom:6px;border-left:3px solid var(--sf)"><div style="font-size:10px;font-weight:600;color:#fff;margin-bottom:3px">JFSL — Jio IPO Speculation</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">Unconfirmed reports of Jio IPO prep for H2 2026. +4.2% today on high vol. Reddit: 18K upvotes. X: 71% bullish.</div><div style="margin-top:4px;display:flex;gap:4px"><span class="pit bull">BULLISH</span><span style="font-size:8px;padding:1px 5px;border-radius:2px;background:rgba(255,255,255,.05);color:var(--dim2)">UNCONFIRMED</span></div></div>
-        <div class="c ch" style="margin-bottom:6px;border-left:3px solid var(--sf2)"><div style="font-size:10px;font-weight:600;color:#fff;margin-bottom:3px">Adani — AAHL Stake Sale</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">Airport Holdings in talks to sell minority stake to ME sovereign fund. $1.5–2B raise expected. AEL ±3% intraday.</div><span class="pit mix">DEVELOPING</span></div>
-        <div class="c ch" style="margin-bottom:6px;border-left:3px solid var(--gn)"><div style="font-size:10px;font-weight:600;color:#fff;margin-bottom:3px">Coforge — UK HMRC Confirmed</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">$158M/5yr HMRC digital confirmed via BSE filing. Revenue from Q4 FY26. Most discussed IT stock on ST India.</div><span class="pit bull">CONFIRMED</span></div>
-        <div class="c ch"><div style="font-size:10px;font-weight:600;color:#fff;margin-bottom:3px">Paytm — Still Bearish</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">MS Asia trimmed. RBI audit pending. ST: 44% bull / 56% bear. Still −58% from ₹2,150 IPO.</div><span class="pit bear">CAUTIOUS</span></div>
-      </div>
-      <div>
-        <div class="ph">Trending News</div>
-        <div class="c ch" style="margin-bottom:6px"><div style="font-size:9px;font-weight:600;color:var(--gn);margin-bottom:2px">WAAREE ENERGIES</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">PLI 2.0 solar module incentives. 2.1 GW Gujarat plant Q1 FY27. Promoter bought 3.2L shares pre-tariff protections.</div></div>
-        <div class="c ch" style="margin-bottom:6px"><div style="font-size:9px;font-weight:600;color:var(--sf);margin-bottom:2px">SUZLON ENERGY</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">Record ₹18K Cr order book. Debt-free after FY25 cleanup. Retail volume surge driven by Instagram + X.</div></div>
-        <div class="c ch" style="margin-bottom:6px"><div style="font-size:9px;font-weight:600;color:var(--ac2);margin-bottom:2px">NTPC</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">Sinnar Thermal (1,350 MW) acquired Feb 24 via NCLT. SBI MF added ₹420 Cr. Budget power capex record high.</div></div>
-        <div class="c ch"><div style="font-size:9px;font-weight:600;color:var(--rd);margin-bottom:2px">L&T</div><div style="font-size:9px;color:var(--dim2);line-height:1.5">₹5K–10K Cr dual order win — India power + ME industrial. Order book ₹5.5L Cr+. Capex direct beneficiary.</div></div>
+        <div class="ph">📊 Market Sentiment — Live Prices</div>
+        <div id="social-sentiment" style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1042,30 +1034,19 @@ body{padding-bottom:28px}
 ══════════════════════════════════════════════════════════════════════════ -->
 <div class="pg" id="pg-insider">
   <div class="sw">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.15em;color:var(--tx);display:flex;align-items:center;gap:10px;margin-bottom:14px">🔍 Insider Intelligence &amp; Policy Impact <span style="font-size:9px;color:var(--dim2);letter-spacing:.2em;font-family:'DM Mono',monospace">SEBI DISCLOSED · FEB–MAR 2026</span></div>
-    <div class="g3">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.15em;color:var(--tx);display:flex;align-items:center;gap:10px;margin-bottom:14px">🔍 Insider Intel &amp; Policy Impact</div>
+    <div class="g2">
       <div>
-        <div class="ph">Promoter &amp; KMP <span class="badge bg-gn">SEBI FILED</span></div>
-        <div class="ii b"><div class="is">WAAREE ENERGIES</div><div class="iw">Promoter group · Feb 2026</div><div class="ia b">▲ BUY — 3.2L shares @ ₹2,840</div><div class="ig">Ahead of <strong>2.1 GW Gujarat solar plant</strong> commissioning. PLI 2.0 = high-conviction.</div></div>
-        <div class="ii s"><div class="is">ISF LIMITED</div><div class="iw">CEO Relative K.K. Dang · Jan 22, 2026</div><div class="ia s">▼ FULL EXIT — 57.27L shares (6.03% → 0%)</div><div class="ig"><strong>Bearish</strong> — family exiting entire stake post CEO change (Vishal Dang, Nov 2025).</div></div>
-        <div class="ii s"><div class="is">IEX — INDIAN ENERGY EXCHANGE</div><div class="iw">SEBI Investigation · Active</div><div class="ia s">⚠ ALLEGED INSIDER TRADING</div><div class="ig"><strong>₹173 Cr ill-gotten gains</strong> via options. Accounts frozen. Avoid.</div></div>
-        <div class="ii b"><div class="is">HG INFRA ENGINEERING</div><div class="iw">Director / KMP · Feb 25, 2026</div><div class="ia b">▲ BUY — Accumulation flagged</div><div class="ig">₹11.1L Cr capex + NHAI + <strong>Sagarmala Phase III</strong> nod. Classic pre-contract buy.</div></div>
-        <div class="ii b"><div class="is">SCHAEFFLER INDIA</div><div class="iw">Parent entity · Feb 2026</div><div class="ia b">▲ BUY SIGNAL</div><div class="ig">India–US trade deal improves <strong>auto export visibility</strong>. EV + PLI 2.0 upside.</div></div>
+        <div class="ph">📰 Policy &amp; Regulatory News</div>
+        <div id="insider-news" style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</div>
+        </div>
       </div>
       <div>
-        <div class="ph">Smart Money <span class="badge bg-sf">FEB–MAR</span></div>
-        <div class="ii b"><div class="is">DR. REDDY'S LABS</div><div class="iw">Institutional accumulation · Feb 25</div><div class="ia b">▲ ACCUMULATE</div><div class="ig"><strong>Biopharma Shakti ₹10K Cr</strong> + nil GST on 36 drugs. Front-running Q4 beat.</div></div>
-        <div class="ii b"><div class="is">IRFC / RAIL VIKAS NIGAM</div><div class="iw">PSU Rail · Bulk deal activity</div><div class="ia b">▲ BUY — Institutional block</div><div class="ig">Mission Purvodaya + <strong>₹2.65L Cr railway budget</strong>. Direct order book.</div></div>
-        <div class="ii w"><div class="is">HEXAWARE TECHNOLOGIES</div><div class="iw">Post-IPO · Feb 25</div><div class="ia w">◆ WATCH — Lock-in expiry risk</div><div class="ig"><strong>US tariff headwinds</strong> in IT. Monitor pledging signals.</div></div>
-        <div class="ii b"><div class="is">ANGEL ONE</div><div class="iw">SEBI broker regulation</div><div class="ia b">▲ STRUCTURAL TAILWIND</div><div class="ig">First broker overhaul since 1992. <strong>Advisory + underwriting</strong> permitted. Revenue expansion.</div></div>
-      </div>
-      <div>
-        <div class="ph">Policy → Stocks <span class="badge" style="background:rgba(123,159,255,.15);color:var(--ac2)">BUDGET + RBI</span></div>
-        <div class="pc" style="border-left-color:var(--ac2)"><div class="pt">🏦 RBI Holds 6.5% — June Cut Signal</div><div class="pd">First rate cut in 4yrs. Rate sensitives re-rating.</div><div class="ps">HDFC BANK · SBI · LIC HOUSING · GODREJ · BAJAJ FIN</div><span class="pit bull">BULLISH</span></div>
-        <div class="pc" style="border-left-color:var(--gn)"><div class="pt">💊 Biopharma Shakti — ₹10,000 Cr/5yrs</div><div class="pd">India as global biopharma hub. Nil GST on health insurance.</div><div class="ps">DR REDDYS · SUN PHARMA · BIOCON · APOLLO · STAR HEALTH</div><span class="pit bull">BULLISH</span></div>
-        <div class="pc" style="border-left-color:var(--sf)"><div class="pt">🇺🇸 India–US Trade Deal — Tariff Cut</div><div class="pd">IT cautious near-term. Exporters bullish.</div><div class="ps">TCS · INFOSYS · WIPRO · TEXTILE · CHEMICALS</div><span class="pit mix">MIXED</span></div>
-        <div class="pc" style="border-left-color:var(--gn)"><div class="pt">⚡ PLI 2.0 — ₹2.5L Cr Semicons + EVs</div><div class="pd">5–7yr structural tailwind. Largest PLI ever.</div><div class="ps">TATA MOTORS · M&M · DIXON · KAYNES · WAAREE</div><span class="pit bull">BULLISH</span></div>
-        <div class="pc" style="border-left-color:var(--rd)"><div class="pt">🛢️ Russia Crude — $4/bbl Discount 3yr</div><div class="pd">Downstream ✓  Upstream ✗</div><div class="ps">RELIANCE · HPCL · BPCL · IOC vs ONGC</div><span class="pit mix">MIXED</span></div>
+        <div class="ph">📈 Stocks in Focus</div>
+        <div id="insider-stocks" style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading…</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1540,8 +1521,72 @@ function renderAllMarketTables() {
   // Gainers/Losers sidebar (header ticker)
   renderGainerLoserSidebar(gainers, losers);
 
+  // Update whale tab movers
+  updateWhaleTab(gainers, losers, sorted);
+
   // Update status bar ticker with live prices
   buildLiveTicker();
+}
+
+function updateWhaleTab(gainers, losers, sorted) {
+  // News feed in whale tab
+  const wNews = document.getElementById('whale-news-feed');
+  if (wNews && liveNews.length) {
+    const fmtP = v => v ? '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:2}) : '—';
+    wNews.innerHTML = liveNews.slice(0,6).map(n =>
+      `<div class="intel-card" ${n.link?`onclick="window.open('${n.link}','_blank')" style="cursor:pointer"`:''}>
+        <div style="font-size:9px;color:var(--tx);line-height:1.4;margin-bottom:2px">${n.title.slice(0,100)}</div>
+        <div style="font-size:8px;color:var(--dim2)">${n.src} · ${timeAgo(n.pubDate)}</div>
+      </div>`
+    ).join('');
+  }
+
+  // Top movers
+  const wMovers = document.getElementById('whale-movers');
+  if (wMovers && sorted.length) {
+    const fmtP = v => v ? '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:2}) : '—';
+    const topMov = [...sorted].sort((a,b) => Math.abs(b.pct)-Math.abs(a.pct)).slice(0,6);
+    wMovers.innerHTML = topMov.map(s =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer" onclick="quickSearch('${s.tick}')">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--tx)">${s.tick}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:600;color:${s.up?'var(--gn)':'var(--rd)'}">${s.up?'▲':'▼'}${Math.abs(s.pct).toFixed(2)}%</span>
+        <span style="font-size:9px;color:var(--dim)">${fmtP(s.price)}</span>
+      </div>`
+    ).join('');
+  }
+
+  // Gainers table
+  const wG = document.getElementById('whale-gainers-tbl');
+  if (wG && gainers.length) {
+    const fmtP = v => v ? '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:2}) : '—';
+    wG.innerHTML = gainers.map(s =>
+      `<tr onclick="quickSearch('${s.tick}')" style="cursor:pointer">
+        <td class="vts">${s.tick}</td>
+        <td class="vtp">${fmtP(s.price)}</td>
+        <td class="vtc up">▲${s.pct.toFixed(2)}%</td>
+      </tr>`
+    ).join('');
+  }
+
+  // Losers table
+  const wL = document.getElementById('whale-losers-tbl');
+  if (wL && losers.length) {
+    const fmtP = v => v ? '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:2}) : '—';
+    wL.innerHTML = losers.map(s =>
+      `<tr onclick="quickSearch('${s.tick}')" style="cursor:pointer">
+        <td class="vts">${s.tick}</td>
+        <td class="vtp">${fmtP(s.price)}</td>
+        <td class="vtc dn">▼${Math.abs(s.pct).toFixed(2)}%</td>
+      </tr>`
+    ).join('');
+  }
+
+  // Update timestamp
+  const wUpd = document.getElementById('whale-updated');
+  if (wUpd) {
+    const now = new Date();
+    wUpd.textContent = 'UPDATED ' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ' IST';
+  }
 }
 
 function renderGainerLoserSidebar(gainers, losers) {
@@ -1591,28 +1636,210 @@ setInterval(liveMarketUpdate, 10000);
 // ═══════════════════════════════════════════════════════════════════════════
 // NEWS FEED
 // ═══════════════════════════════════════════════════════════════════════════
-const NEWS=[
-  {cat:'market',h:'NIFTY hits 3-week high as FII inflows surge ₹4,200 Cr in single session',src:'Economic Times',t:'2m'},
-  {cat:'politics',h:'RBI holds 6.5%; signals possible June cut amid easing inflation',src:'Mint',t:'8m'},
-  {cat:'infra',h:'Mumbai-Pune Expressway expansion greenlit; ₹18,000 Cr NHAI project approved',src:'BusinessLine',t:'14m'},
-  {cat:'oil',h:'India locks in 3-year Russian crude deal at $4/bbl discount to Brent',src:'Reuters',t:'22m'},
-  {cat:'market',h:'Reliance Jio IPO timeline firmed; internal valuation pegged above $100B',src:'CNBC-TV18',t:'31m'},
-  {cat:'politics',h:'Budget 2025-26: Defence allocation rises 9.3% to ₹6.81 lakh crore',src:'PIB',t:'45m'},
-  {cat:'infra',h:'Bullet train: Ahmedabad-Mumbai corridor 62% complete, on track for 2026',src:'BusinessLine',t:'1h'},
-  {cat:'oil',h:'ONGC deepwater block KG-DWN-98 sees major gas discovery; 400 BCF estimated',src:'Financial Express',t:'1h'},
-  {cat:'market',h:'Coforge UK HMRC contract ($158M, 5yr) confirmed — revenue begins Q4 FY26',src:'BSE Filing',t:'2h'},
-  {cat:'politics',h:'SEBI broker regulations 2026 — first overhaul in 30 years',src:'SEBI Circular',t:'2h'},
-  {cat:'infra',h:'Sagarmala Phase III: 18 new port projects worth ₹1.2L Cr receive cabinet nod',src:'Shipping Min.',t:'3h'},
-  {cat:'oil',h:'PM Modi inaugurates 10 GW solar park in Rajasthan — largest single-site project',src:'MNRE',t:'4h'},
-  {cat:'market',h:'Angel One Q4 FY26 expected to reflect first SEBI advisory revenue uplift',src:'Moneycontrol',t:'4h'},
-  {cat:'politics',h:'PLI 2.0: ₹2.5L Cr incentives for semiconductors and EVs announced',src:'DPIIT',t:'5h'},
-];
-const CC={market:'cm',politics:'cp',infra:'ci',oil:'co',social:'cs'};
-const CL={market:'Market',politics:'Policy',infra:'Infra',oil:'Energy',social:'Social'};
-let nf_cur='all';
-function nfil(f,el){nf_cur=f;document.querySelectorAll('.nft').forEach(t=>t.classList.remove('on'));el.classList.add('on');rnews();}
-function rnews(){const d=nf_cur==='all'?NEWS:NEWS.filter(n=>n.cat===nf_cur);const el=document.getElementById('news');if(el)el.innerHTML=d.map(n=>`<div class="ni"><span class="nc ${CC[n.cat]}">${CL[n.cat]}</span><div class="nh2">${n.h}</div><div class="nm"><span class="ns2">${n.src}</span><span>${n.t} ago</span></div></div>`).join('');}
-rnews();
+// ═══════════════════════════════════════════════════════════════════════════
+// LIVE NEWS ENGINE — fetches real RSS feeds every 3 minutes
+// ═══════════════════════════════════════════════════════════════════════════
+let liveNews = [];
+let nf_cur = 'all';
+
+function nfil(f, el) {
+  nf_cur = f;
+  document.querySelectorAll('.nft').forEach(t => t.classList.remove('on'));
+  if (el) el.classList.add('on');
+  rnews();
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return 'recently';
+  try {
+    const d = new Date(dateStr);
+    const mins = Math.floor((Date.now() - d) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs/24) + 'd ago';
+  } catch(e) { return 'recently'; }
+}
+
+function categorize(title) {
+  const t = title.toLowerCase();
+  if (/rbi|rate|inflation|gdp|budget|sebi|govt|government|policy|tax|budget|minister/.test(t)) return 'politics';
+  if (/oil|brent|crude|opec|gas|energy|power|ntpc|ongc|coal/.test(t)) return 'oil';
+  if (/infra|highway|road|rail|railway|airport|port|metro|construction/.test(t)) return 'infra';
+  return 'market';
+}
+
+function rnews() {
+  const el = document.getElementById('news');
+  if (!el) return;
+  const CC = {market:'cm', politics:'cp', infra:'ci', oil:'co', social:'cs'};
+  const CL = {market:'Market', politics:'Policy', infra:'Infra', oil:'Energy', social:'Social'};
+  const data = nf_cur === 'all' ? liveNews : liveNews.filter(n => n.cat === nf_cur);
+  if (!data.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading live news…</div>';
+    return;
+  }
+  el.innerHTML = data.map(n =>
+    `<div class="ni" ${n.link ? `onclick="window.open('${n.link}','_blank')" style="cursor:pointer"` : ''}>
+      <span class="nc ${CC[n.cat]||'cm'}">${CL[n.cat]||'Market'}</span>
+      <div class="nh2">${n.title}</div>
+      <div class="nm">
+        <span class="ns2">${n.src}</span>
+        <span>${timeAgo(n.pubDate)}</span>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function renderNewsWithConclusions() {
+  const container = document.getElementById('news-with-conclusions');
+  if (!container) return;
+  const NEWS_CONCLUSIONS = {
+    market:   {icon:'📊', text:'Market news drives short-term price action. Watch volume confirmation.', badge:'watch'},
+    politics: {icon:'🏛️', text:'Policy changes create sector-wide moves. Rate-sensitive stocks react fastest.', badge:'mix'},
+    infra:    {icon:'🏗️', text:'Infra orders are multi-year revenue visibility. Accumulate on dips.', badge:'bull'},
+    oil:      {icon:'🛢️', text:'Oil moves affect CAD, INR, and downstream margins simultaneously.', badge:'mix'},
+    social:   {icon:'📱', text:'Social buzz creates short-term momentum (1–5 days). Use for timing only.', badge:'mix'},
+  };
+  if (!liveNews.length) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading news…</div>';
+    return;
+  }
+  container.innerHTML = liveNews.slice(0,15).map(n => {
+    const cc = NEWS_CONCLUSIONS[n.cat] || {icon:'📌', text:'Monitor for developments.', badge:'mix'};
+    const badgeColor = cc.badge==='bull'?'var(--gn)':cc.badge==='bear'?'var(--rd)':'var(--sf)';
+    return `<div class="intel-card" ${n.link?`onclick="window.open('${n.link}','_blank')" style="cursor:pointer"`:''}>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
+        <div style="font-size:10px;color:var(--tx);font-weight:500;line-height:1.4">${cc.icon} ${n.title}</div>
+        <span style="font-size:8px;color:${badgeColor};white-space:nowrap;padding:1px 5px;border:1px solid ${badgeColor};border-radius:2px;opacity:.8">${cc.badge.toUpperCase()}</span>
+      </div>
+      <div style="font-size:9px;color:var(--dim2);line-height:1.4;margin-bottom:3px">${cc.text}</div>
+      <div style="font-size:8px;color:var(--dim2)">${n.src} · ${timeAgo(n.pubDate)}</div>
+    </div>`;
+  }).join('');
+}
+
+async function fetchLiveNews() {
+  try {
+    const j = await apiFetch({ type: 'news' }, 12000);
+    if (j && j.items && j.items.length) {
+      liveNews = j.items.map(item => ({
+        ...item,
+        cat: categorize(item.title),
+        h: item.title,
+      }));
+      rnews();
+      renderNewsWithConclusions();
+      updateIntelFeed();
+      updateSocialTab();
+      updateInsiderTab();
+    }
+  } catch(e) { console.warn('News fetch failed:', e.message); }
+}
+
+// Update Social tab with live news
+function updateSocialTab() {
+  if (!liveNews.length) return;
+  const fmtP = v => v ? '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:2}) : '—';
+
+  // Social news feed
+  const sNews = document.getElementById('social-news');
+  if (sNews) {
+    sNews.innerHTML = liveNews.slice(0,8).map(n =>
+      `<div class="intel-card" ${n.link?`onclick="window.open('${n.link}','_blank')" style="cursor:pointer"`:''}>
+        <div style="font-size:9px;color:var(--tx);line-height:1.4;margin-bottom:2px">${n.title.slice(0,120)}</div>
+        <div style="font-size:8px;color:var(--dim2)">${n.src} · ${timeAgo(n.pubDate)}</div>
+      </div>`
+    ).join('');
+  }
+
+  // Sentiment from live stocks
+  const sSent = document.getElementById('social-sentiment');
+  if (sSent) {
+    const stocks = Object.values(window.liveStocks || {});
+    const bullish = stocks.filter(s => s.up).length;
+    const bearish = stocks.filter(s => !s.up).length;
+    const total = stocks.length || 1;
+    const bullPct = Math.round(bullish/total*100);
+    const top5 = [...stocks].sort((a,b) => Math.abs(b.pct)-Math.abs(a.pct)).slice(0,5);
+    sSent.innerHTML = `
+      <div class="c" style="margin-bottom:8px">
+        <div style="font-size:9px;color:var(--dim2);margin-bottom:6px">MARKET BREADTH — ${stocks.length} stocks tracked</div>
+        <div style="height:8px;border-radius:4px;background:rgba(255,59,59,.3);overflow:hidden;margin-bottom:4px">
+          <div style="height:100%;width:${bullPct}%;background:var(--gn);border-radius:4px;transition:width .6s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:8px">
+          <span style="color:var(--gn)">▲ ${bullish} advancing</span>
+          <span style="color:var(--rd)">▼ ${bearish} declining</span>
+        </div>
+      </div>
+      ${top5.map(s => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer" onclick="quickSearch('${s.tick}')">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--tx)">${s.tick}</span>
+          <span style="font-size:9px;color:var(--dim)">${fmtP(s.price)}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:600;color:${s.up?'var(--gn)':'var(--rd)'}">${s.up?'▲':'▼'}${Math.abs(s.pct).toFixed(2)}%</span>
+        </div>`
+      ).join('')}`;
+  }
+}
+
+// Update Insider tab with policy news + stocks
+function updateInsiderTab() {
+  if (!liveNews.length) return;
+  const fmtP = v => v ? '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:2}) : '—';
+
+  const iNews = document.getElementById('insider-news');
+  if (iNews) {
+    const policyNews = liveNews.filter(n => n.cat === 'politics' || n.cat === 'oil').slice(0,8);
+    const toShow = policyNews.length ? policyNews : liveNews.slice(0,8);
+    iNews.innerHTML = toShow.map(n =>
+      `<div class="intel-card" ${n.link?`onclick="window.open('${n.link}','_blank')" style="cursor:pointer"`:''}>
+        <div style="font-size:9px;color:var(--tx);line-height:1.4;margin-bottom:2px">${n.title.slice(0,120)}</div>
+        <div style="font-size:8px;color:var(--dim2)">${n.src} · ${timeAgo(n.pubDate)}</div>
+      </div>`
+    ).join('');
+  }
+
+  // Live stocks in focus
+  const iStocks = document.getElementById('insider-stocks');
+  if (iStocks) {
+    const stocks = Object.values(window.liveStocks || {});
+    const focus = [...stocks].sort((a,b) => Math.abs(b.pct)-Math.abs(a.pct)).slice(0,8);
+    iStocks.innerHTML = focus.map(s =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer" onclick="quickSearch('${s.tick}')">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--tx)">${s.tick}</div>
+          <div style="font-size:8px;color:var(--dim2)">${s.name || ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--tx)">${fmtP(s.price)}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;font-weight:600;color:${s.up?'var(--gn)':'var(--rd)'}">${s.up?'▲':'▼'}${Math.abs(s.pct).toFixed(2)}%</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+}
+
+// Push latest news into Intelligence Feed stream
+function updateIntelFeed() {
+  if (!liveNews.length) return;
+  // Add top 3 fresh news items as alerts
+  liveNews.slice(0, 3).forEach((n, i) => {
+    const key = 'news-' + n.title.slice(0,20).replace(/\s/g,'');
+    if (!firedAlerts.has(key)) {
+      firedAlerts.add(key);
+      setTimeout(() => {
+        pushAlert('news', n.title.slice(0,80), n.src + ' · ' + timeAgo(n.pubDate), '', '', '');
+      }, i * 2000);
+    }
+  });
+}
+
+// Boot: fetch news immediately then every 3 mins
+fetchLiveNews();
+setInterval(fetchLiveNews, 180000);
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // INTELLIGENCE FEED — Categorised sidebar
