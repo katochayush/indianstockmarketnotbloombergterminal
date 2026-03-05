@@ -45,10 +45,11 @@ module.exports = async function handler(req, res) {
     const feeds = [
       { url:'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms', src:'Economic Times' },
       { url:'https://www.business-standard.com/rss/markets-106.rss', src:'Business Standard' },
-      { url:'https://www.moneycontrol.com/rss/marketreports.xml', src:'Moneycontrol' },
-      { url:'https://feeds.feedburner.com/ndtvprofit-latest', src:'NDTV Profit' },
       { url:'https://www.livemint.com/rss/markets', src:'Livemint' },
+      { url:'https://feeds.feedburner.com/ndtvprofit-latest', src:'NDTV Profit' },
       { url:'https://www.financialexpress.com/market/feed/', src:'Financial Express' },
+      // Moneycontrol: use latest news feed instead of stale marketreports
+      { url:'https://www.moneycontrol.com/rss/latestnews.xml', src:'Moneycontrol' },
     ];
     function xt(xml, tag) {
       const cd = xml.match(new RegExp('<'+tag+'><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></'+tag+'>','i'));
@@ -57,21 +58,37 @@ module.exports = async function handler(req, res) {
       return pl ? pl[1].trim() : null;
     }
     const items=[], seen=new Set();
+    const now = Date.now();
+    const MAX_AGE_MS = 48 * 60 * 60 * 1000; // 48 hours — drop anything older
+
     for (const feed of feeds) {
       try {
         const r = await fetch(feed.url,{headers:{'User-Agent':'Mozilla/5.0','Accept':'application/rss+xml,*/*'},signal:AbortSignal.timeout(6000)});
         if (!r.ok) continue;
         const xml = await r.text();
-        for (const entry of (xml.match(/<item[\s>][\s\S]*?<\/item>/gi)||[]).slice(0,10)) {
+        for (const entry of (xml.match(/<item[\s>][\s\S]*?<\/item>/gi)||[]).slice(0,15)) {
           const title=xt(entry,'title'), link=xt(entry,'link')||xt(entry,'guid'), pubDate=xt(entry,'pubDate');
           const desc=xt(entry,'description')?.replace(/<[^>]+>/g,'').replace(/&[a-z#0-9]+;/g,' ').trim().slice(0,250);
-          if (title && title.length>8 && !title.startsWith('http')) {
-            const key=title.slice(0,50).toLowerCase();
-            if (!seen.has(key)){seen.add(key);items.push({title,link,pubDate,desc:desc||'',src:feed.src});}
+          if (!title || title.length<=8 || title.startsWith('http')) continue;
+
+          // Age filter — skip articles older than 48 hours
+          if (pubDate) {
+            const age = now - new Date(pubDate).getTime();
+            if (!isNaN(age) && age > MAX_AGE_MS) continue;
+          }
+
+          const key=title.slice(0,50).toLowerCase();
+          if (!seen.has(key)){
+            seen.add(key);
+            items.push({ title, link, pubDate, desc:desc||'', src:feed.src, ts: pubDate ? new Date(pubDate).getTime() : 0 });
           }
         }
       } catch(e){}
     }
+
+    // Sort newest first
+    items.sort((a,b) => (b.ts||0) - (a.ts||0));
+
     res.setHeader('Cache-Control','s-maxage=90, stale-while-revalidate=60');
     return res.status(200).json({items:items.slice(0,35)});
   }
