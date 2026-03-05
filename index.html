@@ -813,8 +813,9 @@ body{padding-bottom:28px}
 
     <!-- NEWS + IMPACT PANEL -->
     <div id="intel-news" style="display:none">
-      <div style="font-size:8px;color:var(--dim2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Today's news with direct trade impact analysis</div>
-      <div id="news-with-conclusions" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
+      <div id="news-with-conclusions">
+        <div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading live news…</div>
+      </div>
     </div>
 
   </div>
@@ -1675,16 +1676,17 @@ function nfil(f, el) {
 }
 
 function timeAgo(dateStr) {
-  if (!dateStr) return 'recently';
+  if (!dateStr) return '';
   try {
     const d = new Date(dateStr);
-    const mins = Math.floor((Date.now() - d) / 60000);
+    if (isNaN(d.getTime())) return '';
+    const mins = Math.floor((Date.now() - d.getTime()) / 60000);
     if (mins < 1) return 'just now';
     if (mins < 60) return mins + 'm ago';
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return hrs + 'h ago';
     return Math.floor(hrs/24) + 'd ago';
-  } catch(e) { return 'recently'; }
+  } catch(e) { return ''; }
 }
 
 function categorize(title) {
@@ -1743,6 +1745,28 @@ function newsImpact(n) {
   if (/nifty.*fall|sensex.*drop|market.*crash|bear/.test(t)) return {col:'var(--rd)',label:'BEARISH',summary:'Broad market weakness. Defensive sectors like pharma and FMCG may outperform.',stocks:'SUNPHARMA · ITC · HINDUNILVR'};
   // Default
   return {col:'var(--dim2)',label:'WATCH',summary:'Monitor for further developments and price action.',stocks:''};
+}
+
+function renderLiveAlertStream() {
+  const stream = document.getElementById('intel-alert-stream');
+  if (!stream) return;
+  // Show live news as intel alert cards
+  if (liveNews && liveNews.length) {
+    const fmtTime = (d) => { try { const t=new Date(d); return isNaN(t)?'':t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'})+' IST'; } catch(e){return '';} };
+    stream.innerHTML = liveNews.slice(0,12).map(n => {
+      const imp = newsImpact(n);
+      return `<div class="intel-card" style="border-left:3px solid ${imp.col}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px">
+          <div style="font-size:8px;font-weight:700;color:${imp.col};letter-spacing:.08em">${imp.label}</div>
+          <div style="font-size:8px;color:var(--dim2)">${fmtTime(n.pubDate)}</div>
+        </div>
+        <div style="font-size:10px;color:var(--tx);font-weight:500;line-height:1.4;margin-bottom:4px">${n.title}</div>
+        <div style="font-size:9px;color:var(--dim2);line-height:1.4;margin-bottom:4px">${imp.summary}</div>
+        ${imp.stocks ? `<div style="font-size:8px;color:var(--sf)">📌 ${imp.stocks}</div>` : ''}
+        <div style="font-size:8px;color:var(--dim2);margin-top:3px">${n.src}${n.link?` · <span onclick="window.open('${n.link}','_blank')" style="color:var(--ac);cursor:pointer">Read ↗</span>`:''}</div>
+      </div>`;
+    }).join('');
+  }
 }
 
 function renderNewsWithConclusions() {
@@ -1877,14 +1901,17 @@ function updateInsiderTab() {
 // Push latest news into Intelligence Feed stream
 function updateIntelFeed() {
   if (!liveNews.length) return;
-  // Add top 3 fresh news items as alerts
+  // Refresh alert stream if intel tab open
+  renderLiveAlertStream();
+  // Push toast alerts for top 3 new items
   liveNews.slice(0, 3).forEach((n, i) => {
-    const key = 'news-' + n.title.slice(0,20).replace(/\s/g,'');
+    const key = 'news-' + n.title.slice(0,30).replace(/\W/g,'');
     if (!firedAlerts.has(key)) {
       firedAlerts.add(key);
       setTimeout(() => {
-        pushAlert('news', n.title.slice(0,80), n.src + ' · ' + timeAgo(n.pubDate), '', '', '');
-      }, i * 2000);
+        const imp = newsImpact(n);
+        pushAlert('news', n.title.slice(0,80), imp.summary + (imp.stocks?' · '+imp.stocks:''), n.src, imp.label, timeAgo(n.pubDate));
+      }, i * 2500);
     }
   });
 }
@@ -1906,6 +1933,7 @@ function intelTab(name, el) {
   document.querySelectorAll('#intel-tabs .nft').forEach(t => t.classList.remove('on'));
   if(el) el.classList.add('on');
   if(name === 'news') renderNewsWithConclusions();
+  if(name === 'alerts') renderLiveAlertStream();
   if(name === 'alerts') renderIntelAlertStream();
 }
 const NEWS_CONCLUSIONS = {
