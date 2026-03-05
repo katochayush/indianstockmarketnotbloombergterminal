@@ -78,6 +78,12 @@ body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-
 .hi-chg.up{color:var(--gn)}.hi-chg.dn{color:var(--rd)}
 .hdr-r{display:flex;align-items:center;gap:12px;font-family:DM Mono,monospace;font-size:10px;color:var(--dim2)}
 .live-pill{display:flex;align-items:center;gap:5px;background:rgba(0,210,106,.1);border:1px solid rgba(0,210,106,.25);border-radius:20px;padding:3px 10px;color:var(--gn);font-size:9px;font-weight:600}
+.hdr-inr{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.04);border:1px solid var(--br2);border-radius:4px;padding:3px 10px;cursor:pointer;transition:all .2s}
+.hdr-inr:hover{background:rgba(255,153,51,.08);border-color:rgba(255,153,51,.2)}
+.hdr-inr-label{font-size:8px;color:var(--dim2);letter-spacing:.1em;text-transform:uppercase}
+.hdr-inr-val{font-family:DM Mono,monospace;font-size:11px;font-weight:600;color:var(--tx)}
+.hdr-inr-chg{font-family:DM Mono,monospace;font-size:9px}
+@media(max-width:768px){.hdr-inr{display:none}}
 .ld{width:5px;height:5px;border-radius:50%;background:var(--gn);animation:pulse 1.5s infinite}
 .alert-btn{background:rgba(255,153,51,.1);border:1px solid rgba(255,153,51,.25);border-radius:4px;padding:4px 10px;color:var(--sf);font-size:9px;cursor:pointer;transition:all .2s;position:relative}
 .alert-btn:hover{background:rgba(255,153,51,.2)}
@@ -748,6 +754,11 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 
   <div class="hdr-r">
     <div class="live-pill"><div class="ld"></div>LIVE</div>
+    <div class="hdr-inr" id="hdr-inr-wrap" onclick="tab('commodities', document.querySelector('[data-tab=commodities]'))" title="USD/INR live rate — click for Commodities">
+      <span class="hdr-inr-label">USD/INR</span>
+      <span class="hdr-inr-val" id="hdr-inr-val">₹83.94</span>
+      <span class="hdr-inr-chg" id="hdr-inr-chg"></span>
+    </div>
     <div class="alert-btn" onclick="toggleAlertPanel()">
       🔔 ALERTS <span class="alert-count" id="alert-count">0</span>
     </div>
@@ -1833,6 +1844,21 @@ function updateAllDisplays(){
   if(bEl) bEl.textContent=`$${br.v?.toFixed(2)}`;
   const gEl=document.getElementById('h-gold'), gCEl=document.getElementById('h-goldc');
   if(gEl) gEl.textContent=`₹${Math.round(gd.v).toLocaleString('en-IN')}`;
+
+  // Header INR/USD — live from commodities feed (updates every 60s)
+  if (ir && ir.v) {
+    const inrEl  = document.getElementById('hdr-inr-val');
+    const inrChg = document.getElementById('hdr-inr-chg');
+    if (inrEl) inrEl.textContent = '₹' + ir.v.toFixed(2);
+    if (inrChg) {
+      // cmxData has prev value for change calculation
+      const inrPrev = window.cmxData?.inrusd?.prev || ir.v;
+      const inrDiff = ir.v - inrPrev;
+      const inrUp   = inrDiff >= 0;
+      inrChg.textContent  = (inrUp ? '▲' : '▼') + Math.abs(inrDiff).toFixed(2);
+      inrChg.style.color  = inrUp ? 'var(--rd)' : 'var(--gn)'; // INR rising = bad (USD stronger)
+    }
+  }
 
   // Index cards
   const setCard = (vid, v, prev) => {
