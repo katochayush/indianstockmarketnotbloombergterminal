@@ -1544,6 +1544,8 @@ function updateAllDisplays(){
   buildLiveTicker();
   // Refresh portfolio P&L if open
   if (typeof renderPortfolioTab === 'function' && document.getElementById('pg-portfolio')?.classList.contains('on')) renderPortfolioTab();
+  // Refresh oil tab if open
+  if (typeof renderOilTab === 'function' && document.getElementById('pg-oil')?.classList.contains('on')) renderOilTab();
 }
 
 function buildLiveTicker() {
@@ -1730,6 +1732,7 @@ function tab(n,el){
   },50);
   if(n==='commodities') setTimeout(function(){ if(typeof renderCommoditiesTab==='function') renderCommoditiesTab(); },50);
   if(n==='earnings')    setTimeout(function(){ if(typeof fetchLiveEarnings==='function') fetchLiveEarnings(); },50);
+  if(n==='oil')         setTimeout(function(){ if(typeof renderOilTab==='function') renderOilTab(); },50);
   if(n==='fno')         setTimeout(function(){ if(typeof loadFno==='function') loadFno(window._fnoSym||'NIFTY',null); },50);
   if(n==='portfolio')   setTimeout(function(){ if(typeof renderPortfolioTab==='function') renderPortfolioTab(); },50);
   if(n==='alerts')      setTimeout(function(){ if(typeof renderAlertsTab==='function') renderAlertsTab(); },50);
@@ -2158,6 +2161,9 @@ async function fetchLiveNews() {
       updateIntelFeed();
       updateSocialTab();
       updateInsiderTab();
+      // Refresh live tabs that consume news
+      if (typeof renderOilTab === 'function' && document.getElementById('pg-oil')?.classList.contains('on')) renderOilTab();
+      if (typeof fetchLiveEarnings === 'function' && document.getElementById('pg-earnings')?.classList.contains('on')) fetchLiveEarnings();
     }
   } catch(e) { console.warn('News fetch failed:', e.message); }
 }
@@ -3968,14 +3974,7 @@ setInterval(function() {
   }
 }, 60000);
 
-// Also re-render earnings when new news arrives
-var _origFetchNews = fetchLiveNews;
-async function fetchLiveNews() {
-  await _origFetchNews();
-  if (document.getElementById('pg-earnings') && document.getElementById('pg-earnings').classList.contains('on')) {
-    fetchLiveEarnings();
-  }
-}
+// earnings+oil news refresh is handled inside the main fetchLiveNews below
 
 // ══════════════════════════════════════════════════════════════════════════
 // LIVE OIL & ENERGY TAB
@@ -4093,30 +4092,6 @@ function renderOilTab() {
   el.querySelectorAll('.news-ext-row').forEach(function(r){ r.addEventListener('click', function(){ if(r.dataset.href) window.open(r.dataset.href,'_blank'); }); });
 }
 
-// Hook oil tab into tab switcher
-(function() {
-  var _tabOld = tab;
-  function tab(n, el) {
-    _tabOld(n, el);
-    if (n === 'oil') setTimeout(renderOilTab, 50);
-  }
-  window.tab = tab;
-})();
-
-// Re-render oil tab when prices update
-var _origUpdateAll2 = updateAllDisplays;
-function updateAllDisplays() {
-  _origUpdateAll2();
-  if (document.getElementById('pg-oil')?.classList.contains('on')) renderOilTab();
-}
-
-// Re-render oil tab when news updates
-var _origFetchNews2 = fetchLiveNews;
-async function fetchLiveNews() {
-  await _origFetchNews2();
-  if (document.getElementById('pg-oil')?.classList.contains('on')) renderOilTab();
-  if (document.getElementById('pg-earnings')?.classList.contains('on')) fetchLiveEarnings();
-}
 
 </script>
 </body>
