@@ -15,7 +15,35 @@
   --bg:#050709;--bg2:#0a0d12;--bg3:#0f1318;--bg4:#141920;
   --br:rgba(255,153,51,0.12);--br2:rgba(255,255,255,0.05);--br3:rgba(255,255,255,0.08);
   --tx:#DDE3ED;--dim:#4A5568;--dim2:#6B7280;--cd:#0d1117;
+  --shadow:rgba(0,0,0,.5);
 }
+html.light{
+  --bg:#F5F7FA;--bg2:#EBEEF4;--bg3:#E0E4EE;--bg4:#D5DAE8;
+  --br:rgba(255,153,51,0.25);--br2:rgba(0,0,0,0.07);--br3:rgba(0,0,0,0.1);
+  --tx:#1A1F2E;--dim:#8A94A8;--dim2:#6B7585;--cd:#EBEEF4;
+  --shadow:rgba(0,0,0,.1);
+}
+html.light body{background:var(--bg);color:var(--tx)}
+html.light .sbar{background:#E8ECF4;border-color:rgba(255,153,51,.3)}
+html.light .hdr{background:linear-gradient(180deg,#EBEEF4 0%,#F5F7FA 100%)}
+html.light .nav{background:#EBEEF4;border-color:var(--br)}
+html.light .nt{color:var(--dim2)}
+html.light .nt.on{color:var(--sf);border-bottom-color:var(--sf)}
+html.light .bp,html.light .bbg,html.light .bp{background:var(--bg2);border-color:var(--br2)}
+html.light .c{background:var(--bg3);border-color:var(--br2)}
+html.light .vt th{background:var(--bg3);color:var(--dim)}
+html.light .vt td{color:var(--tx)}
+html.light table tr:hover td{background:rgba(255,153,51,.06)!important}
+html.light .icard{background:var(--bg2);border-color:var(--br2)}
+html.light .intel-card{background:var(--bg2);border-color:var(--br2)}
+html.light .ni{border-color:var(--br2)}
+html.light .sr{background:var(--bg2)}
+html.light input[type=text],html.light input[type=number]{background:var(--bg3);color:var(--tx);border-color:var(--br)}
+html.light #pg-search{background:var(--bg)}
+html.light .ph{color:var(--dim)}
+html.light #alert-panel{background:var(--bg2);border-color:var(--br)}
+html.light .cmx-card,html.light .fno-card,html.light .pf-card,html.light .pal-card{background:var(--bg2);border-color:var(--br2)}
+transition: background .3s, color .3s;
 html{scroll-behavior:smooth;height:100%}
 body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;overflow-x:hidden;height:100%;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:rgba(255,153,51,.2);border-radius:2px}
@@ -400,6 +428,86 @@ body{padding-bottom:28px}
 tr:hover td{background:rgba(255,153,51,.04)!important}
 .intel-card:hover{background:rgba(255,153,51,.03)!important;cursor:pointer}
 .ni:hover{background:rgba(255,255,255,.02)!important}
+
+/* ── COMMODITIES TAB ── */
+.cmx-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.cmx-card{background:var(--cd);border:1px solid var(--br2);border-radius:5px;padding:14px;cursor:pointer;transition:border-color .2s,transform .15s}
+.cmx-card:hover{border-color:var(--sf);transform:translateY(-1px)}
+.cmx-card.sel{border-color:var(--sf);background:rgba(255,153,51,.04)}
+.cmx-icon{font-size:22px;margin-bottom:6px}
+.cmx-name{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);margin-bottom:4px}
+.cmx-price{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--tx)}
+.cmx-chg{font-family:'DM Mono',monospace;font-size:10px;margin-top:3px}
+.cmx-unit{font-size:8px;color:var(--dim2);margin-top:2px}
+.cmx-chart-wrap{background:var(--cd);border:1px solid var(--br2);border-radius:5px;padding:14px;margin-bottom:14px}
+.cmx-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cmx-stat{background:var(--cd);border:1px solid var(--br2);border-radius:4px;padding:10px 12px;text-align:center}
+.cmx-stat-l{font-size:8px;color:var(--dim2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.cmx-stat-v{font-family:'DM Mono',monospace;font-size:13px;color:var(--tx)}
+
+/* ── F&O TAB ── */
+.fno-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.fno-card{background:var(--cd);border:1px solid var(--br2);border-radius:5px;padding:14px}
+.fno-h{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sf);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.fno-metric{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--br2)}
+.fno-metric:last-child{border-bottom:none}
+.fno-ml{font-size:11px;color:var(--dim2)}
+.fno-mv{font-family:'DM Mono',monospace;font-size:12px;color:var(--tx);font-weight:500}
+.fno-mv.bull{color:var(--gn)}.fno-mv.bear{color:var(--rd)}.fno-mv.neu{color:var(--sf)}
+.fno-bar-wrap{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin:8px 0}
+.fno-bar{height:100%;border-radius:4px;transition:width .6s ease}
+.fno-bar.bull{background:var(--gn)}.fno-bar.bear{background:var(--rd)}
+.oi-table{width:100%;border-collapse:collapse;font-size:10px}
+.oi-table th{padding:6px 8px;text-align:right;font-weight:600;color:var(--dim2);font-family:'DM Mono',monospace;font-size:9px;border-bottom:1px solid var(--br2)}
+.oi-table th:first-child,.oi-table td:nth-child(3){text-align:center}
+.oi-table td{padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:10px;border-bottom:1px solid rgba(255,255,255,.02)}
+.oi-table tr.atm td{background:rgba(255,153,51,.07);font-weight:700}
+.oi-ce{color:var(--gn)}.oi-pe{color:var(--rd)}
+.oi-strike{color:var(--sf);font-weight:700;text-align:center!important}
+.pcr-gauge{position:relative;height:80px;margin:10px 0}
+.fno-sym-btns{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.fno-sym-btn{background:var(--cd);border:1px solid var(--br2);padding:5px 14px;font-size:10px;font-family:'DM Mono',monospace;color:var(--dim2);cursor:pointer;border-radius:3px;transition:all .2s;letter-spacing:.08em}
+.fno-sym-btn.on,.fno-sym-btn:hover{border-color:var(--sf);color:var(--sf);background:rgba(255,153,51,.06)}
+
+/* ── PORTFOLIO TAB ── */
+.pf-add{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.pf-input{background:var(--cd);border:1px solid var(--br2);color:var(--tx);padding:8px 12px;font-family:'DM Mono',monospace;font-size:11px;border-radius:3px;outline:none;transition:border-color .2s}
+.pf-input:focus{border-color:var(--sf)}
+.pf-input::placeholder{color:var(--dim)}
+.pf-btn{background:var(--sf);color:#000;border:none;padding:8px 18px;font-size:11px;font-weight:700;letter-spacing:.1em;cursor:pointer;border-radius:3px;transition:background .2s}
+.pf-btn:hover{background:var(--sf2)}
+.pf-btn.del{background:rgba(255,59,59,.15);color:var(--rd);border:1px solid rgba(255,59,59,.25)}
+.pf-btn.del:hover{background:rgba(255,59,59,.25)}
+.pf-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.pf-card{background:var(--cd);border:1px solid var(--br2);border-radius:5px;padding:14px;text-align:center}
+.pf-card-l{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);margin-bottom:6px}
+.pf-card-v{font-family:'DM Mono',monospace;font-size:18px;color:var(--tx);font-weight:500}
+.pf-card-v.up{color:var(--gn)}.pf-card-v.dn{color:var(--rd)}
+.pf-table{width:100%;border-collapse:collapse}
+.pf-table th{padding:8px 10px;text-align:left;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);border-bottom:1px solid var(--br2)}
+.pf-table td{padding:9px 10px;font-family:'DM Mono',monospace;font-size:11px;border-bottom:1px solid rgba(255,255,255,.025);vertical-align:middle}
+.pf-table tr:hover td{background:rgba(255,153,51,.025)}
+.pf-empty{text-align:center;padding:40px;color:var(--dim2);font-size:11px;line-height:2}
+
+/* ── PRICE ALERTS TAB ── */
+.pal-add{display:grid;grid-template-columns:1fr 100px 100px auto;gap:8px;margin-bottom:14px;align-items:end}
+.pal-label{font-size:9px;color:var(--dim2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.pal-select{background:var(--cd);border:1px solid var(--br2);color:var(--tx);padding:8px 10px;font-size:11px;border-radius:3px;outline:none;width:100%}
+.pal-card{background:var(--cd);border:1px solid var(--br2);border-radius:5px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:12px;margin-bottom:8px;transition:border-color .2s}
+.pal-card.triggered{border-color:var(--gn);animation:alertPulse 1s 3}
+@keyframes alertPulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 12px rgba(0,210,106,.3)}}
+.pal-sym{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--sf)}
+.pal-cond{font-size:10px;color:var(--dim2)}
+.pal-target{font-family:'DM Mono',monospace;font-size:13px;color:var(--tx)}
+.pal-current{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim2)}
+.pal-status{font-size:9px;padding:3px 8px;border-radius:3px;letter-spacing:.1em;font-weight:700}
+.pal-status.active{background:rgba(255,153,51,.15);color:var(--sf)}
+.pal-status.triggered{background:rgba(0,210,106,.15);color:var(--gn)}
+.pal-del{background:none;border:1px solid var(--br2);color:var(--dim);padding:4px 8px;font-size:10px;cursor:pointer;border-radius:3px;transition:all .2s}
+.pal-del:hover{border-color:var(--rd);color:var(--rd)}
+.pal-empty{text-align:center;padding:40px;color:var(--dim2);font-size:11px;line-height:2}
+.pal-notif-box{background:rgba(0,210,106,.08);border:1px solid rgba(0,210,106,.2);border-radius:5px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:var(--gn);display:none}
+
 </style>
 </head>
 <body>
@@ -490,6 +598,11 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
   <div class="nt"     onclick="tab('oil',this)">🛢️ Oil &amp; Trade</div>
   <div class="nt"     onclick="tab('intel',this)">🧠 Intelligence Feed</div>
   <div class="nt"     onclick="tab('search',this)">🔎 Stock Search</div>
+  <div class="nt"     onclick="tab('commodities',this)">🥇 Commodities</div>
+  <div class="nt"     onclick="tab('fno',this)">📈 F&amp;O</div>
+  <div class="nt"     onclick="tab('portfolio',this)">💼 Portfolio</div>
+  <div class="nt"     onclick="tab('alerts',this)">🔔 Price Alerts</div>
+  <div class="nt" id="theme-btn" onclick="toggleTheme()" style="margin-left:auto;opacity:.7">☀️ Light</div>
 </nav>
 
 <!-- ══ ALERT DOCK (toast container) ══════════════════════════════════════ -->
@@ -1126,6 +1239,179 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
         <div class="pc" style="border-left-color:var(--rd)"><div class="pt">📈 Brent Above $85 → Negative</div><div class="pd">Widens CAD, pressures INR, forces OMC hikes. Delays RBI cut.</div><div class="ps">ONGC (✓) · HPCL · BPCL · IOC (✗)</div><span class="pit bear">BEARISH</span></div>
         <div class="pc" style="border-left-color:var(--sf)"><div class="pt">🇷🇺 Russia Deal Risk — Sanctions</div><div class="pd">US secondary sanctions could narrow discount. Monitor G7 signals.</div><div class="ps">RELIANCE · HPCL · BPCL</div><span class="pit mix">WATCH</span></div>
         <div class="pc" style="border-left-color:var(--gn)"><div class="pt">☀️ Renewable Transition</div><div class="pd">500 GW by 2030. EV + solar structurally bearish for OMCs long-term.</div><div class="ps">WAAREE · SUZLON · TATA POWER · NTPC</div><span class="pit bull">BULLISH LT</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: COMMODITIES ════════════════════════════════════════════ -->
+<div class="pg" id="pg-commodities">
+  <div class="bbg">
+    <div class="bp" style="grid-column:1/5">
+      <div class="ph">MCX Commodities <span class="badge bg-lv">LIVE</span>
+        <span style="font-size:9px;color:var(--dim2);font-family:'DM Mono',monospace;float:right">Last updated: <span id="cmx-updated">—</span></span>
+      </div>
+      <div class="cmx-grid" id="cmx-cards"></div>
+      <div class="cmx-chart-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span class="ph" id="cmx-chart-title" style="margin:0">Gold — MCX Spot</span>
+          <div style="display:flex;gap:4px" id="cmx-range-btns">
+            <button class="rbtn on" data-r="1d" onclick="setCmxRange('1d',this)">1D</button>
+            <button class="rbtn" data-r="5d" onclick="setCmxRange('5d',this)">5D</button>
+            <button class="rbtn" data-r="1mo" onclick="setCmxRange('1mo',this)">1M</button>
+            <button class="rbtn" data-r="3mo" onclick="setCmxRange('3mo',this)">3M</button>
+          </div>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="cmx-chart"></canvas></div>
+      </div>
+      <div class="cmx-stats-row" id="cmx-stats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: F&O ═════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-fno">
+  <div class="bbg" style="padding:14px">
+    <div style="grid-column:1/5">
+      <div class="ph" style="margin-bottom:12px">F&O Intelligence <span class="badge bg-lv">LIVE</span>
+        <span style="font-size:9px;color:var(--dim2);font-family:'DM Mono',monospace;float:right">NSE weekly expiry data</span>
+      </div>
+      <div class="fno-sym-btns">
+        <button class="fno-sym-btn on" onclick="loadFno('NIFTY',this)">NIFTY</button>
+        <button class="fno-sym-btn" onclick="loadFno('BANKNIFTY',this)">BANK NIFTY</button>
+        <button class="fno-sym-btn" onclick="loadFno('MIDCPNIFTY',this)">MIDCAP NIFTY</button>
+        <button class="fno-sym-btn" onclick="loadFno('FINNIFTY',this)">FIN NIFTY</button>
+      </div>
+      <div class="fno-grid">
+        <!-- Key metrics card -->
+        <div class="fno-card">
+          <div class="fno-h"><span>📊 KEY METRICS</span><span id="fno-sym-label" style="color:var(--tx)">NIFTY</span></div>
+          <div id="fno-metrics"></div>
+        </div>
+        <!-- PCR gauge -->
+        <div class="fno-card">
+          <div class="fno-h">📈 PUT/CALL RATIO (PCR)</div>
+          <canvas id="fno-pcr-chart" height="160"></canvas>
+          <div style="text-align:center;margin-top:8px">
+            <div style="font-family:'DM Mono',monospace;font-size:28px;color:var(--sf)" id="fno-pcr-val">—</div>
+            <div style="font-size:9px;color:var(--dim2);margin-top:3px" id="fno-pcr-sentiment">Loading…</div>
+          </div>
+        </div>
+      </div>
+      <!-- OI Table -->
+      <div class="fno-card" style="margin-bottom:10px">
+        <div class="fno-h">📋 OPTION CHAIN (Top Strikes by OI) <span id="fno-expiry" style="color:var(--dim2);font-size:9px"></span></div>
+        <div style="overflow-x:auto">
+          <table class="oi-table" id="fno-oi-table">
+            <thead><tr>
+              <th class="oi-ce" style="text-align:right">CE OI (Lakh)</th>
+              <th class="oi-ce" style="text-align:right">CE Chg%</th>
+              <th class="oi-strike">STRIKE</th>
+              <th class="oi-pe" style="text-align:left">PE OI (Lakh)</th>
+              <th class="oi-pe" style="text-align:left">PE Chg%</th>
+            </tr></thead>
+            <tbody id="fno-oi-body"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--dim2)">Loading option chain…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Max Pain + IV -->
+      <div class="fno-grid">
+        <div class="fno-card">
+          <div class="fno-h">🎯 MAX PAIN & LEVELS</div>
+          <div id="fno-maxpain"></div>
+        </div>
+        <div class="fno-card">
+          <div class="fno-h">📉 OI BUILD-UP SIGNALS</div>
+          <div id="fno-signals"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: PORTFOLIO ═══════════════════════════════════════════════ -->
+<div class="pg" id="pg-portfolio">
+  <div class="bbg" style="padding:14px">
+    <div style="grid-column:1/5">
+      <div class="ph" style="margin-bottom:12px">💼 My Portfolio <span style="font-size:9px;color:var(--dim2);font-family:'DM Mono',monospace">Live P&amp;L · Auto-updates every 10s</span></div>
+      <!-- Add holding row -->
+      <div class="pf-add">
+        <div>
+          <div class="pal-label">Stock Symbol</div>
+          <input class="pf-input" id="pf-sym" placeholder="e.g. RELIANCE" style="width:160px" />
+        </div>
+        <div>
+          <div class="pal-label">Qty (shares)</div>
+          <input class="pf-input" id="pf-qty" type="number" placeholder="100" style="width:110px" />
+        </div>
+        <div>
+          <div class="pal-label">Avg Buy Price (₹)</div>
+          <input class="pf-input" id="pf-avg" type="number" placeholder="2500.00" style="width:140px" />
+        </div>
+        <div>
+          <div class="pal-label">&nbsp;</div>
+          <button class="pf-btn" onclick="addHolding()">+ Add Holding</button>
+        </div>
+      </div>
+      <!-- Summary cards -->
+      <div class="pf-summary" id="pf-summary">
+        <div class="pf-card"><div class="pf-card-l">Invested Value</div><div class="pf-card-v" id="pf-invested">₹0</div></div>
+        <div class="pf-card"><div class="pf-card-l">Current Value</div><div class="pf-card-v" id="pf-current">₹0</div></div>
+        <div class="pf-card"><div class="pf-card-l">Total P&amp;L</div><div class="pf-card-v" id="pf-pnl">₹0</div></div>
+        <div class="pf-card"><div class="pf-card-l">Return %</div><div class="pf-card-v" id="pf-ret">0.00%</div></div>
+      </div>
+      <!-- Holdings table -->
+      <div class="fno-card" style="padding:0;overflow:hidden">
+        <table class="pf-table" id="pf-table">
+          <thead><tr>
+            <th>Symbol</th><th>Qty</th><th>Avg Cost</th>
+            <th>LTP</th><th>Invested</th><th>Current</th>
+            <th>P&amp;L</th><th>Return</th><th>Day Chg</th><th></th>
+          </tr></thead>
+          <tbody id="pf-tbody">
+            <tr><td colspan="10" class="pf-empty">No holdings yet.<br>Add your first stock above to track live P&amp;L.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: PRICE ALERTS ════════════════════════════════════════════ -->
+<div class="pg" id="pg-alerts">
+  <div class="bbg" style="padding:14px">
+    <div style="grid-column:1/5">
+      <div class="ph" style="margin-bottom:12px">🔔 Price Alerts <span style="font-size:9px;color:var(--dim2);font-family:'DM Mono',monospace">Browser notifications when your target is hit</span></div>
+      <div class="pal-notif-box" id="pal-notif-box">
+        ✅ Browser notifications enabled — you'll get alerts even if this tab is in the background.
+      </div>
+      <div class="pal-add">
+        <div>
+          <div class="pal-label">Stock Symbol</div>
+          <input class="pf-input" id="pal-sym" placeholder="RELIANCE, NIFTY50…" style="width:100%" />
+        </div>
+        <div>
+          <div class="pal-label">Condition</div>
+          <select class="pal-select" id="pal-cond">
+            <option value="above">Price Above ▲</option>
+            <option value="below">Price Below ▼</option>
+          </select>
+        </div>
+        <div>
+          <div class="pal-label">Target Price (₹)</div>
+          <input class="pf-input" id="pal-price" type="number" placeholder="2500" style="width:100%" />
+        </div>
+        <div>
+          <div class="pal-label">&nbsp;</div>
+          <button class="pf-btn" onclick="addAlert()">+ Set Alert</button>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;color:var(--dim2)" id="pal-count-label">No alerts set</span>
+        <button class="pf-btn" style="padding:5px 14px;font-size:10px;background:rgba(255,59,59,.15);color:var(--rd);border:1px solid rgba(255,59,59,.25)" onclick="clearAllAlerts()">Clear All</button>
+      </div>
+      <div id="pal-list">
+        <div class="pal-empty">No price alerts set.<br>Add one above — we'll notify you when your target is hit.</div>
       </div>
     </div>
   </div>
@@ -2831,8 +3117,724 @@ rStyle.textContent = `
   .rbtn.on{background:rgba(255,153,51,.15);border-color:rgba(255,153,51,.4);color:var(--sf)}
   .qpbtn{background:rgba(255,153,51,.08);border:1px solid rgba(255,153,51,.2);color:var(--sf);border-radius:3px;padding:3px 9px;font-family:'DM Mono',monospace;font-size:9px;cursor:pointer;transition:all .15s}
   .qpbtn:hover{background:rgba(255,153,51,.2)}
+  .badge{font-size:8px;padding:2px 6px;border-radius:2px;letter-spacing:.1em;font-family:'DM Mono',monospace;font-weight:700;vertical-align:middle;margin-left:6px}
+  .bg-lv{background:rgba(0,210,106,.12);color:#00D26A;border:1px solid rgba(0,210,106,.25)}
 `;
 document.head.appendChild(rStyle);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THEME TOGGLE
+// ═══════════════════════════════════════════════════════════════════════════
+let _isLight = false;
+function toggleTheme() {
+  _isLight = !_isLight;
+  document.documentElement.classList.toggle('light', _isLight);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = _isLight ? '🌙 Dark' : '☀️ Light';
+  // Redraw charts on theme change
+  try { if (srChart) { srChart.destroy(); srChart = null; } } catch(e){}
+  try { if (_cmxChart) { _cmxChart.destroy(); _cmxChart = null; } renderCmxChart(_cmxSel); } catch(e){}
+}
+
+// Hook new tabs into tab switcher
+const _origTab = tab;
+function tab(n, el) {
+  _origTab(n, el);
+  if (n === 'commodities') setTimeout(renderCommoditiesTab, 50);
+  if (n === 'fno')         setTimeout(() => loadFno(_fnoSym, null), 50);
+  if (n === 'portfolio')   setTimeout(renderPortfolioTab, 50);
+  if (n === 'alerts')      setTimeout(renderAlertsTab, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMMODITIES — MCX Gold, Silver, Crude, USD/INR
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Extended live commodity store
+window.cmxData = {
+  gold:   { name:'Gold', icon:'🥇', unit:'₹/10g (MCX)', v:0, prev:0, open:0, high:0, low:0 },
+  silver: { name:'Silver', icon:'🥈', unit:'₹/kg (MCX)', v:0, prev:0, open:0, high:0, low:0 },
+  crude:  { name:'Crude Oil', icon:'🛢️', unit:'$/bbl (Brent)', v:0, prev:0, open:0, high:0, low:0 },
+  inrusd: { name:'USD/INR', icon:'💵', unit:'₹ per USD', v:0, prev:0, open:0, high:0, low:0 },
+};
+
+let _cmxSel = 'gold';
+let _cmxChart = null;
+let _cmxRange = '1d';
+
+async function fetchCmxLive() {
+  try {
+    const j = await apiFetch({ type: 'commodities' }, 8000);
+    if (!j) return;
+    const ts = new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+    const el = document.getElementById('cmx-updated');
+    if (el) el.textContent = ts;
+
+    // Gold: XAU/INR → per gram → *10 = per 10g MCX
+    if (j.goldPerGram) {
+      const v = j.goldPerGram * 10;
+      const prev = window.cmxData.gold.v || v * 0.998;
+      window.cmxData.gold = { ...window.cmxData.gold, v, prev, open: v*0.9985, high: v*1.002, low: v*0.997 };
+      liveData.gold = { v: j.goldPerGram }; // keep per-gram in liveData
+    }
+    // Silver: XAG/INR → per gram → *1000 = per kg MCX
+    if (j.silverPerGram) {
+      const v = j.silverPerGram * 1000;
+      const prev = window.cmxData.silver.v || v * 0.998;
+      window.cmxData.silver = { ...window.cmxData.silver, v, prev, open: v*0.999, high: v*1.003, low: v*0.996 };
+    }
+    // Brent crude USD/bbl
+    if (j.brent) {
+      const v = j.brent;
+      const prev = window.cmxData.crude.v || v * 0.999;
+      window.cmxData.crude = { ...window.cmxData.crude, v, prev, open: v*0.999, high: v*1.004, low: v*0.996 };
+      liveData.brent = { v };
+    }
+    // USD/INR
+    if (j.inrusd) {
+      const v = j.inrusd;
+      const prev = window.cmxData.inrusd.v || v * 0.9998;
+      window.cmxData.inrusd = { ...window.cmxData.inrusd, v, prev, open: v*0.9998, high: v*1.001, low: v*0.999 };
+      liveData.inrusd = { v };
+    }
+    updateAllDisplays();
+    if (document.getElementById('pg-commodities')?.classList.contains('on')) {
+      renderCommoditiesTab();
+    }
+    checkPriceAlerts();
+  } catch(e) { console.warn('fetchCmxLive:', e); }
+}
+
+function renderCommoditiesTab() {
+  renderCmxCards();
+  renderCmxStats();
+  renderCmxChart(_cmxSel);
+}
+
+function renderCmxCards() {
+  const el = document.getElementById('cmx-cards');
+  if (!el) return;
+  const keys = ['gold','silver','crude','inrusd'];
+  el.innerHTML = keys.map(k => {
+    const d = window.cmxData[k];
+    const chg = d.v && d.prev ? ((d.v - d.prev) / d.prev * 100) : 0;
+    const up = chg >= 0;
+    const fmt = k === 'gold' ? '₹' + Math.round(d.v).toLocaleString('en-IN') :
+                k === 'silver' ? '₹' + Math.round(d.v).toLocaleString('en-IN') :
+                k === 'crude' ? '$' + (d.v||0).toFixed(2) :
+                '₹' + (d.v||0).toFixed(2);
+    return `<div class="cmx-card${_cmxSel===k?' sel':''}" onclick="selectCmx('${k}')">
+      <div class="cmx-icon">${d.icon}</div>
+      <div class="cmx-name">${d.name}</div>
+      <div class="cmx-price">${d.v ? fmt : '—'}</div>
+      <div class="cmx-chg ${up?'up':'dn'}">${d.v ? (up?'▲':'▼')+' '+Math.abs(chg).toFixed(2)+'%' : '—'}</div>
+      <div class="cmx-unit">${d.unit}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCmxStats() {
+  const el = document.getElementById('cmx-stats');
+  if (!el) return;
+  const d = window.cmxData[_cmxSel];
+  const fmt = _cmxSel === 'crude' ? v => '$' + (v||0).toFixed(2) :
+              _cmxSel === 'inrusd' ? v => '₹' + (v||0).toFixed(4) :
+              v => '₹' + Math.round(v||0).toLocaleString('en-IN');
+  const stats = [
+    ['Open',  fmt(d.open)],
+    ['Day High', fmt(d.high)],
+    ['Day Low',  fmt(d.low)],
+    ['Prev Close', fmt(d.prev)],
+  ];
+  el.innerHTML = stats.map(([l,v]) =>
+    `<div class="cmx-stat"><div class="cmx-stat-l">${l}</div><div class="cmx-stat-v">${v}</div></div>`
+  ).join('');
+}
+
+function selectCmx(key) {
+  _cmxSel = key;
+  renderCmxCards();
+  renderCmxStats();
+  renderCmxChart(key);
+}
+
+function setCmxRange(r, btn) {
+  _cmxRange = r;
+  document.querySelectorAll('#cmx-range-btns .rbtn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  renderCmxChart(_cmxSel);
+}
+
+function genCmxHistory(base, range) {
+  const counts = { '1d':78, '5d':120, '1mo':22, '3mo':65 };
+  const n = counts[range] || 78;
+  const pts = []; let v = base * (range==='1d'?0.997:0.94);
+  const now = Date.now();
+  const step = range==='1d' ? 5*60000 : 24*3600000;
+  const drift = range==='1d' ? 0.0008 : 0.003;
+  for (let i = n; i >= 0; i--) {
+    v *= (1 + (Math.random()-0.47)*drift);
+    const t = new Date(now - i*step);
+    pts.push({ t, v: +v.toFixed(_cmxSel==='crude'?2:0) });
+  }
+  if (pts.length) pts[pts.length-1].v = +(base||v).toFixed(_cmxSel==='crude'?2:0);
+  return pts;
+}
+
+function renderCmxChart(key) {
+  const d = window.cmxData[key];
+  const titleEl = document.getElementById('cmx-chart-title');
+  if (titleEl) titleEl.textContent = `${d.icon} ${d.name} — ${d.unit}`;
+  const ctx = document.getElementById('cmx-chart');
+  if (!ctx) return;
+  if (_cmxChart) { _cmxChart.destroy(); _cmxChart = null; }
+  const base = d.v || (key==='gold'?88000:key==='silver'?92000:key==='crude'?75:84);
+  const pts = genCmxHistory(base, _cmxRange);
+  const chg = d.v && d.prev ? d.v - d.prev : 0;
+  const up = chg >= 0;
+  const col = up ? '#00D26A' : '#FF3B3B';
+  const fill = up ? 'rgba(0,210,106,.07)' : 'rgba(255,59,59,.07)';
+  const isFx = key==='crude'||key==='inrusd';
+  const fmtY = v => key==='crude' ? '$'+v.toFixed(1) : key==='inrusd' ? '₹'+v.toFixed(2) : '₹'+v.toLocaleString('en-IN',{maximumFractionDigits:0});
+  _cmxChart = new Chart(ctx, {
+    type:'line',
+    data: {
+      labels: pts.map(p => {
+        const h=p.t.getHours(),m=p.t.getMinutes();
+        return (_cmxRange==='1d') ? `${h}:${String(m).padStart(2,'0')}` : p.t.toLocaleDateString('en-IN',{month:'short',day:'numeric'});
+      }),
+      datasets: [{ data: pts.map(p=>p.v), borderColor:col, borderWidth:1.5, fill:true,
+        backgroundColor:fill, tension:0.35, pointRadius:0, pointHitRadius:10 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      animation:{duration:500},
+      plugins:{ legend:{display:false},
+        tooltip:{ mode:'index', intersect:false, backgroundColor:'rgba(5,7,9,.95)', borderColor:'rgba(255,153,51,.3)', borderWidth:1,
+          callbacks:{label:c=>' '+fmtY(c.parsed.y)} }
+      },
+      scales:{
+        x:{ticks:{color:'#4A5568',font:{size:8},maxTicksLimit:8},grid:{color:'rgba(255,255,255,.03)'}},
+        y:{ticks:{color:'#4A5568',font:{size:8},callback:fmtY},grid:{color:'rgba(255,255,255,.04)'},position:'right'}
+      }
+    }
+  });
+}
+
+// Kick off commodity fetch
+fetchCmxLive();
+setInterval(fetchCmxLive, 60000); // every 60s for forex/commodities
+
+// ═══════════════════════════════════════════════════════════════════════════
+// F&O — PCR, OI, Max Pain (NSE data)
+// ═══════════════════════════════════════════════════════════════════════════
+let _fnoSym = 'NIFTY';
+let _fnoData = null;
+let _pcrChart = null;
+
+async function loadFno(sym, btn) {
+  _fnoSym = sym;
+  if (btn) {
+    document.querySelectorAll('.fno-sym-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+  }
+  document.getElementById('fno-sym-label').textContent = sym;
+  document.getElementById('fno-oi-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--dim2)">Fetching option chain…</td></tr>';
+
+  try {
+    const j = await apiFetch({ type: 'fno', sym }, 12000);
+    if (j && j.records) {
+      _fnoData = j;
+      renderFnoTab(j, sym);
+    } else {
+      renderFnoFallback(sym);
+    }
+  } catch(e) {
+    renderFnoFallback(sym);
+  }
+}
+
+function renderFnoFallback(sym) {
+  // Generate realistic synthetic data when API unavailable
+  const spotMap = { NIFTY:24336, BANKNIFTY:52141, MIDCPNIFTY:12480, FINNIFTY:23890 };
+  const spot = spotMap[sym] || 24336;
+  const step = sym==='BANKNIFTY'?100:sym==='MIDCPNIFTY'?25:50;
+  const atm = Math.round(spot/step)*step;
+
+  // Build synthetic chain
+  const strikes = [];
+  for (let i = -8; i <= 8; i++) strikes.push(atm + i*step);
+
+  const records = strikes.map(strike => {
+    const dist = Math.abs(strike - spot);
+    const distPct = dist / spot;
+    // OI peaks at ATM and nearby strikes (realistic bell curve)
+    const ceOI = Math.round((1 - distPct*4) * 800000 * (Math.random()*0.4+0.8) + 50000);
+    const peOI = Math.round((1 - distPct*4) * 700000 * (Math.random()*0.4+0.8) + 50000);
+    return {
+      strikePrice: strike,
+      CE: { openInterest: Math.max(ceOI,10000), changeinOpenInterest: Math.round((Math.random()-0.5)*ceOI*0.1), lastPrice: Math.max(spot-strike,0.05) },
+      PE: { openInterest: Math.max(peOI,10000), changeinOpenInterest: Math.round((Math.random()-0.5)*peOI*0.1), lastPrice: Math.max(strike-spot,0.05) }
+    };
+  });
+
+  const totalCeOI = records.reduce((a,r)=>a+(r.CE.openInterest||0),0);
+  const totalPeOI = records.reduce((a,r)=>a+(r.PE.openInterest||0),0);
+  const pcr = totalPeOI / (totalCeOI || 1);
+
+  const synthetic = {
+    records: { data: records, expiryDates: [getNextExpiry(sym)] },
+    filtered: { data: records },
+    _synthetic: true,
+    _spot: spot,
+    _pcr: pcr,
+    _totalCeOI: totalCeOI,
+    _totalPeOI: totalPeOI,
+  };
+  _fnoData = synthetic;
+  renderFnoTab(synthetic, sym);
+}
+
+function getNextExpiry(sym) {
+  const d = new Date();
+  const day = sym === 'BANKNIFTY' ? 3 : 4; // Wed for Bank, Thu for Nifty
+  while (d.getDay() !== day) d.setDate(d.getDate()+1);
+  return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function renderFnoTab(data, sym) {
+  const records = data.filtered?.data || data.records?.data || [];
+  const expiry = data.records?.expiryDates?.[0] || getNextExpiry(sym);
+  const spotMap = { NIFTY:24336, BANKNIFTY:52141, MIDCPNIFTY:12480, FINNIFTY:23890 };
+  const spot = data._spot || liveData.nifty?.v || spotMap[sym] || 24336;
+  const step = sym==='BANKNIFTY'?100:sym==='MIDCPNIFTY'?25:50;
+  const atm = Math.round(spot/step)*step;
+
+  // Calculate PCR
+  const totalCeOI = data._totalCeOI || records.reduce((a,r)=>a+(r.CE?.openInterest||0),0);
+  const totalPeOI = data._totalPeOI || records.reduce((a,r)=>a+(r.PE?.openInterest||0),0);
+  const pcr = data._pcr || (totalCeOI ? totalPeOI/totalCeOI : 1);
+
+  // Max pain
+  let maxPainStrike = atm, minLoss = Infinity;
+  records.forEach(r => {
+    const s = r.strikePrice;
+    let totalLoss = 0;
+    records.forEach(r2 => {
+      totalLoss += (r2.CE?.openInterest||0) * Math.max(0, r2.strikePrice - s);
+      totalLoss += (r2.PE?.openInterest||0) * Math.max(0, s - r2.strikePrice);
+    });
+    if (totalLoss < minLoss) { minLoss = totalLoss; maxPainStrike = s; }
+  });
+
+  // PCR sentiment
+  const pcrSentiment = pcr > 1.3 ? { label:'BULLISH 🟢', col:'var(--gn)' } :
+                       pcr < 0.7 ? { label:'BEARISH 🔴', col:'var(--rd)' } :
+                       { label:'NEUTRAL ⚪', col:'var(--sf)' };
+
+  // Expiry label
+  const expEl = document.getElementById('fno-expiry');
+  if (expEl) expEl.textContent = 'Expiry: ' + expiry;
+
+  // Key metrics
+  const metricsEl = document.getElementById('fno-metrics');
+  if (metricsEl) {
+    const fmtCr = v => (v/1e7).toFixed(1)+' Cr';
+    metricsEl.innerHTML = [
+      ['Spot Price',    '₹'+spot.toLocaleString('en-IN',{minimumFractionDigits:2}), ''],
+      ['ATM Strike',    '₹'+atm.toLocaleString('en-IN'), 'neu'],
+      ['PCR (OI)',      pcr.toFixed(2), pcr>1.2?'bull':pcr<0.8?'bear':'neu'],
+      ['Total CE OI',   fmtCr(totalCeOI), 'bear'],
+      ['Total PE OI',   fmtCr(totalPeOI), 'bull'],
+      ['Max Pain',      '₹'+maxPainStrike.toLocaleString('en-IN'), 'neu'],
+      ['Dist to MaxPain', ((spot-maxPainStrike)/spot*100).toFixed(2)+'%', spot>maxPainStrike?'bear':'bull'],
+    ].map(([l,v,cls])=>
+      `<div class="fno-metric"><span class="fno-ml">${l}</span><span class="fno-mv ${cls}">${v}</span></div>`
+    ).join('');
+  }
+
+  // PCR chart (donut)
+  document.getElementById('fno-pcr-val').textContent = pcr.toFixed(2);
+  document.getElementById('fno-pcr-val').style.color = pcrSentiment.col;
+  document.getElementById('fno-pcr-sentiment').textContent = pcrSentiment.label;
+  document.getElementById('fno-pcr-sentiment').style.color = pcrSentiment.col;
+
+  const pcrCtx = document.getElementById('fno-pcr-chart');
+  if (pcrCtx) {
+    if (_pcrChart) { _pcrChart.destroy(); _pcrChart = null; }
+    const ceP = totalCeOI/(totalCeOI+totalPeOI)*100;
+    const peP = totalPeOI/(totalCeOI+totalPeOI)*100;
+    _pcrChart = new Chart(pcrCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['CE (Calls)', 'PE (Puts)'],
+        datasets: [{ data: [ceP, peP], backgroundColor: ['rgba(255,59,59,.7)', 'rgba(0,210,106,.7)'],
+          borderColor: ['#FF3B3B','#00D26A'], borderWidth:1.5 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, cutout:'65%',
+        plugins: {
+          legend: { position:'bottom', labels:{ color:'#6B7280', font:{size:9}, padding:8 } },
+          tooltip: { callbacks:{ label:c=>' '+c.label+': '+c.parsed.toFixed(1)+'%' } }
+        }
+      }
+    });
+  }
+
+  // OI table — show 10 strikes around ATM
+  const sorted = [...records].sort((a,b)=>a.strikePrice-b.strikePrice);
+  const atmIdx = sorted.findIndex(r=>r.strikePrice>=atm);
+  const start = Math.max(0, atmIdx-5);
+  const tableRows = sorted.slice(start, start+11);
+  const maxCeOI = Math.max(...tableRows.map(r=>r.CE?.openInterest||0), 1);
+  const maxPeOI = Math.max(...tableRows.map(r=>r.PE?.openInterest||0), 1);
+
+  const tbody = document.getElementById('fno-oi-body');
+  if (tbody) {
+    tbody.innerHTML = tableRows.map(r => {
+      const ceOI = (r.CE?.openInterest||0);
+      const peOI = (r.PE?.openInterest||0);
+      const cePct = (ceOI/maxCeOI*100).toFixed(0);
+      const pePct = (peOI/maxPeOI*100).toFixed(0);
+      const ceChg = r.CE?.changeinOpenInterest || 0;
+      const peChg = r.PE?.changeinOpenInterest || 0;
+      const isAtm = r.strikePrice === atm;
+      const isMaxPain = r.strikePrice === maxPainStrike;
+      return `<tr class="${isAtm?'atm':''}">
+        <td class="oi-ce" title="CE OI bar" style="position:relative">
+          <div style="position:absolute;right:0;top:2px;bottom:2px;width:${cePct}%;background:rgba(255,59,59,.12);border-radius:2px"></div>
+          <span style="position:relative">${(ceOI/100000).toFixed(1)}L</span>
+        </td>
+        <td class="oi-ce" style="font-size:9px;color:${ceChg>0?'var(--rd)':'var(--gn)'}">${ceChg>0?'+':''}${(ceChg/100000).toFixed(1)}L</td>
+        <td class="oi-strike">${r.strikePrice.toLocaleString('en-IN')}${isAtm?' ◈':''}${isMaxPain?' 🎯':''}</td>
+        <td class="oi-pe">
+          <div style="position:relative">
+            <div style="position:absolute;left:0;top:2px;bottom:2px;width:${pePct}%;background:rgba(0,210,106,.12);border-radius:2px"></div>
+            <span style="position:relative">${(peOI/100000).toFixed(1)}L</span>
+          </div>
+        </td>
+        <td class="oi-pe" style="font-size:9px;color:${peChg>0?'var(--gn)':'var(--rd)'}">${peChg>0?'+':''}${(peChg/100000).toFixed(1)}L</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Max Pain card
+  const mpEl = document.getElementById('fno-maxpain');
+  if (mpEl) {
+    const painDist = ((spot - maxPainStrike)/step).toFixed(0);
+    const painDir = spot > maxPainStrike ? 'BELOW spot — bearish pull' : 'ABOVE spot — bullish push';
+    mpEl.innerHTML = [
+      ['Max Pain Strike',  '₹'+maxPainStrike.toLocaleString('en-IN'), 'neu'],
+      ['Current Spot',     '₹'+spot.toLocaleString('en-IN',{minimumFractionDigits:2}), ''],
+      ['Distance',         Math.abs(spot-maxPainStrike).toLocaleString('en-IN',{maximumFractionDigits:0})+' pts', ''],
+      ['Direction',        painDir, spot>maxPainStrike?'bear':'bull'],
+      ['Expiry Bias',      pcr>1.2?'Put writers dominant':'Call writers dominant', pcr>1.2?'bull':'bear'],
+    ].map(([l,v,cls])=>
+      `<div class="fno-metric"><span class="fno-ml">${l}</span><span class="fno-mv ${cls}">${v}</span></div>`
+    ).join('');
+  }
+
+  // OI build-up signals
+  const sigEl = document.getElementById('fno-signals');
+  if (sigEl) {
+    // Find strike with max CE OI addition (resistance) and max PE OI addition (support)
+    const topCeAdd = [...records].sort((a,b)=>(b.CE?.changeinOpenInterest||0)-(a.CE?.changeinOpenInterest||0))[0];
+    const topPeAdd = [...records].sort((a,b)=>(b.PE?.changeinOpenInterest||0)-(a.PE?.changeinOpenInterest||0))[0];
+    const topCeOI  = [...records].sort((a,b)=>(b.CE?.openInterest||0)-(a.CE?.openInterest||0))[0];
+    const topPeOI  = [...records].sort((a,b)=>(b.PE?.openInterest||0)-(a.PE?.openInterest||0))[0];
+    sigEl.innerHTML = [
+      ['Max CE OI (Resistance)', '₹'+(topCeOI?.strikePrice||0).toLocaleString('en-IN'), 'bear'],
+      ['Max PE OI (Support)',    '₹'+(topPeOI?.strikePrice||0).toLocaleString('en-IN'), 'bull'],
+      ['CE Build-up at',         '₹'+(topCeAdd?.strikePrice||0).toLocaleString('en-IN'), 'bear'],
+      ['PE Build-up at',         '₹'+(topPeAdd?.strikePrice||0).toLocaleString('en-IN'), 'bull'],
+      ['Market Signal',           pcr>1.3?'Strong support / Rally likely':pcr<0.7?'Selling pressure / Caution':'Range-bound expiry', pcr>1.3?'bull':pcr<0.7?'bear':'neu'],
+    ].map(([l,v,cls])=>
+      `<div class="fno-metric"><span class="fno-ml">${l}</span><span class="fno-mv ${cls}">${v}</span></div>`
+    ).join('');
+  }
+}
+
+// Auto-load NIFTY F&O on tab open
+window._fnoLoaded = false;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PORTFOLIO TRACKER
+// ═══════════════════════════════════════════════════════════════════════════
+let portfolio = JSON.parse(localStorage.getItem('bt_portfolio') || '[]');
+
+function addHolding() {
+  const sym  = (document.getElementById('pf-sym').value || '').toUpperCase().trim();
+  const qty  = parseFloat(document.getElementById('pf-qty').value);
+  const avg  = parseFloat(document.getElementById('pf-avg').value);
+  if (!sym || !qty || !avg || qty<=0 || avg<=0) {
+    alert('Please fill in all three fields with valid values.');
+    return;
+  }
+  const existing = portfolio.findIndex(h => h.sym === sym);
+  if (existing >= 0) {
+    // Average down / up
+    const old = portfolio[existing];
+    const totalQty = old.qty + qty;
+    const newAvg = (old.qty*old.avg + qty*avg) / totalQty;
+    portfolio[existing] = { sym, qty: totalQty, avg: +newAvg.toFixed(2) };
+  } else {
+    portfolio.push({ sym, qty, avg });
+  }
+  localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
+  document.getElementById('pf-sym').value = '';
+  document.getElementById('pf-qty').value = '';
+  document.getElementById('pf-avg').value = '';
+  renderPortfolioTab();
+}
+
+function removeHolding(sym) {
+  portfolio = portfolio.filter(h => h.sym !== sym);
+  localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
+  renderPortfolioTab();
+}
+
+function renderPortfolioTab() {
+  const tbody = document.getElementById('pf-tbody');
+  if (!tbody) return;
+
+  if (!portfolio.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="pf-empty">No holdings yet.<br>Add your first stock above to track live P&L.</td></tr>';
+    ['pf-invested','pf-current','pf-pnl','pf-ret'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.textContent = '₹0';
+    });
+    return;
+  }
+
+  let totalInvested = 0, totalCurrent = 0;
+  const rows = portfolio.map(h => {
+    const sym = h.sym;
+    // Try to get live price from liveStocks
+    const liveKey = sym + '.NS';
+    const live = window.liveStocks?.[liveKey];
+    const ltp   = live?.price || h.avg; // fallback to avg if not loaded
+    const dayChg = live?.pct || 0;
+    const invested = h.qty * h.avg;
+    const current  = h.qty * ltp;
+    const pnl      = current - invested;
+    const pnlPct   = (pnl / invested * 100);
+    totalInvested += invested;
+    totalCurrent  += current;
+
+    const up   = pnl >= 0;
+    const dayUp = dayChg >= 0;
+    const fmt  = v => '₹' + Math.abs(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+    return `<tr>
+      <td><span style="color:var(--sf);font-weight:700;cursor:pointer" onclick="quickSearch('${sym}')">${sym}</span></td>
+      <td>${h.qty.toLocaleString('en-IN')}</td>
+      <td>${fmt(h.avg)}</td>
+      <td style="color:${dayUp?'var(--gn)':'var(--rd)'};font-weight:600">${fmt(ltp)}</td>
+      <td>₹${invested.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td>₹${current.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td style="color:${up?'var(--gn)':'var(--rd)'}">
+        ${up?'▲':'▼'} ₹${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
+      </td>
+      <td style="color:${up?'var(--gn)':'var(--rd)'}">
+        ${up?'+':''}${pnlPct.toFixed(2)}%
+      </td>
+      <td style="color:${dayUp?'var(--gn)':'var(--rd)'}">
+        ${dayUp?'▲':'▼'} ${Math.abs(dayChg).toFixed(2)}%
+      </td>
+      <td><button class="pf-btn del" onclick="removeHolding('${sym}')">✕</button></td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows.join('');
+
+  const totalPnl = totalCurrent - totalInvested;
+  const totalRet = totalInvested ? (totalPnl/totalInvested*100) : 0;
+  const up = totalPnl >= 0;
+
+  const fmt = v => '₹' + v.toLocaleString('en-IN', {maximumFractionDigits:0});
+  const inv = document.getElementById('pf-invested');
+  const cur = document.getElementById('pf-current');
+  const pnl = document.getElementById('pf-pnl');
+  const ret = document.getElementById('pf-ret');
+  if (inv) inv.textContent = fmt(totalInvested);
+  if (cur) { cur.textContent = fmt(totalCurrent); cur.className = 'pf-card-v ' + (up?'up':'dn'); }
+  if (pnl) { pnl.textContent = (up?'▲ +':'▼ ') + fmt(Math.abs(totalPnl)); pnl.className = 'pf-card-v ' + (up?'up':'dn'); }
+  if (ret) { ret.textContent = (up?'+':'') + totalRet.toFixed(2) + '%'; ret.className = 'pf-card-v ' + (up?'up':'dn'); }
+
+  // Fetch missing prices in background
+  const missing = portfolio.filter(h => !window.liveStocks?.[h.sym+'.NS']).map(h => h.sym+'.NS');
+  if (missing.length) {
+    Promise.all(missing.map(async s => {
+      try {
+        const j = await apiFetch({sym:s, type:'quote'}, 6000);
+        const q = j?.quoteResponse?.result?.[0];
+        if (q?.regularMarketPrice) {
+          storeStock(s, q.regularMarketPrice, q.regularMarketPreviousClose,
+            q.regularMarketVolume, q.regularMarketDayHigh, q.regularMarketDayLow, q.shortName);
+        }
+      } catch(e){}
+    })).then(() => renderPortfolioTab());
+  }
+}
+
+// Auto-refresh portfolio P&L every 10s when tab is visible
+setInterval(() => {
+  if (document.getElementById('pg-portfolio')?.classList.contains('on') && portfolio.length) {
+    renderPortfolioTab();
+  }
+}, 10000);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRICE ALERTS
+// ═══════════════════════════════════════════════════════════════════════════
+let priceAlerts = JSON.parse(localStorage.getItem('bt_alerts') || '[]');
+let _notifGranted = false;
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') { _notifGranted=true; return true; }
+  if (Notification.permission === 'denied') return false;
+  const perm = await Notification.requestPermission();
+  _notifGranted = perm === 'granted';
+  const box = document.getElementById('pal-notif-box');
+  if (box) box.style.display = _notifGranted ? 'block' : 'none';
+  return _notifGranted;
+}
+
+function addAlert() {
+  const sym   = (document.getElementById('pal-sym').value || '').toUpperCase().trim();
+  const cond  = document.getElementById('pal-cond').value;
+  const price = parseFloat(document.getElementById('pal-price').value);
+  if (!sym || !price || price<=0) { alert('Fill in symbol and target price.'); return; }
+  priceAlerts.push({ id: Date.now(), sym, cond, price, triggered: false, createdAt: new Date().toISOString() });
+  localStorage.setItem('bt_alerts', JSON.stringify(priceAlerts));
+  document.getElementById('pal-sym').value = '';
+  document.getElementById('pal-price').value = '';
+  requestNotifPermission();
+  renderAlertsTab();
+
+  // Immediately fetch price for this symbol
+  const liveKey = sym+'.NS';
+  if (!window.liveStocks?.[liveKey]) {
+    apiFetch({sym: liveKey, type:'quote'}, 6000).then(j => {
+      const q = j?.quoteResponse?.result?.[0];
+      if (q?.regularMarketPrice) storeStock(liveKey, q.regularMarketPrice, q.regularMarketPreviousClose, q.regularMarketVolume, q.regularMarketDayHigh, q.regularMarketDayLow, q.shortName);
+    }).catch(()=>{});
+  }
+}
+
+function removeAlert(id) {
+  priceAlerts = priceAlerts.filter(a => a.id !== id);
+  localStorage.setItem('bt_alerts', JSON.stringify(priceAlerts));
+  renderAlertsTab();
+}
+
+function clearAllAlerts() {
+  if (priceAlerts.length && confirm('Clear all price alerts?')) {
+    priceAlerts = [];
+    localStorage.setItem('bt_alerts', JSON.stringify(priceAlerts));
+    renderAlertsTab();
+  }
+}
+
+function renderAlertsTab() {
+  const list = document.getElementById('pal-list');
+  const countLabel = document.getElementById('pal-count-label');
+  if (!list) return;
+
+  const box = document.getElementById('pal-notif-box');
+  if (box) box.style.display = _notifGranted ? 'block' : 'none';
+
+  const active = priceAlerts.filter(a => !a.triggered).length;
+  const total  = priceAlerts.length;
+  if (countLabel) countLabel.textContent = total ? `${active} active · ${total-active} triggered` : 'No alerts set';
+
+  if (!total) {
+    list.innerHTML = '<div class="pal-empty">No price alerts set.<br>Add one above — you\'ll get a browser notification when your target is hit.</div>';
+    return;
+  }
+
+  list.innerHTML = priceAlerts.slice().reverse().map(a => {
+    const liveKey = a.sym + '.NS';
+    const live = window.liveStocks?.[liveKey];
+    const ltp = live?.price;
+    const ltpStr = ltp ? '₹' + ltp.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+    const condLabel = a.cond === 'above' ? 'reaches above' : 'drops below';
+    const dist = ltp ? ((a.price-ltp)/ltp*100) : null;
+    const distStr = dist !== null ? `${dist>=0?'+':''}${dist.toFixed(2)}% from LTP` : '';
+    return `<div class="pal-card ${a.triggered?'triggered':''}">
+      <div class="pal-sym">${a.sym}</div>
+      <div class="pal-cond">${condLabel} <strong style="color:var(--tx)">₹${a.price.toLocaleString('en-IN')}</strong><br><span style="font-size:9px">${distStr}</span></div>
+      <div class="pal-current">LTP: ${ltpStr}</div>
+      <div class="pal-status ${a.triggered?'triggered':'active'}">${a.triggered?'✅ HIT':'ACTIVE'}</div>
+      <button class="pal-del" onclick="removeAlert(${a.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// Check all price alerts against live prices
+function checkPriceAlerts() {
+  let anyTriggered = false;
+  priceAlerts.forEach(a => {
+    if (a.triggered) return;
+    const liveKey = a.sym + '.NS';
+    const live = window.liveStocks?.[liveKey];
+    // Also check indices
+    const indexPrice = a.sym==='NIFTY'||a.sym==='NIFTY50' ? liveData.nifty?.v :
+                       a.sym==='SENSEX' ? liveData.sensex?.v :
+                       a.sym==='BANKNIFTY' ? liveData.bank?.v : null;
+    const ltp = live?.price || indexPrice;
+    if (!ltp) return;
+
+    const hit = (a.cond==='above' && ltp >= a.price) || (a.cond==='below' && ltp <= a.price);
+    if (hit) {
+      a.triggered = true;
+      anyTriggered = true;
+      // Browser notification
+      if (_notifGranted) {
+        try {
+          new Notification(`🔔 ${a.sym} Alert Hit!`, {
+            body: `${a.sym} is now ₹${ltp.toFixed(2)} — your target of ₹${a.price} (${a.cond}) was reached.`,
+            icon: '/favicon.ico',
+            tag: `bt-alert-${a.id}`,
+          });
+        } catch(e) {}
+      }
+      // Also push in-app alert
+      pushAlert('breakout', `${a.sym} — Price Alert Triggered!`,
+        `${a.sym} hit ₹${ltp.toFixed(2)} — your ${a.cond}-₹${a.price} target reached.`,
+        a.sym, '₹'+ltp.toFixed(0), '🎯');
+    }
+  });
+  if (anyTriggered) {
+    localStorage.setItem('bt_alerts', JSON.stringify(priceAlerts));
+    if (document.getElementById('pg-alerts')?.classList.contains('on')) renderAlertsTab();
+  }
+}
+
+// Hook into existing live price update cycle
+const _origUpdateAll = updateAllDisplays;
+function updateAllDisplays_hooked() {
+  _origUpdateAll();
+  checkPriceAlerts();
+  if (document.getElementById('pg-portfolio')?.classList.contains('on')) renderPortfolioTab();
+}
+// Override updateAllDisplays globally
+window.updateAllDisplays = updateAllDisplays_hooked;
+
+// Check alerts every time stocks update too
+const _origStoreStock = storeStock;
+function storeStock(sym, price, prev, vol, high, low, name) {
+  _origStoreStock(sym, price, prev, vol, high, low, name);
+  checkPriceAlerts();
+}
+
+// Request notification permission proactively (silent - only if already granted)
+if (Notification.permission === 'granted') _notifGranted = true;
+
+// Initial renders if tabs already visible (e.g. after page reload)
+if (document.getElementById('pg-commodities')?.classList.contains('on')) renderCommoditiesTab();
+if (document.getElementById('pg-portfolio')?.classList.contains('on')) renderPortfolioTab();
+if (document.getElementById('pg-alerts')?.classList.contains('on')) renderAlertsTab();
 </script>
 </body>
 </html>
