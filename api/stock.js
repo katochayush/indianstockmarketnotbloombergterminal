@@ -106,6 +106,37 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(result);
   }
 
+  // ── CORPORATE ANNOUNCEMENTS ─────────────────────────────────────────────────
+  if (type === 'announcements') {
+    const tk = toNSETicker(sym || 'TCS');
+    try {
+      const d = await nseGet(`/api/corporate-announcements?index=equities&symbol=${encodeURIComponent(tk)}&from_date=&to_date=`, 8000);
+      const items = (d.data || []).slice(0, 6).map(a => ({
+        sym:     tk,
+        subject: (a.subject || a.desc || '').slice(0, 120),
+        date:    a.an_dt ? new Date(a.an_dt).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '',
+        desc:    (a.attchmntText || a.subject || '').slice(0, 200),
+      }));
+      res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=60');
+      return res.status(200).json({ items });
+    } catch(e) {
+      // fallback: NSE board meetings endpoint
+      try {
+        const d = await nseGet(`/api/upcoming-board-meetings?type=&from_date=&to_date=&symbol=${encodeURIComponent(tk)}`, 6000);
+        const items = (d.data || []).slice(0, 4).map(a => ({
+          sym:     tk,
+          subject: (a.purpose || 'Board Meeting').slice(0, 120),
+          date:    a.meeting_date ? new Date(a.meeting_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '',
+          desc:    (a.purpose || '').slice(0, 200),
+        }));
+        res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=60');
+        return res.status(200).json({ items });
+      } catch(e2) {
+        return res.status(200).json({ items: [] });
+      }
+    }
+  }
+
   // ── F&O OPTION CHAIN ──────────────────────────────────────────────────────
   if (type === 'fno') {
     const fnoSym = (sym||'NIFTY').toUpperCase();
