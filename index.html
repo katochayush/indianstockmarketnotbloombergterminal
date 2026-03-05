@@ -574,6 +574,110 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 .pal-empty{text-align:center;padding:40px;color:var(--dim2);font-size:11px;line-height:2}
 .pal-notif-box{background:rgba(0,210,106,.08);border:1px solid rgba(0,210,106,.2);border-radius:5px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:var(--gn);display:none}
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MULTI CHARTS TAB
+══════════════════════════════════════════════════════════════════════════ */
+#pg-charts { display:none; padding:0; background:var(--bg); }
+#pg-charts.on { display:flex; flex-direction:column; height:calc(100vh - 140px); min-height:600px; }
+
+/* Control bar */
+.charts-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:var(--bg2); border-bottom:1px solid var(--br2); gap:10px; flex-shrink:0; flex-wrap:wrap; }
+.charts-bar-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.charts-bar-right { display:flex; align-items:center; gap:8px; }
+.charts-title { font-family:Bebas Neue,sans-serif; font-size:14px; letter-spacing:.12em; color:var(--sf); white-space:nowrap; }
+
+/* Layout buttons */
+.layout-btns { display:flex; gap:3px; background:rgba(0,0,0,.3); border-radius:5px; padding:2px; }
+.lbtn { background:transparent; border:none; color:var(--dim2); cursor:pointer; padding:4px 8px;
+  border-radius:3px; font-size:10px; line-height:1.1; transition:all .15s; white-space:nowrap; }
+.lbtn.on { background:rgba(255,153,51,.2); color:var(--sf); }
+.lbtn:hover:not(.on) { background:rgba(255,255,255,.06); color:var(--tx); }
+
+/* Timeframe buttons */
+.tf-btns { display:flex; gap:2px; }
+.tfbtn { background:rgba(255,255,255,.04); border:1px solid var(--br2); color:var(--dim2);
+  cursor:pointer; padding:3px 9px; border-radius:3px; font-family:DM Mono,monospace;
+  font-size:9px; transition:all .15s; }
+.tfbtn.on { background:rgba(255,153,51,.15); border-color:rgba(255,153,51,.4); color:var(--sf); }
+.tfbtn:hover:not(.on) { color:var(--tx); background:rgba(255,255,255,.06); }
+
+/* Indicator buttons */
+.ind-btns { display:flex; gap:2px; }
+.indbtn { background:rgba(255,255,255,.04); border:1px solid var(--br2); color:var(--dim2);
+  cursor:pointer; padding:3px 9px; border-radius:3px; font-family:DM Mono,monospace;
+  font-size:9px; letter-spacing:.05em; transition:all .15s; }
+.indbtn.on { background:rgba(0,210,106,.1); border-color:rgba(0,210,106,.3); color:var(--gn); }
+.indbtn:hover:not(.on) { color:var(--tx); }
+
+.tv-fullbtn { background:rgba(255,153,51,.1); border:1px solid rgba(255,153,51,.3); color:var(--sf);
+  cursor:pointer; padding:5px 12px; border-radius:4px; font-size:9px; font-family:DM Mono,monospace;
+  letter-spacing:.08em; transition:all .2s; white-space:nowrap; }
+.tv-fullbtn:hover { background:rgba(255,153,51,.2); }
+.charts-reload-btn { background:rgba(255,255,255,.04); border:1px solid var(--br2); color:var(--dim2);
+  cursor:pointer; padding:5px 10px; border-radius:4px; font-size:10px; transition:all .2s; }
+.charts-reload-btn:hover { color:var(--tx); }
+
+/* Chart grid */
+.chart-grid { flex:1; display:grid; gap:1px; background:var(--br2); overflow:hidden; min-height:0; }
+.chart-grid[data-layout="1"] { grid-template-columns:1fr; grid-template-rows:1fr; }
+.chart-grid[data-layout="2"] { grid-template-columns:1fr 1fr; grid-template-rows:1fr; }
+.chart-grid[data-layout="4"] { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+.chart-grid[data-layout="6"] { grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr; }
+
+/* Individual chart slot */
+.chart-slot { background:var(--bg); display:flex; flex-direction:column; position:relative; min-height:0; overflow:hidden; }
+.chart-slot-bar { display:flex; align-items:center; justify-content:space-between; padding:5px 10px;
+  background:var(--bg2); border-bottom:1px solid var(--br2); flex-shrink:0; gap:6px; }
+.chart-slot-sym { font-family:DM Mono,monospace; font-size:11px; font-weight:600; color:var(--sf); cursor:pointer; }
+.chart-slot-sym:hover { color:var(--tx); }
+.chart-slot-price { font-family:DM Mono,monospace; font-size:11px; color:var(--tx); }
+.chart-slot-chg { font-family:DM Mono,monospace; font-size:10px; font-weight:600; }
+.chart-slot-chg.up { color:var(--gn); } .chart-slot-chg.dn { color:var(--rd); }
+.chart-slot-actions { display:flex; gap:4px; margin-left:auto; }
+.chart-slot-btn { background:rgba(255,255,255,.04); border:1px solid var(--br2); color:var(--dim2);
+  cursor:pointer; padding:2px 7px; border-radius:3px; font-size:9px; transition:all .15s; }
+.chart-slot-btn:hover { color:var(--sf); border-color:rgba(255,153,51,.3); }
+.chart-slot-sym-input { background:transparent; border:none; outline:none; color:var(--sf);
+  font-family:DM Mono,monospace; font-size:11px; font-weight:600; width:90px;
+  border-bottom:1px solid rgba(255,153,51,.4); }
+.chart-canvas-wrap { flex:1; position:relative; min-height:0; overflow:hidden; }
+.chart-canvas-wrap canvas { display:block; }
+.chart-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--dim2); font-family:DM Mono,monospace; font-size:10px; background:var(--bg); z-index:2; }
+
+/* RSI sub-chart */
+.rsi-wrap  { height:60px; border-top:1px solid var(--br2); flex-shrink:0; position:relative; overflow:hidden; }
+.macd-wrap { height:65px; border-top:1px solid var(--br2); flex-shrink:0; position:relative; overflow:hidden; }
+.rsi-label { position:absolute; top:2px; left:6px; font-size:8px; color:var(--dim2);
+  font-family:DM Mono,monospace; pointer-events:none; z-index:1; }
+
+/* TV Full Widget Modal */
+.tv-modal { position:fixed; inset:0; z-index:800; display:none; flex-direction:column; }
+.tv-modal.open { display:flex; }
+.tv-modal-inner { position:relative; z-index:801; display:flex; flex-direction:column;
+  margin:20px; flex:1; background:var(--bg2); border:1px solid var(--br); border-radius:8px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.8); }
+.tv-modal-bar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px;
+  background:var(--bg2); border-bottom:1px solid var(--br2); flex-shrink:0; }
+.tv-sym-sel { background:var(--bg3); border:1px solid var(--br2); color:var(--tx);
+  font-family:DM Mono,monospace; font-size:11px; padding:4px 8px; border-radius:4px; cursor:pointer; }
+.tv-close-btn { background:rgba(255,59,59,.1); border:1px solid rgba(255,59,59,.3); color:var(--rd);
+  cursor:pointer; padding:5px 12px; border-radius:4px; font-size:10px; transition:all .2s; }
+.tv-close-btn:hover { background:rgba(255,59,59,.2); }
+.tv-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:799;
+  display:none; backdrop-filter:blur(2px); }
+.tv-modal-overlay.open { display:block; }
+
+@media(max-width:768px) {
+  #pg-charts.on { height:calc(100vh - 120px); }
+  .chart-grid[data-layout="4"] { grid-template-columns:1fr; grid-template-rows:repeat(4,1fr); }
+  .chart-grid[data-layout="6"] { grid-template-columns:1fr 1fr; grid-template-rows:repeat(3,1fr); }
+  .chart-grid[data-layout="2"] { grid-template-columns:1fr; grid-template-rows:1fr 1fr; }
+  .charts-bar { padding:6px 10px; gap:6px; }
+  .ind-btns { display:none; }
+}
+
 </style>
 </head>
 <body>
@@ -676,6 +780,7 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
       <div class="nt"    data-tab="commodities" onclick="tab('commodities',this)">🥇 Commodities</div>
       <div class="nt"    data-tab="fno"      onclick="tab('fno',this)">📈 F&amp;O</div>
       <div class="nt"    data-tab="oil"      onclick="tab('oil',this)">🛢️ Oil</div>
+      <div class="nt"    data-tab="charts"   onclick="tab('charts',this)">📉 Charts</div>
     </div>
   </div>
   <div class="nav-divider"></div>
@@ -813,6 +918,69 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 <!-- ═══════════════════════════════════════════════════════════════════════
      TAB: MARKETS
 ══════════════════════════════════════════════════════════════════════════ -->
+<!-- ══ TAB: CHARTS ══════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-charts">
+  <!-- Top control bar -->
+  <div class="charts-bar" id="charts-bar">
+    <div class="charts-bar-left">
+      <span class="charts-title">📉 MULTI CHARTS</span>
+      <!-- Layout picker -->
+      <div class="layout-btns">
+        <button class="lbtn" data-layout="1" onclick="setChartLayout(1,this)" title="1 chart">⬜</button>
+        <button class="lbtn" data-layout="2" onclick="setChartLayout(2,this)" title="2 charts">⬛⬛</button>
+        <button class="lbtn on" data-layout="4" onclick="setChartLayout(4,this)" title="4 charts (2×2)">▪▪<br>▪▪</button>
+        <button class="lbtn" data-layout="6" onclick="setChartLayout(6,this)" title="6 charts (3×2)">▪▪▪<br>▪▪▪</button>
+      </div>
+      <!-- Timeframe sync -->
+      <div class="tf-btns" id="tf-btns">
+        <button class="tfbtn" data-tf="5"  onclick="syncTimeframe('5',this)">5m</button>
+        <button class="tfbtn" data-tf="15" onclick="syncTimeframe('15',this)">15m</button>
+        <button class="tfbtn" data-tf="60" onclick="syncTimeframe('60',this)">1H</button>
+        <button class="tfbtn on" data-tf="D" onclick="syncTimeframe('D',this)">1D</button>
+        <button class="tfbtn" data-tf="W" onclick="syncTimeframe('W',this)">1W</button>
+      </div>
+      <!-- Indicator toggles -->
+      <div class="ind-btns">
+        <button class="indbtn on" data-ind="ema"  onclick="toggleIndicator('ema',this)" title="EMA 20 + 50">EMA</button>
+        <button class="indbtn"    data-ind="vwap" onclick="toggleIndicator('vwap',this)" title="VWAP">VWAP</button>
+        <button class="indbtn"    data-ind="vol"  onclick="toggleIndicator('vol',this)" title="Volume histogram">VOL</button>
+        <button class="indbtn"    data-ind="rsi"  onclick="toggleIndicator('rsi',this)" title="RSI 14">RSI</button>
+        <button class="indbtn"    data-ind="macd" onclick="toggleIndicator('macd',this)" title="MACD">MACD</button>
+        <button class="indbtn"    data-ind="bb"   onclick="toggleIndicator('bb',this)" title="Bollinger Bands 20,2">BB</button>
+      </div>
+    </div>
+    <div class="charts-bar-right">
+      <button class="tv-fullbtn" onclick="openTVWidget()" title="Open in TradingView full widget">
+        📺 Full TV View
+      </button>
+      <button class="charts-reload-btn" onclick="reloadAllCharts()" title="Reload all charts">↺ Reload</button>
+    </div>
+  </div>
+
+  <!-- Chart grid -->
+  <div class="chart-grid" id="chart-grid" data-layout="4">
+    <!-- slots populated by JS -->
+  </div>
+</div>
+
+<!-- ══ TRADINGVIEW FULL WIDGET MODAL ══════════════════════════════════════ -->
+<div class="tv-modal" id="tv-modal">
+  <div class="tv-modal-inner">
+    <div class="tv-modal-bar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:.12em;color:var(--sf)">TRADINGVIEW</span>
+        <select id="tv-sym-sel" onchange="changeTVSym(this.value)" class="tv-sym-sel"></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:9px;color:var(--dim2)">Full indicators · Drawing tools · Replay</span>
+        <button onclick="closeTVWidget()" class="tv-close-btn">✕ Close</button>
+      </div>
+    </div>
+    <div id="tv-widget-container" style="flex:1;min-height:0"></div>
+  </div>
+</div>
+<div class="tv-modal-overlay" id="tv-modal-overlay" onclick="closeTVWidget()"></div>
+
 <div class="pg on" id="pg-markets">
   <div class="bbg">
 
@@ -1894,6 +2062,7 @@ function tab(n,el){
   if(n==='commodities') setTimeout(function(){ if(typeof renderCommoditiesTab==='function') renderCommoditiesTab(); },50);
   if(n==='earnings')    setTimeout(function(){ if(typeof fetchLiveEarnings==='function') fetchLiveEarnings(); },50);
   if(n==='oil')         setTimeout(function(){ if(typeof renderOilTab==='function') renderOilTab(); },50);
+  if(n==='charts')      setTimeout(function(){ if(typeof initChartsTab==='function') initChartsTab(); },60);
   if(n==='fno')         setTimeout(function(){ if(typeof loadFno==='function') loadFno(window._fnoSym||'NIFTY',null); },50);
   if(n==='portfolio')   setTimeout(function(){ if(typeof renderPortfolioTab==='function') renderPortfolioTab(); },50);
   if(n==='alerts')      setTimeout(function(){ if(typeof renderAlertsTab==='function') renderAlertsTab(); },50);
@@ -4375,6 +4544,545 @@ function updatePortfolioStrip() {
   strip.style.display = 'block';
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MULTI CHARTS ENGINE
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Config ─────────────────────────────────────────────────────────────────
+const CHARTS_DEFAULTS = ['NSE:NIFTY','NSE:BANKNIFTY','NSE:RELIANCE','NSE:TCS',
+                          'NSE:HDFCBANK','NSE:INFY'];
+let _chartLayout   = 4;
+let _chartTF       = 'D';
+let _chartInds     = { ema:true, vwap:false, vol:false, rsi:false, macd:false, bb:false };
+let _chartSlots    = [];   // array of { sym, lwChart, candleSeries, volSeries, rsiChart, rsiSeries, emaSeries, bbUpper, bbLower }
+let _tvModalSym    = 'NSE:NIFTY';
+let _tvWidgetEl    = null;
+let _chartsInited  = false;
+
+// ── NSE symbol → TradingView format ───────────────────────────────────────
+function toTVSym(raw) {
+  const s = (raw||'').toUpperCase().replace('.NS','').replace('.BO','').replace('^','').trim();
+  if (s==='NIFTY'||s==='^NSEI'||s==='NIFTY50') return 'NSE:NIFTY';
+  if (s==='BANKNIFTY'||s==='^NSEBANK') return 'NSE:BANKNIFTY';
+  if (s==='MIDCPNIFTY') return 'NSE:MIDCPNIFTY';
+  if (s==='FINNIFTY') return 'NSE:FINNIFTY';
+  if (s.startsWith('NSE:')) return s;
+  return 'NSE:' + s;
+}
+
+// ── Get watchlist from portfolio + defaults ────────────────────────────────
+function getChartWatchlist() {
+  try {
+    const pf = JSON.parse(localStorage.getItem('bt_portfolio')||'[]');
+    const pfSyms = pf.map(h => toTVSym(h.sym)).filter(Boolean);
+    const combined = [...new Set([...pfSyms, ...CHARTS_DEFAULTS])];
+    return combined.slice(0, 12);
+  } catch(e) { return CHARTS_DEFAULTS; }
+}
+
+// ── Initialise charts tab ──────────────────────────────────────────────────
+function initChartsTab() {
+  if (_chartsInited && _chartSlots.length) return;
+  _chartsInited = true;
+  const watchlist = getChartWatchlist();
+  // Assign symbols to slots
+  const syms = watchlist.slice(0, _chartLayout);
+  while (syms.length < _chartLayout) syms.push(CHARTS_DEFAULTS[syms.length % CHARTS_DEFAULTS.length]);
+  _chartSlots = syms.map(s => ({ sym: s }));
+  renderChartGrid();
+  populateTVSymSelect();
+}
+
+// ── Render the grid of chart slots ────────────────────────────────────────
+function renderChartGrid() {
+  const grid = document.getElementById('chart-grid');
+  if (!grid) return;
+  grid.setAttribute('data-layout', _chartLayout);
+  // Destroy existing LW charts
+  _chartSlots.forEach(sl => {
+    try { if (sl.lwChart)   sl.lwChart.remove();   } catch(e){}
+    try { if (sl.rsiChart)  sl.rsiChart.remove();  } catch(e){}
+    try { if (sl.macdChart) sl.macdChart.remove(); } catch(e){}
+  });
+
+  grid.innerHTML = _chartSlots.map((sl, i) => `
+    <div class="chart-slot" id="cs-${i}">
+      <div class="chart-slot-bar">
+        <span class="chart-slot-sym" onclick="editChartSym(${i})" title="Click to change symbol" id="cs-sym-${i}">${sl.sym.replace('NSE:','')}</span>
+        <span class="chart-slot-price" id="cs-price-${i}">—</span>
+        <span class="chart-slot-chg"  id="cs-chg-${i}"></span>
+        <div class="chart-slot-actions">
+          <button class="chart-slot-btn" onclick="openTVWidget('${sl.sym}')" title="Open full TradingView — all indicators + drawing tools">📺 TV</button>
+          <button class="chart-slot-btn" onclick="focusChartSlot(${i})"      title="Expand to single view">⛶</button>
+          <button class="chart-slot-btn" onclick="editChartSym(${i})"        title="Change symbol">✏️</button>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" id="cs-wrap-${i}">
+        <div class="chart-loading" id="cs-load-${i}">⏳ Loading…</div>
+      </div>
+      ${_chartInds.rsi  ? `<div class="rsi-wrap"  id="cs-rsi-${i}"><div class="rsi-label">RSI 14</div></div>`   : ''}
+      ${_chartInds.macd ? `<div class="macd-wrap" id="cs-macd-${i}"><div class="rsi-label">MACD</div></div>` : ''}
+    </div>
+  `).join('');
+
+  // Load each chart after DOM settles
+  setTimeout(() => {
+    _chartSlots.forEach((sl, i) => loadLWChart(i, sl.sym));
+  }, 80);
+}
+
+// ── Load a Lightweight Chart into slot i ──────────────────────────────────
+async function loadLWChart(i, tvSym) {
+  const wrap = document.getElementById('cs-wrap-' + i);
+  const loadEl = document.getElementById('cs-load-' + i);
+  if (!wrap) return;
+
+  // Load LightweightCharts lib on demand
+  if (!window.LightweightCharts) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  // Destroy previous
+  try { if (_chartSlots[i].lwChart) _chartSlots[i].lwChart.remove(); } catch(e){}
+
+  const isDark = !document.documentElement.classList.contains('light');
+  const chart = LightweightCharts.createChart(wrap, {
+    width:  wrap.clientWidth,
+    height: wrap.clientHeight,
+    layout: { background:{ color: isDark?'#050709':'#f5f7fa' }, textColor: isDark?'#8899aa':'#4a5568' },
+    grid:   { vertLines:{ color: isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.05)' },
+               horzLines:{ color: isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.05)' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: isDark?'rgba(255,255,255,.08)':'rgba(0,0,0,.1)' },
+    timeScale: { borderColor: isDark?'rgba(255,255,255,.08)':'rgba(0,0,0,.1)', timeVisible:true },
+    handleScroll: true, handleScale: true,
+  });
+
+  _chartSlots[i].lwChart = chart;
+
+  // Responsive resize
+  const ro = new ResizeObserver(() => {
+    chart.resize(wrap.clientWidth, wrap.clientHeight);
+  });
+  ro.observe(wrap);
+
+  // Crosshair sync — when this chart moves, update all others
+  chart.subscribeCrosshairMove(param => {
+    if (!param || !param.time) return;
+    _chartSlots.forEach((sl, j) => {
+      if (j === i || !sl.lwChart) return;
+      try { sl.lwChart.setCrosshairPosition(param.point?.x ?? 0, param.point?.y ?? 0, sl.candleSeries); } catch(e){}
+    });
+  });
+
+  // Candlestick series
+  const candleSeries = chart.addCandlestickSeries({
+    upColor:'#00D26A', downColor:'#FF3B3B',
+    borderUpColor:'#00D26A', borderDownColor:'#FF3B3B',
+    wickUpColor:'#00D26A', wickDownColor:'#FF3B3B',
+  });
+  _chartSlots[i].candleSeries = candleSeries;
+
+  // Volume series (histogram)
+  if (_chartInds.vol) {
+    const volSeries = chart.addHistogramSeries({
+      color:'rgba(100,120,160,.3)', priceFormat:{ type:'volume' },
+      priceScaleId:'vol', scaleMargins:{ top:0.8, bottom:0 },
+    });
+    _chartSlots[i].volSeries = volSeries;
+  }
+
+  // Fetch and render data
+  await fetchAndRenderChart(i, tvSym);
+  if (loadEl) loadEl.style.display = 'none';
+}
+
+// ── Fetch OHLCV data for a symbol ─────────────────────────────────────────
+async function fetchAndRenderChart(i, tvSym) {
+  const nseSym = tvSym.replace('NSE:','') + '.NS';
+  // range drives how much history; interval drives candle size
+  const tfToRange    = { '1':'1d', '5':'1d', '15':'5d', '60':'1mo', 'D':'1y', 'W':'2y' };
+  const tfToInterval = { '1':'1m', '5':'5m', '15':'15m','60':'60m', 'D':'1d', 'W':'1wk' };
+  const range = tfToRange[_chartTF] || '1y';
+
+  try {
+    const interval = tfToInterval[_chartTF] || '1d';
+    const j = await apiFetch({ sym: nseSym, type:'chart', range, interval }, 12000);
+    const res = j && j.chart && j.chart.result && j.chart.result[0];
+    if (!res) throw new Error('no data');
+
+    const ts  = res.timestamp || [];
+    const q0  = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
+    const opens=q0.open||[], highs=q0.high||[], lows=q0.low||[], closes=q0.close||[], vols=q0.volume||[];
+
+    const candles = ts.map((t,idx) => ({
+      time:   t,
+      open:   +(opens[idx]  || closes[idx] || 0).toFixed(2),
+      high:   +(highs[idx]  || closes[idx] || 0).toFixed(2),
+      low:    +(lows[idx]   || closes[idx] || 0).toFixed(2),
+      close:  +(closes[idx] || 0).toFixed(2),
+      volume: vols[idx] || 0,
+    })).filter(d => d.close > 0 && d.time > 0);
+
+    if (!candles.length) throw new Error('empty');
+
+    _chartSlots[i].candleSeries.setData(candles);
+    _chartSlots[i].ohlcv = candles;
+    _chartSlots[i].closes = closes.filter(Boolean);
+
+    // Volume
+    if (_chartSlots[i].volSeries && vols.length) {
+      const volData = ts.map((t,idx) => ({
+        time: t, value: vols[idx]||0,
+        color: (closes[idx]||0) >= (opens[idx]||0) ? 'rgba(0,210,106,.25)' : 'rgba(255,59,59,.25)',
+      })).filter(d => d.value > 0 && d.time > 0);
+      _chartSlots[i].volSeries.setData(volData);
+    }
+
+    // EMA 20 + EMA 50
+    if (_chartInds.ema && candles.length > 20) {
+      renderEMA(_chartSlots[i].lwChart, candles, 20, '#FF9933', i);
+      renderEMA(_chartSlots[i].lwChart, candles, 50, '#64B5F6', i);
+    }
+
+    // VWAP overlay
+    if (_chartInds.vwap && candles.length > 1) {
+      renderVWAP(_chartSlots[i].lwChart, candles, i);
+    }
+
+    // Bollinger Bands
+    if (_chartInds.bb && candles.length > 20) {
+      renderBB(_chartSlots[i].lwChart, candles, 20, 2, i);
+    }
+
+    // RSI sub-chart
+    if (_chartInds.rsi && candles.length > 14) {
+      renderRSISubchart(i, candles);
+    }
+
+    // MACD sub-chart
+    if (_chartInds.macd && candles.length > 26) {
+      renderMACDSubchart(i, candles);
+    }
+
+    // Update price display
+    const last = candles[candles.length-1];
+    const prev = candles[candles.length-2];
+    if (last) {
+      const chg = prev ? ((last.close - prev.close) / prev.close * 100) : 0;
+      const up  = chg >= 0;
+      const prEl = document.getElementById('cs-price-' + i);
+      const chEl = document.getElementById('cs-chg-' + i);
+      if (prEl) prEl.textContent = '₹' + last.close.toLocaleString('en-IN',{minimumFractionDigits:2});
+      if (chEl) { chEl.textContent = (up?'▲ +':'▼ ') + Math.abs(chg).toFixed(2) + '%'; chEl.className = 'chart-slot-chg ' + (up?'up':'dn'); }
+    }
+
+    _chartSlots[i].lwChart.timeScale().fitContent();
+
+  } catch(e) {
+    const loadEl = document.getElementById('cs-load-' + i);
+    if (loadEl) { loadEl.style.display='flex'; loadEl.textContent = '⚠️ ' + (tvSym.replace('NSE:','')) + ' — data unavailable'; }
+  }
+}
+
+// ── EMA line overlay ────────────────────────────────────────────────────────
+function renderEMA(chart, candles, period, color, slotIdx) {
+  const closes = candles.map(c => c.close);
+  const k = 2/(period+1);
+  let ema = closes[0];
+  const emaData = candles.map((c,i) => {
+    if (i===0) { ema = c.close; }
+    else { ema = c.close * k + ema * (1-k); }
+    return { time: c.time, value: +ema.toFixed(2) };
+  }).slice(period-1);
+
+  const s = chart.addLineSeries({ color, lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  s.setData(emaData);
+  if (!_chartSlots[slotIdx].emaSeries) _chartSlots[slotIdx].emaSeries = [];
+  _chartSlots[slotIdx].emaSeries.push(s);
+}
+
+// ── Bollinger Bands overlay ─────────────────────────────────────────────────
+function renderBB(chart, candles, period, mult, slotIdx) {
+  const closes = candles.map(c => c.close);
+  const bbData = candles.map((c,i) => {
+    if (i < period-1) return null;
+    const slice = closes.slice(i-period+1, i+1);
+    const mean = slice.reduce((a,b)=>a+b,0)/period;
+    const std  = Math.sqrt(slice.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/period);
+    return { time:c.time, upper:+(mean+mult*std).toFixed(2), lower:+(mean-mult*std).toFixed(2), mid:+mean.toFixed(2) };
+  }).filter(Boolean);
+
+  const upper = chart.addLineSeries({ color:'rgba(100,180,255,.5)', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  const lower = chart.addLineSeries({ color:'rgba(100,180,255,.5)', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  const mid   = chart.addLineSeries({ color:'rgba(100,180,255,.25)', lineWidth:1, lineStyle:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  upper.setData(bbData.map(d=>({time:d.time,value:d.upper})));
+  lower.setData(bbData.map(d=>({time:d.time,value:d.lower})));
+  mid.setData(bbData.map(d=>({time:d.time,value:d.mid})));
+}
+
+// ── VWAP overlay ─────────────────────────────────────────────────────────────
+function renderVWAP(chart, candles, slotIdx) {
+  // VWAP = cumulative(typical_price * volume) / cumulative(volume)
+  // For daily charts we compute session VWAP approximation over full history
+  let cumTPV = 0, cumVol = 0;
+  const vwapData = candles.map(c => {
+    const tp  = (c.high + c.low + c.close) / 3;
+    const vol = c.volume || 1e6; // fallback if volume missing
+    cumTPV += tp * vol;
+    cumVol += vol;
+    return { time: c.time, value: +(cumTPV / cumVol).toFixed(2) };
+  });
+  const s = chart.addLineSeries({
+    color: 'rgba(180,120,255,.8)', lineWidth: 1, lineStyle: 0,
+    priceLineVisible: false, lastValueVisible: true,
+    crosshairMarkerVisible: false,
+    title: 'VWAP',
+  });
+  s.setData(vwapData);
+  if (!_chartSlots[slotIdx].vwapSeries) _chartSlots[slotIdx].vwapSeries = [];
+  _chartSlots[slotIdx].vwapSeries.push(s);
+}
+
+// ── MACD sub-chart ────────────────────────────────────────────────────────────
+function renderMACDSubchart(i, candles) {
+  const macdWrap = document.getElementById('cs-macd-' + i);
+  if (!macdWrap || !window.LightweightCharts) return;
+  macdWrap.querySelectorAll('div:not(.rsi-label)').forEach(el => el.remove());
+
+  const closes = candles.map(c => c.close);
+  const ema = (data, p) => {
+    const k = 2/(p+1); let e = data[0];
+    return data.map((v,i) => { e = i===0 ? v : v*k + e*(1-k); return e; });
+  };
+  const ema12 = ema(closes, 12);
+  const ema26 = ema(closes, 26);
+  const macdLine = ema12.map((v,i) => v - ema26[i]);
+  const signal   = ema(macdLine.slice(25), 9);
+  const startIdx = 25 + 8; // 26 for ema26 + 9 for signal warmup
+
+  const macdData   = candles.slice(startIdx).map((c,i) => ({ time: c.time, value: +macdLine[startIdx+i].toFixed(4) }));
+  const signalData = candles.slice(startIdx).map((c,i) => ({ time: c.time, value: +signal[i].toFixed(4) }));
+  const histData   = candles.slice(startIdx).map((c,i) => ({
+    time: c.time, value: +(macdLine[startIdx+i] - signal[i]).toFixed(4),
+    color: macdLine[startIdx+i] >= signal[i] ? 'rgba(0,210,106,.5)' : 'rgba(255,59,59,.5)',
+  }));
+
+  const mc = LightweightCharts.createChart(macdWrap, {
+    width: macdWrap.clientWidth, height: macdWrap.clientHeight,
+    layout: { background:{color:'transparent'}, textColor:'#556677' },
+    grid: { vertLines:{color:'transparent'}, horzLines:{color:'rgba(255,255,255,.03)'} },
+    rightPriceScale: { borderVisible:false, scaleMargins:{top:0.1,bottom:0.1} },
+    timeScale: { visible:false },
+    crosshair: { vertLine:{visible:false} },
+  });
+  const histSeries   = mc.addHistogramSeries({ priceLineVisible:false, lastValueVisible:false });
+  const macdSeries   = mc.addLineSeries({ color:'#64B5F6', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  const signalSeries = mc.addLineSeries({ color:'#FF9933', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  histSeries.setData(histData);
+  macdSeries.setData(macdData);
+  signalSeries.setData(signalData);
+  mc.timeScale().fitContent();
+
+  _chartSlots[i].macdChart = mc;
+  const ro = new ResizeObserver(() => mc.resize(macdWrap.clientWidth, macdWrap.clientHeight));
+  ro.observe(macdWrap);
+}
+
+// ── RSI sub-chart ────────────────────────────────────────────────────────────
+function renderRSISubchart(i, candles) {
+  const rsiWrap = document.getElementById('cs-rsi-' + i);
+  if (!rsiWrap || !window.LightweightCharts) return;
+
+  // Clear previous
+  rsiWrap.querySelectorAll('div:not(.rsi-label)').forEach(el => el.remove());
+
+  const closes = candles.map(c => c.close);
+  const period = 14;
+  const rsiValues = [];
+  let gains=0, losses=0;
+  for (let j=1; j<=period; j++) { const d=closes[j]-closes[j-1]; d>0?gains+=d:losses-=d; }
+  let ag=gains/period, al=losses/period;
+  rsiValues.push({ time: candles[period].time, value: al===0?100:+(100-100/(1+ag/al)).toFixed(2) });
+  for (let j=period+1; j<candles.length; j++) {
+    const d=closes[j]-closes[j-1];
+    ag=(ag*(period-1)+Math.max(d,0))/period;
+    al=(al*(period-1)+Math.max(-d,0))/period;
+    rsiValues.push({ time:candles[j].time, value: al===0?100:+(100-100/(1+ag/al)).toFixed(2) });
+  }
+
+  const rsiChart = LightweightCharts.createChart(rsiWrap, {
+    width: rsiWrap.clientWidth, height: rsiWrap.clientHeight,
+    layout:{ background:{color:'transparent'}, textColor:'#556677' },
+    grid:{ vertLines:{color:'transparent'}, horzLines:{color:'rgba(255,255,255,.03)'} },
+    rightPriceScale:{ borderVisible:false, scaleMargins:{top:0.1,bottom:0.1} },
+    timeScale:{ visible:false },
+    crosshair:{ vertLine:{visible:false} },
+  });
+  const rsiSeries = rsiChart.addLineSeries({
+    color:'#FF9933', lineWidth:1, priceLineVisible:false, lastValueVisible:true,
+  });
+  // Overbought/oversold bands
+  const obSeries = rsiChart.addLineSeries({ color:'rgba(255,59,59,.3)', lineWidth:1, lineStyle:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  const osSeries = rsiChart.addLineSeries({ color:'rgba(0,210,106,.3)', lineWidth:1, lineStyle:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  rsiSeries.setData(rsiValues);
+  obSeries.setData(rsiValues.map(d=>({time:d.time,value:70})));
+  osSeries.setData(rsiValues.map(d=>({time:d.time,value:30})));
+  rsiChart.timeScale().fitContent();
+
+  _chartSlots[i].rsiChart = rsiChart;
+  const rro = new ResizeObserver(() => rsiChart.resize(rsiWrap.clientWidth, rsiWrap.clientHeight));
+  rro.observe(rsiWrap);
+}
+
+// ── Focus single slot (expand to 1-chart view) ───────────────────────────────
+function focusChartSlot(i) {
+  const sym = _chartSlots[i]?.sym;
+  if (!sym) return;
+  // Remember previous layout so we can restore
+  _chartSlots._prevLayout = _chartLayout;
+  _chartSlots._prevSyms   = _chartSlots.map(s => s.sym);
+  setChartLayout(1, document.querySelector('.lbtn[data-layout="1"]'));
+  // Load this specific symbol in the single slot
+  _chartSlots[0].sym = sym;
+  const symEl = document.getElementById('cs-sym-0');
+  if (symEl) symEl.textContent = sym.replace('NSE:','');
+  try { if (_chartSlots[0].lwChart) _chartSlots[0].lwChart.remove(); _chartSlots[0].lwChart = null; } catch(e){}
+  loadLWChart(0, sym);
+}
+
+// ── Layout switcher ──────────────────────────────────────────────────────────
+function setChartLayout(n, btn) {
+  _chartLayout = n;
+  _chartsInited = false;
+  document.querySelectorAll('.lbtn').forEach(b => b.classList.toggle('on', b.dataset.layout == n));
+  const watchlist = getChartWatchlist();
+  const syms = watchlist.slice(0, n);
+  while (syms.length < n) syms.push(CHARTS_DEFAULTS[syms.length % CHARTS_DEFAULTS.length]);
+  _chartSlots = syms.map((s,idx) => ({ sym: _chartSlots[idx]?.sym || s }));
+  while (_chartSlots.length < n) _chartSlots.push({ sym: syms[_chartSlots.length % syms.length] });
+  _chartSlots = _chartSlots.slice(0, n);
+  _chartsInited = true;
+  renderChartGrid();
+}
+
+// ── Timeframe sync ────────────────────────────────────────────────────────────
+function syncTimeframe(tf, btn) {
+  _chartTF = tf;
+  document.querySelectorAll('.tfbtn').forEach(b => b.classList.toggle('on', b.dataset.tf === tf));
+  // Reload all charts with new timeframe
+  _chartSlots.forEach((sl, i) => {
+    const loadEl = document.getElementById('cs-load-' + i);
+    if (loadEl) { loadEl.style.display='flex'; loadEl.textContent='⏳ Loading…'; }
+    fetchAndRenderChart(i, sl.sym);
+  });
+}
+
+// ── Indicator toggle ──────────────────────────────────────────────────────────
+function toggleIndicator(ind, btn) {
+  _chartInds[ind] = !_chartInds[ind];
+  btn.classList.toggle('on', _chartInds[ind]);
+  // Full re-render to add/remove indicator series
+  _chartsInited = false;
+  const saved = _chartSlots.map(s => s.sym);
+  _chartSlots = saved.map(s => ({ sym: s }));
+  _chartsInited = true;
+  renderChartGrid();
+}
+
+// ── Edit symbol in a slot ────────────────────────────────────────────────────
+function editChartSym(i) {
+  const symEl = document.getElementById('cs-sym-' + i);
+  if (!symEl) return;
+  const cur = _chartSlots[i].sym.replace('NSE:','');
+  symEl.innerHTML = `<input class="chart-slot-sym-input" id="cs-sym-inp-${i}" value="${cur}" placeholder="e.g. RELIANCE" autofocus>`;
+  const inp = document.getElementById('cs-sym-inp-' + i);
+  inp.focus(); inp.select();
+  const commit = () => {
+    const val = inp.value.trim().toUpperCase();
+    if (val) {
+      const newSym = toTVSym(val);
+      _chartSlots[i].sym = newSym;
+      symEl.textContent = newSym.replace('NSE:','');
+      const loadEl = document.getElementById('cs-load-' + i);
+      if (loadEl) { loadEl.style.display='flex'; loadEl.textContent='⏳ Loading…'; }
+      try { if (_chartSlots[i].lwChart) _chartSlots[i].lwChart.remove(); } catch(e){}
+      _chartSlots[i].lwChart = null;
+      loadLWChart(i, newSym);
+      populateTVSymSelect();
+    } else {
+      symEl.textContent = _chartSlots[i].sym.replace('NSE:','');
+    }
+  };
+  inp.addEventListener('keydown', e => { if(e.key==='Enter') commit(); if(e.key==='Escape') symEl.textContent=cur; });
+  inp.addEventListener('blur', commit);
+}
+
+// ── Reload all charts ────────────────────────────────────────────────────────
+function reloadAllCharts() {
+  _chartSlots.forEach((sl, i) => {
+    try { if (sl.lwChart) sl.lwChart.remove(); sl.lwChart = null; } catch(e){}
+    const loadEl = document.getElementById('cs-load-' + i);
+    if (loadEl) { loadEl.style.display='flex'; loadEl.textContent='⏳ Loading…'; }
+  });
+  setTimeout(() => _chartSlots.forEach((sl,i) => loadLWChart(i, sl.sym)), 50);
+}
+
+// ── TradingView full widget modal ────────────────────────────────────────────
+function populateTVSymSelect() {
+  const sel = document.getElementById('tv-sym-sel');
+  if (!sel) return;
+  const syms = [...new Set(_chartSlots.map(s=>s.sym).concat(CHARTS_DEFAULTS))];
+  sel.innerHTML = syms.map(s => `<option value="${s}" ${s===_tvModalSym?'selected':''}>${s}</option>`).join('');
+}
+
+function openTVWidget(sym) {
+  _tvModalSym = sym || _chartSlots[0]?.sym || 'NSE:NIFTY';
+  document.getElementById('tv-modal').classList.add('open');
+  document.getElementById('tv-modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  populateTVSymSelect();
+  loadTVWidget(_tvModalSym);
+}
+
+function closeTVWidget() {
+  document.getElementById('tv-modal').classList.remove('open');
+  document.getElementById('tv-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  // Remove widget iframe to free memory
+  const c = document.getElementById('tv-widget-container');
+  if (c) c.innerHTML = '';
+}
+
+function changeTVSym(sym) {
+  _tvModalSym = sym;
+  loadTVWidget(sym);
+}
+
+function loadTVWidget(sym) {
+  const container = document.getElementById('tv-widget-container');
+  if (!container) return;
+  container.innerHTML = '';
+  const isDark = !document.documentElement.classList.contains('light');
+  const tfMap = { '1':'1','5':'5','15':'15','D':'D','W':'W' };
+  const iframe = document.createElement('iframe');
+  iframe.src = 'https://s.tradingview.com/widgetembed/?frameElementId=tvwidget&symbol=' + encodeURIComponent(sym) +
+    '&interval=' + (tfMap[_chartTF]||'D') +
+    '&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=1&saveimage=1&toolbarbg=' + (isDark?'0a0d12':'f5f7fa') +
+    '&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies&theme=' + (isDark?'dark':'light') +
+    '&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=1&locale=en';
+  iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+  iframe.allowFullscreen = true;
+  container.appendChild(iframe);
+}
+
+// charts tab is hooked directly into the main tab() function above
 </script>
 </body>
 </html>
