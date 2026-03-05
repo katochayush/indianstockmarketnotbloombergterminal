@@ -3760,11 +3760,17 @@ async function loadFno(sym, btn) {
 
   try {
     const j = await apiFetch({ type: 'fno', sym }, 12000);
-    if (j && j.records) {
+    const st = document.getElementById('fno-status-label');
+
+    if (j && j.records && j.records.data && j.records.data.length) {
       _fnoData = j;
-      const st = document.getElementById('fno-status-label');
-      if(st) st.innerHTML = '<span style="color:var(--gn)">✅ Live NSE data</span>';
+      const src = j.source === 'yahoo' ? '📡 Yahoo Finance' : '✅ NSE Live';
+      const col = j.source === 'yahoo' ? 'var(--ac)' : 'var(--gn)';
+      if (st) st.innerHTML = `<span style="color:${col}">${src}</span>`;
       renderFnoTab(j, sym);
+    } else if (j && j.fallback) {
+      // Both sources failed on server
+      renderFnoFallback(sym);
     } else {
       renderFnoFallback(sym);
     }
@@ -3777,7 +3783,7 @@ function renderFnoFallback(sym) {
   // API unavailable — use live spot price + realistic OI distribution model
   // Mark clearly as estimated so user knows NSE call failed
   const fnoStatus = document.getElementById('fno-status-label');
-  if (fnoStatus) fnoStatus.innerHTML = '<span style="color:var(--yl)">⚠️ NSE unavailable — showing estimated OI model</span>';
+  if (fnoStatus) fnoStatus.innerHTML = '<span style="color:var(--yl)">⚠️ Data unavailable — estimated model (market may be closed)</span>';
   // Use real live spot price if available
   const spotMap = { NIFTY: liveData.nifty?.v||24336, BANKNIFTY: liveData.bank?.v||52141, MIDCPNIFTY:12480, FINNIFTY:23890 };
   const spot = spotMap[sym] || liveData.nifty?.v || 24336;
