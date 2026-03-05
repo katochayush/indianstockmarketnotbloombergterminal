@@ -43,6 +43,11 @@ html.light #pg-search{background:var(--bg)}
 html.light .ph{color:var(--dim)}
 html.light #alert-panel{background:var(--bg2);border-color:var(--br)}
 html.light .cmx-card,html.light .fno-card,html.light .pf-card,html.light .pal-card{background:var(--bg2);border-color:var(--br2)}
+/* Prevent Chart.js from expanding beyond container */
+#cmx-chart,#fno-pcr-chart{max-height:200px!important;display:block}
+#pg-commodities canvas,#pg-fno canvas{max-width:100%!important}
+.fno-card{overflow:hidden}
+.cmx-chart-wrap canvas{max-height:200px!important}
 transition: background .3s, color .3s;
 html{scroll-behavior:smooth;height:100%}
 body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;overflow-x:hidden;height:100%;-webkit-font-smoothing:antialiased}
@@ -1262,7 +1267,7 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
             <button class="rbtn" data-r="3mo" onclick="setCmxRange('3mo',this)">3M</button>
           </div>
         </div>
-        <div style="position:relative;height:220px"><canvas id="cmx-chart"></canvas></div>
+        <div style="position:relative;height:200px;max-height:200px;overflow:hidden"><canvas id="cmx-chart"></canvas></div>
       </div>
       <div class="cmx-stats-row" id="cmx-stats"></div>
     </div>
@@ -1289,9 +1294,9 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
           <div id="fno-metrics"></div>
         </div>
         <!-- PCR gauge -->
-        <div class="fno-card">
+        <div class="fno-card" style="overflow:hidden">
           <div class="fno-h">📈 PUT/CALL RATIO (PCR)</div>
-          <canvas id="fno-pcr-chart" height="160"></canvas>
+          <div style="position:relative;height:160px;max-height:160px"><canvas id="fno-pcr-chart"></canvas></div>
           <div style="text-align:center;margin-top:8px">
             <div style="font-family:'DM Mono',monospace;font-size:28px;color:var(--sf)" id="fno-pcr-val">—</div>
             <div style="font-size:9px;color:var(--dim2);margin-top:3px" id="fno-pcr-sentiment">Loading…</div>
@@ -3151,10 +3156,10 @@ function toggleTheme() {
 
 // Extended live commodity store
 window.cmxData = {
-  gold:   { name:'Gold', icon:'🥇', unit:'₹/10g (MCX)', v:0, prev:0, open:0, high:0, low:0 },
-  silver: { name:'Silver', icon:'🥈', unit:'₹/kg (MCX)', v:0, prev:0, open:0, high:0, low:0 },
-  crude:  { name:'Crude Oil', icon:'🛢️', unit:'$/bbl (Brent)', v:0, prev:0, open:0, high:0, low:0 },
-  inrusd: { name:'USD/INR', icon:'💵', unit:'₹ per USD', v:0, prev:0, open:0, high:0, low:0 },
+  gold:   { name:'Gold',     icon:'🥇', unit:'₹/10g (MCX)',    v:90200,  prev:89980,  open:89800,  high:90450,  low:89600  },
+  silver: { name:'Silver',   icon:'🥈', unit:'₹/kg (MCX)',     v:95800,  prev:95200,  open:95100,  high:96100,  low:94900  },
+  crude:  { name:'Crude Oil',icon:'🛢️', unit:'$/bbl (Brent)',  v:74.82,  prev:74.20,  open:74.10,  high:75.40,  low:73.80  },
+  inrusd: { name:'USD/INR',  icon:'💵', unit:'₹ per USD',      v:83.94,  prev:84.02,  open:84.01,  high:84.12,  low:83.88  },
 };
 
 let _cmxSel = 'gold';
@@ -3172,27 +3177,27 @@ async function fetchCmxLive() {
     // Gold: XAU/INR → per gram → *10 = per 10g MCX
     if (j.goldPerGram) {
       const v = j.goldPerGram * 10;
-      const prev = window.cmxData.gold.v || v * 0.998;
+      const prev = window.cmxData.gold.v > 0 ? window.cmxData.gold.v : v * 0.998;
       window.cmxData.gold = { ...window.cmxData.gold, v, prev, open: v*0.9985, high: v*1.002, low: v*0.997 };
       liveData.gold = { v: j.goldPerGram }; // keep per-gram in liveData
     }
     // Silver: XAG/INR → per gram → *1000 = per kg MCX
     if (j.silverPerGram) {
       const v = j.silverPerGram * 1000;
-      const prev = window.cmxData.silver.v || v * 0.998;
+      const prev = window.cmxData.silver.v > 0 ? window.cmxData.silver.v : v * 0.998;
       window.cmxData.silver = { ...window.cmxData.silver, v, prev, open: v*0.999, high: v*1.003, low: v*0.996 };
     }
     // Brent crude USD/bbl
     if (j.brent) {
       const v = j.brent;
-      const prev = window.cmxData.crude.v || v * 0.999;
+      const prev = window.cmxData.crude.v > 0 ? window.cmxData.crude.v : v * 0.999;
       window.cmxData.crude = { ...window.cmxData.crude, v, prev, open: v*0.999, high: v*1.004, low: v*0.996 };
       liveData.brent = { v };
     }
     // USD/INR
     if (j.inrusd) {
       const v = j.inrusd;
-      const prev = window.cmxData.inrusd.v || v * 0.9998;
+      const prev = window.cmxData.inrusd.v > 0 ? window.cmxData.inrusd.v : v * 0.9998;
       window.cmxData.inrusd = { ...window.cmxData.inrusd, v, prev, open: v*0.9998, high: v*1.001, low: v*0.999 };
       liveData.inrusd = { v };
     }
@@ -3307,10 +3312,11 @@ function renderCmxChart(key) {
     },
     options: {
       responsive:true, maintainAspectRatio:false,
-      animation:{duration:500},
+      animation:{duration:400},
+      layout:{padding:0},
       plugins:{ legend:{display:false},
         tooltip:{ mode:'index', intersect:false, backgroundColor:'rgba(5,7,9,.95)', borderColor:'rgba(255,153,51,.3)', borderWidth:1,
-          callbacks:{label:c=>' '+fmtY(c.parsed.y)} }
+          callbacks:{label:ctx=>' '+fmtY(ctx.parsed.y)} }
       },
       scales:{
         x:{ticks:{color:'#4A5568',font:{size:8},maxTicksLimit:8},grid:{color:'rgba(255,255,255,.03)'}},
@@ -3320,9 +3326,13 @@ function renderCmxChart(key) {
   });
 }
 
-// Kick off commodity fetch
+// Kick off commodity fetch — render cards immediately with seed data, then API overwrites
 fetchCmxLive();
 setInterval(fetchCmxLive, 60000); // every 60s for forex/commodities
+// Render seed data immediately so cards show on first tab open
+setTimeout(function() {
+  if (document.getElementById('pg-commodities')?.classList.contains('on')) renderCommoditiesTab();
+}, 100);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // F&O — PCR, OI, Max Pain (NSE data)
@@ -3332,7 +3342,7 @@ let _fnoData = null;
 let _pcrChart = null;
 
 async function loadFno(sym, btn) {
-  _fnoSym = sym;
+  _fnoSym = sym; window._fnoSym = sym;
   if (btn) {
     document.querySelectorAll('.fno-sym-btn').forEach(b => b.classList.remove('on'));
     btn.classList.add('on');
@@ -3472,9 +3482,11 @@ function renderFnoTab(data, sym) {
       },
       options: {
         responsive:true, maintainAspectRatio:false, cutout:'65%',
+        animation:{duration:400},
+        layout:{padding:2},
         plugins: {
-          legend: { position:'bottom', labels:{ color:'#6B7280', font:{size:9}, padding:8 } },
-          tooltip: { callbacks:{ label:c=>' '+c.label+': '+c.parsed.toFixed(1)+'%' } }
+          legend: { position:'bottom', labels:{ color:'#6B7280', font:{size:9}, padding:6, boxWidth:10 } },
+          tooltip: { callbacks:{ label:ctx=>' '+ctx.label+': '+ctx.parsed.toFixed(1)+'%' } }
         }
       }
     });
