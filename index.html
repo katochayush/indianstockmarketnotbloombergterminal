@@ -649,11 +649,6 @@ body{padding-bottom:28px}
 
 <!-- ═══════════════════════════════════════════════════════════════════════
      TAB: INTELLIGENCE FEED
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════════════
-     TAB: INTELLIGENCE FEED
 ══════════════════════════════════════════════════════════════════════════ -->
 <div class="pg" id="pg-intel">
   <div class="sw">
@@ -1185,6 +1180,28 @@ function updateAllDisplays(){
   setHdr('h-sensex','h-sensexc', s.v, s.prev);
   setHdr('h-bank','h-bankc',     b.v, b.prev);
 
+  // Update index cards with live data
+  function updCard(id, data, label) {
+    const el = document.getElementById(id); if (!el) return;
+    const price = data.v, prev = data.prev||price;
+    const chg = price - prev, pct = prev ? chg/prev*100 : 0;
+    const up = chg >= 0;
+    const vEl = el.querySelector('.iv2');
+    const cEl = el.querySelector('.ich2');
+    if (vEl) vEl.textContent = price?.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}) || '—';
+    if (cEl) {
+      cEl.textContent = (up?'▲ ':' ▼ ')+Math.abs(chg).toFixed(2)+' ('+Math.abs(pct).toFixed(2)+'%)';
+      cEl.className = 'ich2 ' + (up?'up':'dn');
+    }
+    el.classList.toggle('up', up); el.classList.toggle('dn', !up);
+    // Update open/high/low in card
+    const cells = el.querySelectorAll('.iv2 ~ * [style*="DM Mono"]');
+  }
+  updCard('ic0', n, 'NIFTY 50');
+  updCard('ic1', s, 'SENSEX');
+  updCard('ic2', b, 'NIFTY BANK');
+  updCard('ic3', m, 'NIFTY MID');
+
   // Commodities header
   const bEl=document.getElementById('h-brent'), bCEl=document.getElementById('h-brentc');
   if(bEl) bEl.textContent=`$${br.v?.toFixed(2)}`;
@@ -1391,7 +1408,15 @@ function tab(n,el){
   document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));
   document.getElementById('pg-'+n).classList.add('on');
   el.classList.add('on');
+  if(n==='social')  setTimeout(updateSocialTab,50);
+  if(n==='insider') setTimeout(updateInsiderTab,50);
+  if(n==='whale')   setTimeout(function(){
+    const stocks=Object.values(window.liveStocks||{});
+    const sorted=[...stocks].sort((a,b)=>b.pct-a.pct);
+    updateWhaleTab(sorted.filter(s=>s.up).slice(0,5),sorted.filter(s=>!s.up).reverse().slice(0,5),sorted);
+  },50);
 }
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1680,16 +1705,44 @@ function rnews() {
     el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading live news…</div>';
     return;
   }
-  el.innerHTML = data.map(n =>
-    `<div class="ni" ${n.link ? `onclick="window.open('${n.link}','_blank')" style="cursor:pointer"` : ''}>
-      <span class="nc ${CC[n.cat]||'cm'}">${CL[n.cat]||'Market'}</span>
-      <div class="nh2">${n.title}</div>
+  el.innerHTML = data.map(n => {
+    const impact = newsImpact(n);
+    return `<div class="ni">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="nc ${CC[n.cat]||'cm'}">${CL[n.cat]||'Market'}</span>
+        <span style="font-size:8px;color:${impact.col};font-weight:700">${impact.label}</span>
+      </div>
+      <div class="nh2" style="margin-bottom:4px">${n.title}</div>
+      <div style="font-size:9px;color:var(--dim2);line-height:1.5;margin-bottom:4px">${impact.summary}</div>
+      ${impact.stocks ? `<div style="font-size:8px;color:var(--sf);margin-bottom:3px">Watch: ${impact.stocks}</div>` : ''}
       <div class="nm">
         <span class="ns2">${n.src}</span>
         <span>${timeAgo(n.pubDate)}</span>
+        ${n.link ? `<span onclick="window.open('${n.link}','_blank')" style="color:var(--ac);cursor:pointer;margin-left:4px">↗ Read</span>` : ''}
       </div>
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
+}
+
+function newsImpact(n) {
+  const t = (n.title||'').toLowerCase();
+  // RBI / Rate
+  if (/rbi.*cut|rate.*cut|cut.*rate/.test(t)) return {col:'var(--gn)',label:'BULLISH',summary:'Rate cuts boost bank NIMs and rate-sensitive sectors. Market re-rating likely.',stocks:'HDFCBANK · SBI · BAJFINANCE · LICHSGFIN'};
+  if (/rbi.*hold|rate.*hold|repo.*unchanged/.test(t)) return {col:'var(--sf)',label:'NEUTRAL',summary:'Status quo on rates. Markets have priced this in. Watch forward guidance.',stocks:'HDFCBANK · KOTAKBANK'};
+  if (/rbi.*hike|rate.*hike/.test(t)) return {col:'var(--rd)',label:'BEARISH',summary:'Rate hikes compress bank margins and slow credit growth.',stocks:'HDFCBANK · SBI · BAJFINANCE'};
+  // Oil
+  if (/oil.*rise|crude.*high|brent.*\$8/.test(t)) return {col:'var(--rd)',label:'BEARISH',summary:'Higher oil widens India CAD, pressures INR and margins for downstream companies.',stocks:'INDIGO · HPCL · BPCL (sell)'};
+  if (/oil.*fall|crude.*low|oil.*drop/.test(t)) return {col:'var(--gn)',label:'BULLISH',summary:'Lower oil reduces import bill, supports INR, boosts downstream margins.',stocks:'INDIGO · HPCL · BPCL · ASIAN PAINTS'};
+  // IT
+  if (/tcs|infosys|wipro|hcl.*tech/.test(t) && /deal|contract|win/.test(t)) return {col:'var(--gn)',label:'BULLISH',summary:'Deal wins drive multi-year revenue visibility for Indian IT.',stocks:'TCS · INFY · HCLTECH · WIPRO'};
+  // Results
+  if (/beat|profit.*rise|revenue.*grow|strong.*result/.test(t)) return {col:'var(--gn)',label:'BULLISH',summary:'Earnings beat signals business momentum and often triggers re-rating.',stocks:''};
+  if (/miss|profit.*fall|revenue.*drop|weak.*result/.test(t)) return {col:'var(--rd)',label:'BEARISH',summary:'Earnings miss may trigger analyst downgrades and near-term selling.',stocks:''};
+  // Nifty/market move
+  if (/nifty.*high|sensex.*high|market.*rally|bull/.test(t)) return {col:'var(--gn)',label:'BULLISH',summary:'Broad market strength indicates risk-on sentiment. Momentum stocks likely to outperform.',stocks:'NIFTY BETA stocks'};
+  if (/nifty.*fall|sensex.*drop|market.*crash|bear/.test(t)) return {col:'var(--rd)',label:'BEARISH',summary:'Broad market weakness. Defensive sectors like pharma and FMCG may outperform.',stocks:'SUNPHARMA · ITC · HINDUNILVR'};
+  // Default
+  return {col:'var(--dim2)',label:'WATCH',summary:'Monitor for further developments and price action.',stocks:''};
 }
 
 function renderNewsWithConclusions() {
