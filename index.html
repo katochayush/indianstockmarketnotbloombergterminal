@@ -758,6 +758,60 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 .scr-filter-sep{width:1px;background:var(--br2);margin:0 4px;align-self:stretch}
 #pg-screener.on{display:flex;flex-direction:column}
 
+
+/* ══ PORTFOLIO ANALYTICS ═══════════════════════════════════════════════════ */
+.pfa-root{display:flex;flex-direction:column;height:calc(100vh - 140px);overflow:hidden}
+.pfa-topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--br2);gap:12px;flex-wrap:wrap;flex-shrink:0}
+.pfa-add-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pfa-tabs{display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:5px;padding:2px}
+.pfa-tab{background:transparent;border:none;color:var(--dim2);cursor:pointer;padding:5px 12px;border-radius:4px;font-size:10px;font-family:DM Mono,monospace;letter-spacing:.06em;transition:all .15s;white-space:nowrap}
+.pfa-tab.on{background:rgba(255,153,51,.2);color:var(--sf)}
+.pfa-tab:hover:not(.on){color:var(--tx);background:rgba(255,255,255,.05)}
+.pfa-panel{display:none;flex:1;overflow-y:auto}
+.pfa-panel.on{display:block}
+.pfa-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}
+.pfa-card{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;padding:14px}
+.pfa-card-wide{grid-column:span 2}
+.pfa-card-hdr{font-size:10px;font-weight:700;color:var(--sf);letter-spacing:.1em;text-transform:uppercase;font-family:DM Mono,monospace;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.pfa-sector-wrap{display:flex;align-items:center;gap:20px}
+.pfa-legend{display:flex;flex-direction:column;gap:5px;flex:1}
+.pfa-legend-item{display:flex;align-items:center;gap:6px;font-family:DM Mono,monospace;font-size:9px;color:var(--tx)}
+.pfa-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pfa-range-btns{display:flex;gap:2px}
+.pfa-rbtn{background:rgba(255,255,255,.04);border:1px solid var(--br2);color:var(--dim2);cursor:pointer;padding:3px 8px;border-radius:3px;font-size:8px;font-family:DM Mono,monospace;transition:all .15s}
+.pfa-rbtn.on{background:rgba(255,153,51,.15);border-color:rgba(255,153,51,.3);color:var(--sf)}
+
+/* Return analysis */
+.pfa-analysis-body{display:flex;flex-direction:column;gap:8px}
+.pfa-metric-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pfa-metric-row:last-child{border-bottom:none}
+.pfa-metric-label{font-size:9px;color:var(--dim2);font-family:DM Mono,monospace;text-transform:uppercase;letter-spacing:.1em}
+.pfa-metric-val{font-size:13px;font-weight:700;font-family:DM Mono,monospace}
+.pfa-metric-sub{font-size:8px;color:var(--dim2);text-align:right;margin-top:2px}
+
+/* Weight bars */
+.pfa-wbar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:DM Mono,monospace}
+.pfa-wbar-sym{font-size:10px;color:var(--sf);font-weight:600;width:80px;flex-shrink:0}
+.pfa-wbar-track{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.pfa-wbar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.pfa-wbar-pct{font-size:9px;color:var(--dim2);width:36px;text-align:right;flex-shrink:0}
+
+/* Performers */
+.pfa-performers-list{display:flex;flex-direction:column;gap:6px}
+.pfa-perf-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:4px;cursor:pointer;transition:all .2s}
+.pfa-perf-row:hover{background:rgba(255,255,255,.06)}
+.pfa-perf-sym{font-family:DM Mono,monospace;font-size:11px;font-weight:700;color:var(--sf)}
+.pfa-perf-name{font-size:8px;color:var(--dim2);margin-top:1px}
+.pfa-perf-right{text-align:right}
+.pfa-perf-pnl{font-family:DM Mono,monospace;font-size:11px;font-weight:700}
+.pfa-perf-pct{font-family:DM Mono,monospace;font-size:10px}
+
+@media(max-width:768px){
+  .pfa-grid{grid-template-columns:1fr}
+  .pfa-card-wide{grid-column:span 1}
+  .pfa-topbar{flex-direction:column;align-items:flex-start}
+}
+
 </style>
 </head>
 <body>
@@ -1721,49 +1775,105 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 
 <!-- ══ TAB: PORTFOLIO ═══════════════════════════════════════════════ -->
 <div class="pg" id="pg-portfolio">
-  <div class="bbg" style="padding:14px">
-    <div style="grid-column:1/5">
-      <div class="ph" style="margin-bottom:12px">💼 My Portfolio <span style="font-size:9px;color:var(--dim2);font-family:DM Mono,monospace">Live P&amp;L · Auto-updates every 10s</span></div>
-      <!-- Add holding row -->
-      <div class="pf-add">
-        <div>
-          <div class="pal-label">Stock Symbol</div>
-          <input class="pf-input" id="pf-sym" placeholder="e.g. RELIANCE" style="width:160px" />
+  <div class="pfa-root">
+
+    <!-- ── Top bar: Add holding + sub-tab nav ─────────────────────────────── -->
+    <div class="pfa-topbar">
+      <div class="pfa-add-row">
+        <input class="pf-input" id="pf-sym"      placeholder="Symbol e.g. RELIANCE" style="width:150px"/>
+        <input class="pf-input" id="pf-qty"      type="number" placeholder="Qty" style="width:80px"/>
+        <input class="pf-input" id="pf-avg"      type="number" placeholder="Avg Price ₹" style="width:120px"/>
+        <input class="pf-input" id="pf-buy-date" type="date"   style="width:130px" title="Buy date (used for XIRR)"/>
+        <button class="pf-btn" onclick="addHolding()">+ Add</button>
+      </div>
+      <div class="pfa-tabs">
+        <button class="pfa-tab on" data-pft="overview"   onclick="pfTab('overview',this)">📊 Overview</button>
+        <button class="pfa-tab"    data-pft="holdings"   onclick="pfTab('holdings',this)">📋 Holdings</button>
+        <button class="pfa-tab"    data-pft="analytics"  onclick="pfTab('analytics',this)">📈 Analytics</button>
+        <button class="pfa-tab"    data-pft="performers" onclick="pfTab('performers',this)">🏆 Performers</button>
+      </div>
+    </div>
+
+    <!-- ── Summary strip ──────────────────────────────────────────────────── -->
+    <div class="pf-summary" id="pf-summary">
+      <div class="pf-card"><div class="pf-card-l">Invested</div><div class="pf-card-v" id="pf-invested">₹0</div></div>
+      <div class="pf-card"><div class="pf-card-l">Current Value</div><div class="pf-card-v" id="pf-current">₹0</div></div>
+      <div class="pf-card"><div class="pf-card-l">Total P&amp;L</div><div class="pf-card-v" id="pf-pnl">₹0</div></div>
+      <div class="pf-card"><div class="pf-card-l">Abs Return</div><div class="pf-card-v" id="pf-ret">0.00%</div></div>
+      <div class="pf-card"><div class="pf-card-l">XIRR</div><div class="pf-card-v" id="pf-xirr" title="Annualised return accounting for buy dates">—</div></div>
+      <div class="pf-card"><div class="pf-card-l">Day P&amp;L</div><div class="pf-card-v" id="pf-day-pnl">₹0</div></div>
+    </div>
+
+    <!-- ── Overview panel ────────────────────────────────────────────────── -->
+    <div class="pfa-panel on" id="pft-overview">
+      <div class="pfa-grid">
+        <div class="pfa-card">
+          <div class="pfa-card-hdr">🗂 Sector Allocation</div>
+          <div class="pfa-sector-wrap">
+            <div style="position:relative;height:200px;width:200px;flex-shrink:0"><canvas id="pf-sector-chart"></canvas></div>
+            <div id="pf-sector-legend" class="pfa-legend"></div>
+          </div>
         </div>
-        <div>
-          <div class="pal-label">Qty (shares)</div>
-          <input class="pf-input" id="pf-qty" type="number" placeholder="100" style="width:110px" />
-        </div>
-        <div>
-          <div class="pal-label">Avg Buy Price (₹)</div>
-          <input class="pf-input" id="pf-avg" type="number" placeholder="2500.00" style="width:140px" />
-        </div>
-        <div>
-          <div class="pal-label">&nbsp;</div>
-          <button class="pf-btn" onclick="addHolding()">+ Add Holding</button>
+        <div class="pfa-card pfa-card-wide">
+          <div class="pfa-card-hdr">
+            📉 Portfolio Value Over Time
+            <div class="pfa-range-btns">
+              <button class="pfa-rbtn on" onclick="pfPnlRange('1mo',this)">1M</button>
+              <button class="pfa-rbtn"    onclick="pfPnlRange('3mo',this)">3M</button>
+              <button class="pfa-rbtn"    onclick="pfPnlRange('6mo',this)">6M</button>
+              <button class="pfa-rbtn"    onclick="pfPnlRange('1y',this)">1Y</button>
+            </div>
+          </div>
+          <div style="position:relative;height:200px"><canvas id="pf-pnl-chart"></canvas></div>
+          <div id="pf-pnl-status" style="text-align:center;font-size:9px;color:var(--dim2);margin-top:4px;font-family:DM Mono,monospace"></div>
         </div>
       </div>
-      <!-- Summary cards -->
-      <div class="pf-summary" id="pf-summary">
-        <div class="pf-card"><div class="pf-card-l">Invested Value</div><div class="pf-card-v" id="pf-invested">₹0</div></div>
-        <div class="pf-card"><div class="pf-card-l">Current Value</div><div class="pf-card-v" id="pf-current">₹0</div></div>
-        <div class="pf-card"><div class="pf-card-l">Total P&amp;L</div><div class="pf-card-v" id="pf-pnl">₹0</div></div>
-        <div class="pf-card"><div class="pf-card-l">Return %</div><div class="pf-card-v" id="pf-ret">0.00%</div></div>
-      </div>
-      <!-- Holdings table -->
-      <div class="fno-card" style="padding:0;overflow:hidden">
+    </div>
+
+    <!-- ── Holdings panel ────────────────────────────────────────────────── -->
+    <div class="pfa-panel" id="pft-holdings">
+      <div style="padding:12px;overflow-x:auto">
         <table class="pf-table" id="pf-table">
           <thead><tr>
-            <th>Symbol</th><th>Qty</th><th>Avg Cost</th>
-            <th>LTP</th><th>Invested</th><th>Current</th>
-            <th>P&amp;L</th><th>Return</th><th>Day Chg</th><th></th>
+            <th>Symbol</th><th>Qty</th><th>Avg Cost</th><th>LTP</th>
+            <th>Invested</th><th>Current</th><th>P&amp;L</th><th>Return</th>
+            <th>Day Chg</th><th>Buy Date</th><th></th>
           </tr></thead>
           <tbody id="pf-tbody">
-            <tr><td colspan="10" class="pf-empty">No holdings yet.<br>Add your first stock above to track live P&amp;L.</td></tr>
+            <tr><td colspan="11" class="pf-empty">No holdings yet. Add your first stock above.</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- ── Analytics panel ───────────────────────────────────────────────── -->
+    <div class="pfa-panel" id="pft-analytics">
+      <div class="pfa-grid" style="padding:12px;gap:12px">
+        <div class="pfa-card">
+          <div class="pfa-card-hdr">📐 Return Analysis</div>
+          <div id="pf-return-analysis" class="pfa-analysis-body"></div>
+        </div>
+        <div class="pfa-card">
+          <div class="pfa-card-hdr">⚖️ Weight &amp; Allocation</div>
+          <div id="pf-weight-bars"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Performers panel ───────────────────────────────────────────────── -->
+    <div class="pfa-panel" id="pft-performers">
+      <div class="pfa-grid" style="padding:12px;gap:12px">
+        <div class="pfa-card">
+          <div class="pfa-card-hdr">🏆 Best Performers</div>
+          <div id="pf-best" class="pfa-performers-list"></div>
+        </div>
+        <div class="pfa-card">
+          <div class="pfa-card-hdr">💀 Worst Performers</div>
+          <div id="pf-worst" class="pfa-performers-list"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -4206,30 +4316,278 @@ window._fnoLoaded = false;
 let portfolio = JSON.parse(localStorage.getItem('bt_portfolio') || '[]');
 
 function addHolding() {
-  const sym  = (document.getElementById('pf-sym').value || '').toUpperCase().trim();
-  const qty  = parseFloat(document.getElementById('pf-qty').value);
-  const avg  = parseFloat(document.getElementById('pf-avg').value);
-  if (!sym || !qty || !avg || qty<=0 || avg<=0) {
-    alert('Please fill in all three fields with valid values.');
-    return;
-  }
-  const existing = portfolio.findIndex(h => h.sym === sym);
-  if (existing >= 0) {
-    // Average down / up
-    const old = portfolio[existing];
-    const totalQty = old.qty + qty;
-    const newAvg = (old.qty*old.avg + qty*avg) / totalQty;
-    portfolio[existing] = { sym, qty: totalQty, avg: +newAvg.toFixed(2) };
+  const sym     = (document.getElementById('pf-sym')?.value||'').toUpperCase().trim().replace('.NS','').replace('.BO','');
+  const qty     = parseFloat(document.getElementById('pf-qty')?.value);
+  const avg     = parseFloat(document.getElementById('pf-avg')?.value);
+  const buyDate = document.getElementById('pf-buy-date')?.value || '';
+  if (!sym || !qty || !avg || qty<=0 || avg<=0) { alert('Please fill in Symbol, Qty and Avg Price'); return; }
+  const existing = portfolio.find(h => h.sym.replace('.NS','').replace('.BO','') === sym);
+  if (existing) {
+    const totalCost = existing.qty * existing.avg + qty * avg;
+    existing.qty += qty;
+    existing.avg = totalCost / existing.qty;
+    if (buyDate) existing.buyDate = buyDate;
   } else {
-    portfolio.push({ sym, qty, avg });
+    portfolio.push({ sym, qty, avg, buyDate });
   }
   localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
-  document.getElementById('pf-sym').value = '';
-  document.getElementById('pf-qty').value = '';
-  document.getElementById('pf-avg').value = '';
+  ['pf-sym','pf-qty','pf-avg','pf-buy-date'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  renderPortfolioTab();
+}
+function removeHolding(sym) {
+  portfolio = portfolio.filter(h => h.sym !== sym);
+  localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
   renderPortfolioTab();
 }
 
+// ══ PORTFOLIO ANALYTICS ══════════════════════════════════════════════════════
+
+const PF_SECTORS = {
+  HDFCBANK:'Banking',ICICIBANK:'Banking',SBIN:'Banking',KOTAKBANK:'Banking',AXISBANK:'Banking',
+  INDUSINDBK:'Banking',BANKBARODA:'Banking',PNB:'Banking',CANBK:'Banking',FEDERALBNK:'Banking',
+  IDFCFIRSTB:'Banking',BANDHANBNK:'Banking',AUBANK:'Banking',
+  BAJFINANCE:'NBFC',BAJAJFINSV:'NBFC',CHOLAFIN:'NBFC',MUTHOOTFIN:'NBFC',LICHSGFIN:'NBFC',
+  SBICARD:'NBFC',ABCAPITAL:'NBFC',
+  HDFCLIFE:'Insurance',SBILIFE:'Insurance',MFSL:'Insurance',
+  TCS:'IT',INFY:'IT',HCLTECH:'IT',WIPRO:'IT',TECHM:'IT',LTIM:'IT',LTTS:'IT',
+  MPHASIS:'IT',COFORGE:'IT',PERSISTENT:'IT',OFSS:'IT',NAUKRI:'IT',
+  RELIANCE:'Energy',ONGC:'Energy',BPCL:'Energy',HINDPETRO:'Energy',
+  PETRONET:'Energy',GAIL:'Energy',NTPC:'Energy',POWERGRID:'Energy',JSWENERGY:'Energy',TATAPOWER:'Energy',
+  TATAMOTORS:'Auto',MARUTI:'Auto',HEROMOTOCO:'Auto',EICHERMOT:'Auto',TVSMOTOR:'Auto',
+  'BAJAJ-AUTO':'Auto',
+  SUNPHARMA:'Pharma',DRREDDY:'Pharma',CIPLA:'Pharma',DIVISLAB:'Pharma',
+  AUROPHARMA:'Pharma',LUPIN:'Pharma',TORNTPHARM:'Pharma',ZYDUSLIFE:'Pharma',
+  HINDUNILVR:'FMCG',ITC:'FMCG',NESTLEIND:'FMCG',BRITANNIA:'FMCG',DABUR:'FMCG',
+  MARICO:'FMCG',COLPAL:'FMCG',GODREJCP:'FMCG',TATACONSUM:'FMCG',VBL:'FMCG',
+  TATASTEEL:'Metals',JSWSTEEL:'Metals',HINDALCO:'Metals',VEDL:'Metals',NMDC:'Metals',COALINDIA:'Metals',
+  LT:'Infra',ADANIPORTS:'Infra',ADANIENT:'Infra',BEL:'Infra',BHEL:'Infra',SIEMENS:'Infra',IRCTC:'Infra',IRFC:'Infra',
+  DLF:'Real Estate',GODREJPROP:'Real Estate',OBEROIRLTY:'Real Estate',
+  ULTRACEMCO:'Cement',ACC:'Cement',DALBHARAT:'Cement',
+  TITAN:'Consumer',TRENT:'Consumer',PAGEIND:'Consumer',JUBLFOOD:'Consumer',
+  BHARTIAIRTEL:'Telecom',INDUSTOWER:'Telecom',
+  PIDILITIND:'Chemicals',SRF:'Chemicals',DEEPAKNTR:'Chemicals',
+  ZOMATO:'New Age',PAYTM:'New Age',
+};
+const SECTOR_COLORS = ['#FF9933','#64B5F6','#00D26A','#FF6B6B','#A78BFA','#34D399','#FBBF24','#F472B6','#38BDF8','#FB923C','#4ADE80','#E879F9','#22D3EE','#F87171','#818CF8'];
+
+function pfGetSector(sym) {
+  return PF_SECTORS[sym.replace('.NS','').replace('.BO','').toUpperCase()] || 'Others';
+}
+
+function pfTab(name, btn) {
+  document.querySelectorAll('.pfa-tab').forEach(b => b.classList.toggle('on', b.dataset.pft === name));
+  document.querySelectorAll('.pfa-panel').forEach(p => p.classList.toggle('on', p.id === 'pft-'+name));
+  if (name==='overview')   renderPfOverview();
+  if (name==='holdings')   renderPfHoldings();
+  if (name==='analytics')  renderPfAnalytics();
+  if (name==='performers') renderPfPerformers();
+}
+
+function calcXIRR(cashflows) {
+  if (!cashflows || cashflows.length < 2) return null;
+  const today = new Date();
+  const flows = cashflows.map(cf => ({ amount:cf.amount, t:(cf.date-today)/(365.25*24*3600*1000) }));
+  const f  = r => flows.reduce((s,cf) => s + cf.amount/Math.pow(1+r,cf.t), 0);
+  const df = r => flows.reduce((s,cf) => s - cf.t*cf.amount/Math.pow(1+r,cf.t+1), 0);
+  let r = 0.1;
+  for (let i=0; i<100; i++) {
+    const fr=f(r), dfr=df(r);
+    if (Math.abs(dfr)<1e-10) break;
+    const nr=r-fr/dfr;
+    if (Math.abs(nr-r)<1e-8){r=nr;break;}
+    r=nr; if(r<-0.999)r=-0.5;
+  }
+  return isFinite(r)&&r>-1 ? r : null;
+}
+
+let _pfData=null, _pfSectorChart=null, _pfPnlChart=null, _pfPnlRange='1mo';
+
+function renderPortfolioTab() {
+  computePfData();
+  const active = document.querySelector('.pfa-panel.on')?.id?.replace('pft-','') || 'overview';
+  if (active==='overview')   renderPfOverview();
+  if (active==='holdings')   renderPfHoldings();
+  if (active==='analytics')  renderPfAnalytics();
+  if (active==='performers') renderPfPerformers();
+}
+
+function computePfData() {
+  if (!portfolio.length) { _pfData=null; renderPfSummaryEmpty(); return; }
+  let totalInvested=0, totalCurrent=0, totalDayPnl=0;
+  const holdings = portfolio.map(h => {
+    const sym   = h.sym.replace('.NS','').replace('.BO','');
+    const live  = window.liveStocks?.[sym+'.NS'];
+    const ltp   = live?.price || h.avg;
+    const dayChg= live?.chg   || 0;
+    const invested=h.qty*h.avg, current=h.qty*ltp;
+    const pnl=current-invested, pnlPct=invested?pnl/invested*100:0;
+    totalInvested+=invested; totalCurrent+=current; totalDayPnl+=h.qty*dayChg;
+    return {...h, sym, ltp, invested, current, pnl, pnlPct, dayPnl:h.qty*dayChg, sector:pfGetSector(sym), name:live?.name||sym, live};
+  });
+  const today=new Date();
+  const cashflows=holdings.map(h=>({amount:-h.invested,date:h.buyDate?new Date(h.buyDate):new Date(today-365*86400000)}));
+  cashflows.push({amount:totalCurrent,date:today});
+  const sectorMap={};
+  holdings.forEach(h=>{sectorMap[h.sector]=(sectorMap[h.sector]||0)+h.current;});
+  _pfData={holdings,totalInvested,totalCurrent,totalPnl:totalCurrent-totalInvested,
+    totalRet:totalInvested?(totalCurrent-totalInvested)/totalInvested*100:0,
+    totalDayPnl,xirr:calcXIRR(cashflows),sectorMap};
+  renderPfSummary();
+  const missing=portfolio.filter(h=>!window.liveStocks?.[h.sym.replace('.NS','')+'.NS']).map(h=>h.sym.replace('.NS','')+'.NS');
+  if(missing.length){
+    Promise.all(missing.map(async s=>{try{const j=await apiFetch({sym:s,type:'quote'},6000);const q=j?.quoteResponse?.result?.[0];if(q?.regularMarketPrice)storeStock(s,q.regularMarketPrice,q.regularMarketPreviousClose,q.regularMarketVolume,q.regularMarketDayHigh,q.regularMarketDayLow,q.shortName);}catch(e){}})).then(()=>renderPortfolioTab());
+  }
+}
+
+function renderPfSummaryEmpty(){
+  ['pf-invested','pf-current','pf-pnl','pf-ret','pf-xirr','pf-day-pnl'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=id.includes('xirr')?'—':'₹0';el.className='pf-card-v';}});
+}
+
+function renderPfSummary(){
+  if(!_pfData)return;
+  const{totalInvested,totalCurrent,totalPnl,totalRet,totalDayPnl,xirr}=_pfData;
+  const fmt=v=>'₹'+Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:0});
+  const up=totalPnl>=0,dUp=totalDayPnl>=0;
+  const set=(id,text,cls)=>{const el=document.getElementById(id);if(el){el.textContent=text;if(cls)el.className='pf-card-v '+cls;}};
+  set('pf-invested',fmt(totalInvested));
+  set('pf-current',fmt(totalCurrent),up?'up':'dn');
+  set('pf-pnl',(up?'▲ +':'▼ ')+fmt(Math.abs(totalPnl)),up?'up':'dn');
+  set('pf-ret',(up?'+':'')+totalRet.toFixed(2)+'%',up?'up':'dn');
+  set('pf-day-pnl',(dUp?'▲ +':'▼ ')+fmt(Math.abs(totalDayPnl)),dUp?'up':'dn');
+  set('pf-xirr',xirr!==null?(xirr>=0?'+':'')+  (xirr*100).toFixed(2)+'% p.a.':'Add buy dates',xirr!==null?(xirr>=0?'up':'dn'):'');
+}
+
+function renderPfOverview(){
+  if(!_pfData){document.getElementById('pf-sector-legend').innerHTML='<div style="color:var(--dim2);font-size:10px;padding:10px">Add holdings to see analytics</div>';return;}
+  renderSectorPie(); renderPnlChart(_pfPnlRange);
+}
+
+function renderSectorPie(){
+  const{sectorMap,totalCurrent}=_pfData;
+  const sectors=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
+  const canvas=document.getElementById('pf-sector-chart'); if(!canvas)return;
+  if(_pfSectorChart){try{_pfSectorChart.destroy();}catch(e){}} 
+  if(!window.Chart){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';s.onload=()=>renderSectorPie();document.head.appendChild(s);return;}
+  const colors=sectors.map((_,i)=>SECTOR_COLORS[i%SECTOR_COLORS.length]);
+  const isDark=!document.documentElement.classList.contains('light');
+  _pfSectorChart=new Chart(canvas.getContext('2d'),{
+    type:'doughnut',
+    data:{labels:sectors.map(s=>s[0]),datasets:[{data:sectors.map(s=>s[1]),backgroundColor:colors,borderColor:isDark?'#0a0d12':'#f0f4f8',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${(ctx.raw/totalCurrent*100).toFixed(1)}% (₹${Math.round(ctx.raw).toLocaleString('en-IN')})`}}}},
+  });
+  const leg=document.getElementById('pf-sector-legend');
+  if(leg)leg.innerHTML=sectors.map(([sec,val],i)=>`<div class="pfa-legend-item"><div class="pfa-legend-dot" style="background:${colors[i]}"></div><span style="flex:1">${sec}</span><span style="color:var(--dim2)">${(val/totalCurrent*100).toFixed(1)}%</span></div>`).join('');
+}
+
+function pfPnlRange(range,btn){
+  _pfPnlRange=range;
+  document.querySelectorAll('.pfa-rbtn').forEach(b=>b.classList.toggle('on',b.textContent.trim()===range.replace('mo','M').replace('y','Y')));
+  renderPnlChart(range);
+}
+
+async function renderPnlChart(range){
+  const canvas=document.getElementById('pf-pnl-chart');
+  const status=document.getElementById('pf-pnl-status');
+  if(!canvas||!_pfData)return;
+  if(!window.Chart){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';s.onload=()=>renderPnlChart(range);document.head.appendChild(s);return;}
+  if(status)status.textContent='⏳ Loading…';
+  if(_pfPnlChart){try{_pfPnlChart.destroy();_pfPnlChart=null;}catch(e){}}
+  try{
+    const allSeries=await Promise.all(_pfData.holdings.map(async h=>{
+      try{const j=await apiFetch({sym:h.sym+'.NS',type:'chart',range,interval:'1d'},8000);const res=j?.chart?.result?.[0];return{h,ts:res?.timestamp||[],cls:res?.indicators?.quote?.[0]?.close||[]};}catch(e){return{h,ts:[],cls:[]};}
+    }));
+    const dayMap={};
+    allSeries.forEach(({h,ts,cls})=>{ts.forEach((t,i)=>{const cv=cls[i];if(!cv)return;const key=new Date(t*1000).toISOString().slice(0,10);dayMap[key]=(dayMap[key]||0)+h.qty*cv;});});
+    const dates=Object.keys(dayMap).sort();
+    const values=dates.map(d=>+dayMap[d].toFixed(0));
+    const invested=_pfData.totalInvested;
+    const pnls=values.map(v=>+(v-invested).toFixed(0));
+    const allPos=pnls.every(v=>v>=0),allNeg=pnls.every(v=>v<=0);
+    const lc=allPos?'#00D26A':allNeg?'#FF3B3B':'#FF9933';
+    const isDark=!document.documentElement.classList.contains('light');
+    _pfPnlChart=new Chart(canvas.getContext('2d'),{
+      type:'line',
+      data:{labels:dates.map(d=>{const dt=new Date(d);return dt.getDate()+'/'+(dt.getMonth()+1);}),
+        datasets:[{label:'Portfolio Value',data:values,borderColor:lc,borderWidth:2,backgroundColor:lc+'22',fill:true,tension:0.3,pointRadius:0,pointHoverRadius:4},
+                  {label:'Invested',data:Array(dates.length).fill(invested),borderColor:'rgba(255,255,255,.2)',borderWidth:1,borderDash:[4,4],fill:false,tension:0,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>` ${ctx.dataset.label}: ₹${ctx.raw?.toLocaleString('en-IN')}`}}},
+        scales:{x:{grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'},ticks:{color:'#556677',font:{size:8},maxTicksLimit:8}},
+                y:{grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'},ticks:{color:'#556677',font:{size:8},callback:v=>'₹'+Math.round(v/1000)+'K'}}},
+        interaction:{mode:'index',intersect:false}},
+    });
+    const last=pnls[pnls.length-1];
+    if(status)status.textContent=`${range.toUpperCase()} · P&L: ${last>=0?'+':''}₹${Math.abs(last).toLocaleString('en-IN')} vs invested`;
+  }catch(e){if(status)status.textContent='⚠️ Could not load chart data';}
+}
+
+function renderPfHoldings(){
+  const tbody=document.getElementById('pf-tbody'); if(!tbody)return;
+  if(!_pfData||!_pfData.holdings.length){tbody.innerHTML='<tr><td colspan="11" class="pf-empty">No holdings yet. Add your first stock above.</td></tr>';return;}
+  const fmt=v=>'₹'+Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  tbody.innerHTML=_pfData.holdings.map(h=>{
+    const up=h.pnl>=0,dUp=h.dayPnl>=0;
+    return `<tr>
+      <td><span style="color:var(--sf);font-weight:700;cursor:pointer" onclick="quickSearch('${h.sym}')">${h.sym}</span></td>
+      <td>${h.qty.toLocaleString('en-IN')}</td><td>${fmt(h.avg)}</td>
+      <td style="color:${dUp?'var(--gn)':'var(--rd)'};font-weight:600">${fmt(h.ltp)}</td>
+      <td>₹${h.invested.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td>₹${h.current.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td style="color:${up?'var(--gn)':'var(--rd)'}">${up?'▲ +':'▼ '}₹${Math.abs(h.pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td style="color:${up?'var(--gn)':'var(--rd)'}">${up?'+':''}${h.pnlPct.toFixed(2)}%</td>
+      <td style="color:${dUp?'var(--gn)':'var(--rd)'}">${dUp?'▲':'▼'} ${Math.abs(h.live?.pct||0).toFixed(2)}%</td>
+      <td style="color:var(--dim2);font-size:9px">${h.buyDate||'—'}</td>
+      <td><button class="pf-btn del" onclick="removeHolding('${h.sym}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPfAnalytics(){
+  if(!_pfData)return;
+  const{holdings,totalInvested,totalCurrent,totalPnl,totalRet,xirr}=_pfData;
+  const days=portfolio.reduce((mx,h)=>{if(!h.buyDate)return mx;const d=Math.floor((Date.now()-new Date(h.buyDate))/86400000);return Math.max(mx,d);},0);
+  const ra=document.getElementById('pf-return-analysis');
+  if(ra)ra.innerHTML=[
+    {label:'Total Invested',     val:'₹'+totalInvested.toLocaleString('en-IN',{maximumFractionDigits:0}), sub:'',col:'var(--tx)'},
+    {label:'Current Value',      val:'₹'+totalCurrent.toLocaleString('en-IN',{maximumFractionDigits:0}),  sub:'Live prices',col:totalPnl>=0?'var(--gn)':'var(--rd)'},
+    {label:'Absolute P&L',       val:(totalPnl>=0?'+':'')+'₹'+Math.abs(totalPnl).toLocaleString('en-IN',{maximumFractionDigits:0}),sub:'',col:totalPnl>=0?'var(--gn)':'var(--rd)'},
+    {label:'Absolute Return',    val:(totalRet>=0?'+':'')+totalRet.toFixed(2)+'%',sub:'Simple return on invested',col:totalRet>=0?'var(--gn)':'var(--rd)'},
+    {label:'XIRR (Annualised)',  val:xirr!==null?(xirr>=0?'+':'')+(xirr*100).toFixed(2)+'% p.a.':'Add buy dates for XIRR',sub:'Accounts for timing of each investment',col:xirr!==null?(xirr>=0?'var(--gn)':'var(--rd)'):'var(--dim2)'},
+    {label:'Holdings',           val:holdings.length+' stocks',sub:days?`Oldest buy: ${days} days ago`:'',col:'var(--tx)'},
+  ].map(m=>`<div class="pfa-metric-row"><div><div class="pfa-metric-label">${m.label}</div>${m.sub?`<div style="font-size:8px;color:var(--dim2);margin-top:2px">${m.sub}</div>`:''}</div><div class="pfa-metric-val" style="color:${m.col}">${m.val}</div></div>`).join('');
+  const wb=document.getElementById('pf-weight-bars');
+  if(wb){const sorted=[...holdings].sort((a,b)=>b.current-a.current);wb.innerHTML=sorted.map((h,i)=>{const w=totalCurrent?h.current/totalCurrent*100:0;const col=SECTOR_COLORS[i%SECTOR_COLORS.length];return`<div class="pfa-wbar-row"><div class="pfa-wbar-sym">${h.sym}</div><div class="pfa-wbar-track"><div class="pfa-wbar-fill" style="width:${w.toFixed(1)}%;background:${col}"></div></div><div class="pfa-wbar-pct">${w.toFixed(1)}%</div></div>`;}).join('');}
+}
+
+function renderPfPerformers(){
+  if(!_pfData)return;
+  const sorted=[..._pfData.holdings].sort((a,b)=>b.pnlPct-a.pnlPct);
+  const renderList=(id,items)=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.innerHTML=items.map(h=>{const up=h.pnl>=0;return`<div class="pfa-perf-row" onclick="quickSearch('${h.sym}')"><div><div class="pfa-perf-sym">${h.sym}</div><div class="pfa-perf-name">${h.sector} · ${h.qty} shares</div></div><div class="pfa-perf-right"><div class="pfa-perf-pnl" style="color:${up?'var(--gn)':'var(--rd)'}">${up?'+':''}₹${Math.abs(h.pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</div><div class="pfa-perf-pct" style="color:${up?'var(--gn)':'var(--rd)'}">${up?'+':''}${h.pnlPct.toFixed(2)}%</div></div></div>`;}).join('');
+  };
+  renderList('pf-best',sorted.slice(0,5));
+  renderList('pf-worst',sorted.slice(-5).reverse());
+}
+function addHolding() {
+  const sym     = (document.getElementById('pf-sym')?.value||'').toUpperCase().trim().replace('.NS','').replace('.BO','');
+  const qty     = parseFloat(document.getElementById('pf-qty')?.value);
+  const avg     = parseFloat(document.getElementById('pf-avg')?.value);
+  const buyDate = document.getElementById('pf-buy-date')?.value || '';
+  if (!sym || !qty || !avg || qty<=0 || avg<=0) { alert('Please fill in Symbol, Qty and Avg Price'); return; }
+  const existing = portfolio.find(h => h.sym.replace('.NS','').replace('.BO','') === sym);
+  if (existing) {
+    const totalCost = existing.qty * existing.avg + qty * avg;
+    existing.qty += qty;
+    existing.avg = totalCost / existing.qty;
+    if (buyDate) existing.buyDate = buyDate;
+  } else {
+    portfolio.push({ sym, qty, avg, buyDate });
+  }
+  localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
+  ['pf-sym','pf-qty','pf-avg','pf-buy-date'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  renderPortfolioTab();
+}
 function removeHolding(sym) {
   portfolio = portfolio.filter(h => h.sym !== sym);
   localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
