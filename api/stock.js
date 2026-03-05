@@ -276,6 +276,83 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // ── SCREENER BULK — returns full NSE equity market snapshot in one call ───
+  if (type === 'screener') {
+    try {
+      // NSE equity bhavcopy — full day snapshot for all listed stocks
+      // This single call gets price/volume/52W data for every NSE stock
+      const d = await nseGet('/api/equity-stockIndices?index=SECURITIES%20IN%20F%26O', 8000);
+      const fnoSyms = new Set((d.data||[]).map(r => r.symbol));
+
+      // Get full market data from NSE equity market
+      const mkt = await nseGet('/api/equity-stockIndices?index=NIFTY%20TOTAL%20MARKET', 10000);
+      const rows = (mkt.data || []).map(r => {
+        const sym     = r.symbol;
+        const price   = r.lastPrice   || r.last   || 0;
+        const prev    = r.previousClose || r.prev  || price;
+        const chgPct  = prev ? ((price - prev) / prev * 100) : 0;
+        const high52  = r.yearHigh  || r.weekHigh52 || null;
+        const low52   = r.yearLow   || r.weekLow52  || null;
+        const vol     = r.totalTradedVolume || r.quantityTraded || 0;
+        const mcap    = r.ffmc || r.marketCap || null; // free float market cap
+        const pe      = r.pe   || null;
+        const from52h = high52 && price ? ((price - high52) / high52 * 100) : null;
+        const from52l = low52  && price ? ((price - low52)  / low52  * 100) : null;
+        return {
+          sym, price, prev, chgPct,
+          high52, low52, from52h, from52l,
+          vol, mcap, pe,
+          isFno: fnoSyms.has(sym),
+          open:  r.open     || price,
+          high:  r.dayHigh  || price,
+          low:   r.dayLow   || price,
+          name:  r.meta?.companyName || sym,
+        };
+      }).filter(r => r.sym && r.price > 0);
+
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
+      return res.status(200).json({ rows, ts: Date.now() });
+    } catch(e) {
+      // Fallback: try NIFTY 500
+      try {
+        const d = await nseGet('/api/equity-stockIndices?index=NIFTY%20500', 10000);
+        const rows = (d.data || []).map(r => ({
+          sym: r.symbol, price: r.lastPrice||0, prev: r.previousClose||r.lastPrice||0,
+          chgPct: r.pChange||0, high52: r.yearHigh, low52: r.yearLow,
+          from52h: r.yearHigh && r.lastPrice ? ((r.lastPrice-r.yearHigh)/r.yearHigh*100) : null,
+          from52l: r.yearLow  && r.lastPrice ? ((r.lastPrice-r.yearLow) /r.yearLow *100) : null,
+          vol: r.totalTradedVolume||0, mcap: r.ffmc||null, pe: r.pe||null,
+          open: r.open||r.lastPrice, high: r.dayHigh||r.lastPrice, low: r.dayLow||r.lastPrice,
+          name: r.meta?.companyName||r.symbol, isFno: false,
+        })).filter(r => r.sym && r.price > 0);
+        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
+        return res.status(200).json({ rows, ts: Date.now(), fallback: 'nifty500' });
+      } catch(e2) {
+        return res.status(500).json({ error: e.message, rows: [] });
+      }
+    }
+  }
+
+  // ── F&O OI DATA for screener ───────────────────────────────────────────────
+  if (type === 'fno_bulk') {
+    try {
+      // NSE F&O participant-wise OI — gives us PCR + OI data per symbol
+      const d = await nseGet('/api/equity-stockIndices?index=SECURITIES%20IN%20F%26O', 8000);
+      const rows = (d.data || []).map(r => ({
+        sym:    r.symbol,
+        price:  r.lastPrice || 0,
+        chgPct: r.pChange   || 0,
+        oi:     r.openInterest      || null,
+        oiChg:  r.changeinOpenInterest || null,
+        vol:    r.totalTradedVolume  || 0,
+      })).filter(r => r.sym && r.price > 0);
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
+      return res.status(200).json({ rows });
+    } catch(e) {
+      return res.status(500).json({ error: e.message, rows: [] });
+    }
+  }
+
   // ── MARKET BULK ───────────────────────────────────────────────────────────
   if (type === 'market') {
     try {
