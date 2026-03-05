@@ -43,10 +43,12 @@ module.exports = async function handler(req, res) {
   // ── NEWS ──────────────────────────────────────────────────────────────────
   if (type === 'news') {
     const feeds = [
-      { url:'https://feeds.feedburner.com/ndtvprofit-latest', src:'NDTV Profit' },
       { url:'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms', src:'Economic Times' },
-      { url:'https://www.moneycontrol.com/rss/marketreports.xml', src:'Moneycontrol' },
       { url:'https://www.business-standard.com/rss/markets-106.rss', src:'Business Standard' },
+      { url:'https://www.moneycontrol.com/rss/marketreports.xml', src:'Moneycontrol' },
+      { url:'https://feeds.feedburner.com/ndtvprofit-latest', src:'NDTV Profit' },
+      { url:'https://www.livemint.com/rss/markets', src:'Livemint' },
+      { url:'https://www.financialexpress.com/market/feed/', src:'Financial Express' },
     ];
     function xt(xml, tag) {
       const cd = xml.match(new RegExp('<'+tag+'><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></'+tag+'>','i'));
@@ -74,35 +76,69 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({items:items.slice(0,35)});
   }
 
-  // ── COMMODITIES — Gold (XAU), Silver (XAG), Brent Crude, USD/INR ─────────
+  // ── COMMODITIES — Gold (GC=F), Silver (SI=F), Brent (BZ=F), USD/INR ──────
   if (type === 'commodities') {
     const result = {};
-    // USD/INR
+    const yhFetch = async (ticker) => {
+      const r = await fetch(
+        'https://query1.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d',
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
+      );
+      if (!r.ok) throw new Error(ticker + ' ' + r.status);
+      const d = await r.json();
+      return d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    };
+
+    // USD/INR from Yahoo Finance (most reliable)
     try {
-      const r = await fetch('https://open.er-api.com/v6/latest/USD',{signal:AbortSignal.timeout(5000)});
-      if (r.ok) { const d=await r.json(); if (d.rates?.INR) result.inrusd=+d.rates.INR.toFixed(4); }
-    } catch(e){}
-    // Gold XAU/INR → per gram
+      const p = await yhFetch('USDINR=X');
+      if (p) result.inrusd = +p.toFixed(4);
+    } catch(e) {
+      // fallback: open.er-api.com
+      try {
+        const r = await fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(5000) });
+        if (r.ok) { const d = await r.json(); if (d.rates?.INR) result.inrusd = +d.rates.INR.toFixed(4); }
+      } catch(e2) {}
+    }
+
+    // Gold: Yahoo Finance GC=F gives USD/troy oz → convert to INR/gram
     try {
-      const r = await fetch('https://open.er-api.com/v6/latest/XAU',{signal:AbortSignal.timeout(5000)});
-      if (r.ok) { const d=await r.json(); if (d.rates?.INR) result.goldPerGram=Math.round(d.rates.INR/31.1035); }
-    } catch(e){}
-    // Silver XAG/INR → per gram
-    try {
-      const r = await fetch('https://open.er-api.com/v6/latest/XAG',{signal:AbortSignal.timeout(5000)});
-      if (r.ok) { const d=await r.json(); if (d.rates?.INR) result.silverPerGram=+(d.rates.INR/31.1035).toFixed(2); }
-    } catch(e){}
-    // Brent crude via Yahoo Finance
-    try {
-      const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/BZ=F?interval=1d&range=1d',
-        {headers:{'User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(5000)});
-      if (r.ok) {
-        const d=await r.json();
-        const price=d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (price) result.brent=+price.toFixed(2);
+      const goldUSD = await yhFetch('GC=F'); // USD per troy oz
+      if (goldUSD && result.inrusd) {
+        result.goldPerGram = +(goldUSD / 31.1035 * result.inrusd).toFixed(2); // INR per gram (international)
+      } else if (goldUSD) {
+        result.goldPerGram = +(goldUSD / 31.1035 * 84).toFixed(2); // assume 84 INR/USD if fetch failed
       }
-    } catch(e){}
-    res.setHeader('Cache-Control','s-maxage=60, stale-while-revalidate=30');
+    } catch(e) {
+      // fallback: open.er-api.com XAU
+      try {
+        const r = await fetch('https://open.er-api.com/v6/latest/XAU', { signal: AbortSignal.timeout(5000) });
+        if (r.ok) { const d = await r.json(); if (d.rates?.INR) result.goldPerGram = +(d.rates.INR / 31.1035).toFixed(2); }
+      } catch(e2) {}
+    }
+
+    // Silver: Yahoo Finance SI=F gives USD/troy oz → INR/gram
+    try {
+      const silverUSD = await yhFetch('SI=F');
+      if (silverUSD && result.inrusd) {
+        result.silverPerGram = +(silverUSD / 31.1035 * result.inrusd).toFixed(4);
+      } else if (silverUSD) {
+        result.silverPerGram = +(silverUSD / 31.1035 * 84).toFixed(4);
+      }
+    } catch(e) {
+      try {
+        const r = await fetch('https://open.er-api.com/v6/latest/XAG', { signal: AbortSignal.timeout(5000) });
+        if (r.ok) { const d = await r.json(); if (d.rates?.INR) result.silverPerGram = +(d.rates.INR / 31.1035).toFixed(4); }
+      } catch(e2) {}
+    }
+
+    // Brent crude via Yahoo Finance BZ=F
+    try {
+      const p = await yhFetch('BZ=F');
+      if (p) result.brent = +p.toFixed(2);
+    } catch(e) {}
+
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
     return res.status(200).json(result);
   }
 
