@@ -4972,28 +4972,43 @@ function setChartLayout(n, btn) {
   renderChartGrid();
 }
 
-// ── Timeframe sync ────────────────────────────────────────────────────────────
+// ── Hard-reset a slot: destroy chart + all series, reload fresh ─────────────
+function resetAndReloadSlot(i) {
+  const sl = _chartSlots[i];
+  if (!sl) return;
+  const loadEl = document.getElementById('cs-load-' + i);
+  if (loadEl) { loadEl.style.display = 'flex'; loadEl.textContent = '⏳ Loading…'; }
+
+  // Destroy chart completely — removes ALL series at once
+  try { if (sl.lwChart)   { sl.lwChart.remove();   sl.lwChart   = null; } } catch(e){}
+  try { if (sl.rsiChart)  { sl.rsiChart.remove();  sl.rsiChart  = null; } } catch(e){}
+  try { if (sl.macdChart) { sl.macdChart.remove(); sl.macdChart = null; } } catch(e){}
+
+  // Null all series refs so loadLWChart recreates them
+  sl.candleSeries = sl.volSeries = sl.emaSeries = sl.vwapSeries = sl.bbSeries = null;
+
+  // Clear RSI/MACD sub-chart DOM (preserve the label div)
+  const rsiW  = document.getElementById('cs-rsi-'  + i);
+  const macdW = document.getElementById('cs-macd-' + i);
+  if (rsiW)  rsiW.querySelectorAll('div:not(.rsi-label)').forEach(el => el.remove());
+  if (macdW) macdW.querySelectorAll('div:not(.rsi-label)').forEach(el => el.remove());
+
+  // Rebuild fresh chart in the same container
+  loadLWChart(i, sl.sym);
+}
+
+// ── Timeframe sync — full destroy+rebuild so no stale series stack up ────────
 function syncTimeframe(tf, btn) {
   _chartTF = tf;
   document.querySelectorAll('.tfbtn').forEach(b => b.classList.toggle('on', b.dataset.tf === tf));
-  // Reload all charts with new timeframe
-  _chartSlots.forEach((sl, i) => {
-    const loadEl = document.getElementById('cs-load-' + i);
-    if (loadEl) { loadEl.style.display='flex'; loadEl.textContent='⏳ Loading…'; }
-    fetchAndRenderChart(i, sl.sym);
-  });
+  _chartSlots.forEach((_, i) => resetAndReloadSlot(i));
 }
 
-// ── Indicator toggle ──────────────────────────────────────────────────────────
+// ── Indicator toggle — destroy+rebuild so indicators don't stack ─────────────
 function toggleIndicator(ind, btn) {
   _chartInds[ind] = !_chartInds[ind];
   btn.classList.toggle('on', _chartInds[ind]);
-  // Full re-render to add/remove indicator series
-  _chartsInited = false;
-  const saved = _chartSlots.map(s => s.sym);
-  _chartSlots = saved.map(s => ({ sym: s }));
-  _chartsInited = true;
-  renderChartGrid();
+  _chartSlots.forEach((_, i) => resetAndReloadSlot(i));
 }
 
 // ── Edit symbol in a slot ────────────────────────────────────────────────────
@@ -5026,12 +5041,7 @@ function editChartSym(i) {
 
 // ── Reload all charts ────────────────────────────────────────────────────────
 function reloadAllCharts() {
-  _chartSlots.forEach((sl, i) => {
-    try { if (sl.lwChart) sl.lwChart.remove(); sl.lwChart = null; } catch(e){}
-    const loadEl = document.getElementById('cs-load-' + i);
-    if (loadEl) { loadEl.style.display='flex'; loadEl.textContent='⏳ Loading…'; }
-  });
-  setTimeout(() => _chartSlots.forEach((sl,i) => loadLWChart(i, sl.sym)), 50);
+  _chartSlots.forEach((_, i) => resetAndReloadSlot(i));
 }
 
 // ── TradingView full widget modal ────────────────────────────────────────────
