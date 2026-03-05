@@ -17,7 +17,7 @@
   --tx:#DDE3ED;--dim:#4A5568;--dim2:#6B7280;--cd:#0d1117;
 }
 html{scroll-behavior:smooth;height:100%}
-body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;overflow-x:hidden;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;overflow-x:hidden;height:100%;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:rgba(255,153,51,.2);border-radius:2px}
 
 /* ── STATUS BAR ── */
@@ -391,6 +391,15 @@ body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-
 .es-val.gn{color:var(--gn)}.es-val.rd{color:var(--rd)}.es-val.sf{color:var(--sf)}
 
 body{padding-bottom:28px}
+
+.iv2,.hi-val,.fmono{transition:color .3s ease}
+.vtc,.ich2,.hi-chg{transition:color .2s ease}
+.vbf{transition:width .5s ease}
+.icard{transition:border-color .2s,background .2s,transform .15s}
+.icard:hover{transform:translateY(-1px)}
+tr:hover td{background:rgba(255,153,51,.04)!important}
+.intel-card:hover{background:rgba(255,153,51,.03)!important;cursor:pointer}
+.ni:hover{background:rgba(255,255,255,.02)!important}
 </style>
 </head>
 <body>
@@ -1138,10 +1147,36 @@ const IDX = [
 ];
 
 const SEC = [
-  {n:'Realty',  c:3.12},{n:'Telecom',c:2.08},{n:'IT',c:1.84},{n:'Infra',c:2.31},
-  {n:'Pharma',  c:1.12},{n:'Metals', c:0.95},{n:'Auto',c:0.64},
-  {n:'FMCG',    c:-0.33},{n:'Banking',c:-0.12},{n:'Energy',c:-0.87},
+  {n:'IT',       stocks:['TCS.NS','INFY.NS','HCLTECH.NS','WIPRO.NS','COFORGE.NS'], c:0},
+  {n:'Banking',  stocks:['HDFCBANK.NS','ICICIBANK.NS','SBIN.NS','KOTAKBANK.NS','AXISBANK.NS'], c:0},
+  {n:'Energy',   stocks:['RELIANCE.NS','ONGC.NS','NTPC.NS','ADANIGREEN.NS'], c:0},
+  {n:'Auto',     stocks:['TATAMOTORS.NS','MARUTI.NS','BAJAJ-AUTO.NS'], c:0},
+  {n:'Telecom',  stocks:['BHARTIAIRTEL.NS'], c:0},
+  {n:'Infra',    stocks:['LT.NS','ADANIPORTS.NS'], c:0},
+  {n:'Pharma',   stocks:['SUNPHARMA.NS'], c:0},
+  {n:'Fintech',  stocks:['BAJFINANCE.NS','PAYTM.NS','ZOMATO.NS'], c:0},
+  {n:'Metals',   stocks:['JSWSTEEL.NS','TATASTEEL.NS'], c:0},
+  {n:'Renewable',stocks:['SUZLON.NS','WAAREE.NS'], c:0},
 ];
+
+function renderSectorHeatmap() {
+  // Compute sector change from live stock data
+  SEC.forEach(sec => {
+    const vals = sec.stocks.map(s => window.liveStocks && window.liveStocks[s]).filter(Boolean);
+    if (vals.length) sec.c = +(vals.reduce((a,b) => a + b.pct, 0) / vals.length).toFixed(2);
+  });
+  const el = document.getElementById('sl'); if (!el) return;
+  const mx = Math.max(...SEC.map(s => Math.abs(s.c)), 0.01);
+  el.innerHTML = SEC.map(s => {
+    const up = s.c >= 0, w = (Math.abs(s.c)/mx*100).toFixed(0);
+    const col = up ? 'var(--gn)' : 'var(--rd)';
+    return `<div class="sr" onclick="quickSearch('${s.stocks[0].replace('.NS','')}')" style="cursor:pointer">
+      <span class="sn">${s.n}</span>
+      <div class="bt"><div class="bf ${up?'up':'dn'}" style="width:${w}%"></div></div>
+      <span class="sv ${up?'up':'dn'}">${up?'▲':'▼'}${Math.abs(s.c).toFixed(2)}%</span>
+    </div>`;
+  }).join('');
+}
 
 // commodity values now in liveData object
 let chartInst, curIdx=0;
@@ -1250,12 +1285,12 @@ function buildLiveTicker() {
     return (c>=0?'▲ +':'▼ ')+Math.abs(c).toFixed(2)+'%';
   };
   const items = [
-    { dot:'sf', text:'NIFTY 50',    val: n.v  ? '₹'+n.v.toLocaleString('en-IN',{maximumFractionDigits:2})+' '+fmt(n.v,n.prev||n.v)   : '—', vc: (n.v||0)>=(n.prev||n.v)?'gn':'rd' },
-    { dot:'sf', text:'SENSEX',      val: s.v  ? '₹'+s.v.toLocaleString('en-IN',{maximumFractionDigits:2})+' '+fmt(s.v,s.prev||s.v)   : '—', vc: (s.v||0)>=(s.prev||s.v)?'gn':'rd' },
-    { dot:'sf', text:'BANK NIFTY',  val: b.v  ? '₹'+b.v.toLocaleString('en-IN',{maximumFractionDigits:2})+' '+fmt(b.v,b.prev||b.v)   : '—', vc: (b.v||0)>=(b.prev||b.v)?'gn':'rd' },
-    { dot:'rd', text:'BRENT CRUDE', val: br.v ? '$'+br.v.toFixed(2) : '—', vc:'sf' },
-    { dot:'gn', text:'GOLD MCX',    val: gd.v ? '₹'+Math.round(gd.v).toLocaleString('en-IN') : '—', vc:'gn' },
-    { dot:'sf', text:'USD/INR',     val: ir.v ? '₹'+ir.v.toFixed(2) : '—', vc:'sf' },
+    { dot:'sf', text:'NIFTY 50',    sym:'NIFTY50',    val: n.v  ? '₹'+n.v.toLocaleString('en-IN',{maximumFractionDigits:2})+' '+fmt(n.v,n.prev||n.v)   : '—', vc: (n.v||0)>=(n.prev||n.v)?'gn':'rd' },
+    { dot:'sf', text:'SENSEX',      sym:'SENSEX',     val: s.v  ? '₹'+s.v.toLocaleString('en-IN',{maximumFractionDigits:2})+' '+fmt(s.v,s.prev||s.v)   : '—', vc: (s.v||0)>=(s.prev||s.v)?'gn':'rd' },
+    { dot:'sf', text:'BANK NIFTY',  sym:'BANKNIFTY',  val: b.v  ? '₹'+b.v.toLocaleString('en-IN',{maximumFractionDigits:2})+' '+fmt(b.v,b.prev||b.v)   : '—', vc: (b.v||0)>=(b.prev||b.v)?'gn':'rd' },
+    { dot:'rd', text:'BRENT CRUDE', sym:'',           val: br.v ? '$'+br.v.toFixed(2) : '—', vc:'sf' },
+    { dot:'gn', text:'GOLD /10g',   sym:'',           val: gd.v ? '₹'+Math.round(gd.v*10).toLocaleString('en-IN') : '—', vc:'gn' },
+    { dot:'sf', text:'USD/INR',     sym:'',           val: ir.v ? '₹'+ir.v.toFixed(2) : '—', vc:'sf' },
   ];
   if (window._trendingTicker && window._trendingTicker.length) {
     window._trendingTicker.forEach(function(t){ items.push(t); });
@@ -1263,7 +1298,12 @@ function buildLiveTicker() {
   const arr = items.concat(items);
   const el = document.getElementById('es-inner');
   if (el) el.innerHTML = arr.map(function(e){
-    return '<span class="es-item"><span class="es-dot '+e.dot+'"></span><span class="es-text">'+e.text+'</span><span class="es-val '+e.vc+'">'+e.val+'</span></span>';
+    const sym = e.sym || '';
+    return '<span class="es-item"'+(sym?' onclick="quickSearch(\'' + sym + '\')" style="cursor:pointer"':'')+'>'+
+      '<span class="es-dot '+e.dot+'"></span>'+
+      '<span class="es-text">'+e.text+'</span>'+
+      '<span class="es-val '+e.vc+'">'+e.val+'</span>'+
+    '</span>';
   }).join('');
 }
 
@@ -1274,6 +1314,8 @@ function triggerSmartAlerts(){
   const npct = np ? ((nv-np)/np*100) : 0;
   const nchg = (nv-np).toFixed(0);
   const nstr = (npct>=0?'+':'')+npct.toFixed(2)+'%';
+  // Only fire if we have real live data (not defaults)
+  if (!nv || nv === 24336) return;
 
   // Dynamic level alerts based on real current price
   [22000,22500,23000,23500,24000,24500,25000,25500,26000,26500,27000].forEach(function(lvl){
@@ -1326,6 +1368,7 @@ async function fetchTrending() {
       results.push({
         dot: up ? 'gn' : 'rd',
         text: sym.replace('.NS',''),
+        sym: sym.replace('.NS',''),
         val: `₹${q.regularMarketPrice.toLocaleString('en-IN',{maximumFractionDigits:2})} ${up?'▲ +':'▼ '}${Math.abs(pct).toFixed(2)}%`,
         vc: up ? 'gn' : 'rd'
       });
@@ -1424,46 +1467,69 @@ function tab(n,el){
 // LIVE MARKET ENGINE — fetches real prices every 10s
 // ═══════════════════════════════════════════════════════════════════════════
 
-// All stocks to track live
-const WATCH = [
-  'RELIANCE.NS','TCS.NS','HDFCBANK.NS','INFY.NS','ICICIBANK.NS',
-  'SBIN.NS','BHARTIAIRTEL.NS','LT.NS','BAJFINANCE.NS','ADANIENT.NS',
-  'TATAMOTORS.NS','WIPRO.NS','HCLTECH.NS','SUNPHARMA.NS','NTPC.NS',
-  'ONGC.NS','JSWSTEEL.NS','TITAN.NS','MARUTI.NS','ITC.NS',
-  'SUZLON.NS','YESBANK.NS','WAAREE.NS','COFORGE.NS','PAYTM.NS',
-  'ZOMATO.NS','KOTAKBANK.NS','AXISBANK.NS','ADANIPORTS.NS','TATASTEEL.NS',
+// Core stocks to track
+const WATCH_SYMS = [
+  'RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK',
+  'SBIN','BHARTIAIRTEL','LT','BAJFINANCE','ADANIENT',
+  'TATAMOTORS','WIPRO','HCLTECH','SUNPHARMA','NTPC',
+  'ONGC','JSWSTEEL','TITAN','MARUTI','ITC',
+  'SUZLON','YESBANK','WAAREE','COFORGE','PAYTM',
+  'ZOMATO','KOTAKBANK','AXISBANK','ADANIPORTS','TATASTEEL',
 ];
+const WATCH = WATCH_SYMS.map(s => s+'.NS');
 
-// Live price store: sym -> {price, prev, chg, pct, up, vol, name}
+// Live price store
 window.liveStocks = {};
 
-// Fetch a batch of symbols via our proxy
+function storeStock(sym, price, prev, vol, high, low, name) {
+  if (!price) return;
+  const tick = sym.replace('.NS','').replace('.BO','');
+  const chg = price - (prev||price);
+  const pct = prev ? (chg/prev*100) : 0;
+  window.liveStocks[sym] = {
+    sym, tick, price, prev: prev||price, chg, pct, up: chg >= 0,
+    vol: vol||null, high: high||price, low: low||price,
+    name: (name||tick).replace(' Limited','').replace(' Ltd','').slice(0,20),
+  };
+}
+
+// Fetch via NSE market endpoints (bulk — one call per endpoint)
 async function fetchBatch(syms) {
-  const results = [];
-  // Fetch in parallel groups of 5
-  for (let i = 0; i < syms.length; i += 5) {
-    const batch = syms.slice(i, i+5);
-    const promises = batch.map(async sym => {
+  let gotData = false;
+
+  // Strategy 1: NSE equity market data endpoint (returns ~200 stocks at once)
+  try {
+    const r = await fetch('/api/stock?sym=NIFTY50&type=market', {signal: AbortSignal.timeout(8000)});
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.data && d.data.length) {
+        d.data.forEach(q => {
+          const tick = (q.symbol||'').toUpperCase();
+          if (WATCH_SYMS.includes(tick)) {
+            storeStock(tick+'.NS', q.lastPrice||q.ltp, q.previousClose||q.prevClose,
+              q.totalTradedVolume||q.tradedVolume, q.dayHigh||q.high52, q.dayLow||q.low52,
+              q.meta?.companyName || tick);
+          }
+        });
+        gotData = Object.keys(window.liveStocks).length > 0;
+      }
+    }
+  } catch(e) {}
+
+  // Strategy 2: Fetch top 10 individually with Promise.all (fast parallel)
+  if (!gotData || Object.keys(window.liveStocks).length < 5) {
+    const top10 = syms.slice(0, 10);
+    await Promise.all(top10.map(async sym => {
       try {
-        const j = await apiFetch({ sym, type: 'quote' }, 8000);
-        const q = j && j.quoteResponse && j.quoteResponse.result && j.quoteResponse.result[0];
-        if (q && q.regularMarketPrice) {
-          const price = q.regularMarketPrice;
-          const prev  = q.regularMarketPreviousClose || price;
-          const chg   = price - prev;
-          const pct   = prev ? (chg/prev*100) : 0;
-          window.liveStocks[sym] = {
-            sym, price, prev, chg, pct, up: chg >= 0,
-            vol:  q.regularMarketVolume,
-            high: q.regularMarketDayHigh,
-            low:  q.regularMarketDayLow,
-            name: (q.shortName || sym.replace('.NS','')).replace(' Limited','').replace(' Ltd',''),
-            tick: sym.replace('.NS','').replace('.BO',''),
-          };
+        const j = await apiFetch({sym, type:'quote'}, 6000);
+        const q = j?.quoteResponse?.result?.[0];
+        if (q?.regularMarketPrice) {
+          storeStock(sym, q.regularMarketPrice, q.regularMarketPreviousClose,
+            q.regularMarketVolume, q.regularMarketDayHigh, q.regularMarketDayLow,
+            q.shortName||q.longName);
         }
       } catch(e) {}
-    });
-    await Promise.all(promises);
+    }));
   }
 }
 
@@ -1549,6 +1615,9 @@ function renderAllMarketTables() {
 
   // Update whale tab movers
   updateWhaleTab(gainers, losers, sorted);
+
+  // Update sector heatmap
+  renderSectorHeatmap();
 
   // Update status bar ticker with live prices
   buildLiveTicker();
@@ -1642,20 +1711,49 @@ function buildTopHeaderTicker() {
 let _fetchRound = 0;
 async function liveMarketUpdate() {
   _fetchRound++;
-  // Fetch all 30 stocks in rotation — do 15 per round to avoid hammering API
+  // Alternate batches to avoid overwhelming the API
   const half = Math.floor(WATCH.length / 2);
   const batch = _fetchRound % 2 === 0 ? WATCH.slice(0, half) : WATCH.slice(half);
   await fetchBatch(batch);
   renderAllMarketTables();
   buildTopHeaderTicker();
   buildLiveTicker();
+  renderSectorHeatmap();
 }
 
 // Boot: fetch all immediately then update every 10s
-fetchBatch(WATCH).then(() => {
+// Boot: fetch initial data then render
+async function bootMarket() {
+  await fetchBatch(WATCH);
+  // If we got fewer than 5 stocks, fetch remaining individually in background
+  const missing = WATCH.filter(s => !window.liveStocks[s]);
+  if (missing.length > 0) {
+    // Fetch remaining in background, 3 at a time
+    (async () => {
+      for (let i = 0; i < missing.length; i += 3) {
+        const batch = missing.slice(i, i+3);
+        await Promise.all(batch.map(async sym => {
+          try {
+            const j = await apiFetch({sym, type:'quote'}, 5000);
+            const q = j?.quoteResponse?.result?.[0];
+            if (q?.regularMarketPrice) {
+              storeStock(sym, q.regularMarketPrice, q.regularMarketPreviousClose,
+                q.regularMarketVolume, q.regularMarketDayHigh, q.regularMarketDayLow,
+                q.shortName||q.longName);
+            }
+          } catch(e) {}
+        }));
+        renderAllMarketTables();
+        buildTopHeaderTicker();
+        await new Promise(r => setTimeout(r, 800)); // small delay between batches
+      }
+    })();
+  }
   renderAllMarketTables();
   buildTopHeaderTicker();
-});
+  renderSectorHeatmap();
+}
+bootMarket();
 setInterval(liveMarketUpdate, 10000);
 
 
@@ -1769,33 +1867,7 @@ function renderLiveAlertStream() {
   }
 }
 
-function renderNewsWithConclusions() {
-  const container = document.getElementById('news-with-conclusions');
-  if (!container) return;
-  const NEWS_CONCLUSIONS = {
-    market:   {icon:'📊', text:'Market news drives short-term price action. Watch volume confirmation.', badge:'watch'},
-    politics: {icon:'🏛️', text:'Policy changes create sector-wide moves. Rate-sensitive stocks react fastest.', badge:'mix'},
-    infra:    {icon:'🏗️', text:'Infra orders are multi-year revenue visibility. Accumulate on dips.', badge:'bull'},
-    oil:      {icon:'🛢️', text:'Oil moves affect CAD, INR, and downstream margins simultaneously.', badge:'mix'},
-    social:   {icon:'📱', text:'Social buzz creates short-term momentum (1–5 days). Use for timing only.', badge:'mix'},
-  };
-  if (!liveNews.length) {
-    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim2);font-size:10px">Loading news…</div>';
-    return;
-  }
-  container.innerHTML = liveNews.slice(0,15).map(n => {
-    const cc = NEWS_CONCLUSIONS[n.cat] || {icon:'📌', text:'Monitor for developments.', badge:'mix'};
-    const badgeColor = cc.badge==='bull'?'var(--gn)':cc.badge==='bear'?'var(--rd)':'var(--sf)';
-    return `<div class="intel-card" ${n.link?`onclick="window.open('${n.link}','_blank')" style="cursor:pointer"`:''}>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
-        <div style="font-size:10px;color:var(--tx);font-weight:500;line-height:1.4">${cc.icon} ${n.title}</div>
-        <span style="font-size:8px;color:${badgeColor};white-space:nowrap;padding:1px 5px;border:1px solid ${badgeColor};border-radius:2px;opacity:.8">${cc.badge.toUpperCase()}</span>
-      </div>
-      <div style="font-size:9px;color:var(--dim2);line-height:1.4;margin-bottom:3px">${cc.text}</div>
-      <div style="font-size:8px;color:var(--dim2)">${n.src} · ${timeAgo(n.pubDate)}</div>
-    </div>`;
-  }).join('');
-}
+
 
 async function fetchLiveNews() {
   try {
@@ -2180,21 +2252,33 @@ async function apiFetch(params, timeout) {
 }
 
 async function fetchLivePrices() {
-  const j = await apiFetch({ sym: '^NSEI,^BSESN,^NSEBANK,BZ=F,GC=F,INR=X', type: 'batch' });
+  // Fetch NSE indices
+  const j = await apiFetch({ sym: '^NSEI,^BSESN,^NSEBANK', type: 'batch' });
   const results = (j && j.quoteResponse && j.quoteResponse.result) || [];
   results.forEach(function(q) {
     const p = q.regularMarketPrice, prev = q.regularMarketPreviousClose, s = q.symbol;
+    if (!p) return;
     const base = { v: p, prev: prev, open: q.regularMarketOpen||p, high: q.regularMarketDayHigh||p, low: q.regularMarketDayLow||p };
-    if (s==='^NSEI')     liveData.nifty  = base;
-    if (s==='^BSESN')    liveData.sensex = base;
-    if (s==='^NSEBANK')  liveData.bank   = base;
-    if (s==='^NSEMDCP50') liveData.mid   = base;
-    if (s==='BZ=F')      liveData.brent  = { v: p };
-    if (s==='GC=F')      liveData.gold   = { v: Math.round(p * ((liveData.inrusd && liveData.inrusd.v) || 84) / 31.1) };
-    if (s==='INR=X')     liveData.inrusd = { v: p };
+    if (s==='^NSEI')    liveData.nifty  = base;
+    if (s==='^BSESN')   liveData.sensex = base;
+    if (s==='^NSEBANK') liveData.bank   = base;
   });
   updateAllDisplays();
 }
+
+// Fetch forex + commodities via our proxy (which calls free APIs server-side)
+async function fetchCommodities() {
+  try {
+    const j = await apiFetch({ type: 'commodities' }, 10000);
+    if (j) {
+      if (j.inrusd)      liveData.inrusd = { v: +j.inrusd.toFixed(2) };
+      if (j.goldPerGram) liveData.gold   = { v: j.goldPerGram }; // per gram
+    }
+  } catch(e) {}
+  updateAllDisplays();
+}
+fetchCommodities();
+setInterval(fetchCommodities, 300000);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // STOCK SEARCH
@@ -2292,6 +2376,13 @@ function searchSuggest(val) {
 }
 
 function quickSearch(sym) {
+  // Navigate to search tab first
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));
+  const pg = document.getElementById('pg-search');
+  if (pg) pg.classList.add('on');
+  const nt = document.querySelector('.nt[onclick*="search"]');
+  if (nt) nt.classList.add('on');
   document.getElementById('stock-search-input').value = sym;
   document.getElementById('search-suggestions').style.display = 'none';
   doSearch();
