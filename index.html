@@ -4326,7 +4326,7 @@ function addHolding() {
   const avg     = parseFloat(document.getElementById('pf-avg')?.value);
   const buyDate = document.getElementById('pf-buy-date')?.value || '';
   if (!sym || !qty || !avg || qty<=0 || avg<=0) { alert('Please fill in Symbol, Qty and Avg Price'); return; }
-  const existing = portfolio.find(h => h.sym.replace('.NS','').replace('.BO','') === sym);
+  const existing = portfolio.find(h => h.sym === sym);
   if (existing) {
     const totalCost = existing.qty * existing.avg + qty * avg;
     existing.qty += qty;
@@ -4337,11 +4337,21 @@ function addHolding() {
   }
   localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
   ['pf-sym','pf-qty','pf-avg','pf-buy-date'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  // Switch to Overview tab so charts are visible immediately after adding
+  // Show overview immediately with avg as placeholder price
   document.querySelectorAll('.pfa-tab').forEach(b => b.classList.toggle('on', b.dataset.pft === 'overview'));
   document.querySelectorAll('.pfa-panel').forEach(p => p.classList.toggle('on', p.id === 'pft-overview'));
-  _pfChartDataCache = {}; // invalidate chart cache
-  renderPortfolioTab();
+  if (typeof _pfChartDataCache !== 'undefined') _pfChartDataCache = {};
+  renderPortfolioTab(); // instant render with avg price as placeholder
+  // Pre-warm: fetch live price for just this stock immediately
+  const nseSym = sym + '.NS';
+  apiFetch({ sym: nseSym, type: 'quote' }, 5000).then(j => {
+    const q = j?.quoteResponse?.result?.[0];
+    if (q?.regularMarketPrice) {
+      storeStock(nseSym, q.regularMarketPrice, q.regularMarketPreviousClose,
+        q.regularMarketVolume, q.regularMarketDayHigh, q.regularMarketDayLow, q.shortName);
+      renderPortfolioTab(); // re-render with live price — happens ~1s after add
+    }
+  }).catch(()=>{});
 }
 function removeHolding(sym) {
   portfolio = portfolio.filter(h => h.sym !== sym);
