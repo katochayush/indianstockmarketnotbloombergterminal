@@ -106,16 +106,35 @@ module.exports = async function handler(req, res) {
       return d?.chart?.result?.[0]?.meta?.regularMarketPrice;
     };
 
-    // USD/INR from Yahoo Finance (most reliable)
-    try {
-      const p = await yhFetch('USDINR=X');
-      if (p) result.inrusd = +p.toFixed(4);
-    } catch(e) {
-      // fallback: open.er-api.com
-      try {
-        const r = await fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(5000) });
-        if (r.ok) { const d = await r.json(); if (d.rates?.INR) result.inrusd = +d.rates.INR.toFixed(4); }
-      } catch(e2) {}
+    // USD/INR — try multiple sources in order
+    const inrSources = [
+      // 1. Yahoo Finance query2 — INR=X gives INR per USD directly
+      async () => {
+        const r = await fetch('https://query2.finance.yahoo.com/v8/finance/chart/INR=X?interval=1m&range=1d',
+          { headers:{'User-Agent':'Mozilla/5.0'}, signal:AbortSignal.timeout(5000) });
+        if (!r.ok) throw new Error('yh2 ' + r.status);
+        const d = await r.json();
+        const p = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+        if (!p || p < 50 || p > 150) throw new Error('bad price: ' + p); // sanity check
+        return +p.toFixed(4);
+      },
+      // 2. Yahoo Finance query1 USDINR=X
+      async () => {
+        const p = await yhFetch('USDINR=X');
+        if (!p || p < 50 || p > 150) throw new Error('bad USDINR=X: ' + p);
+        return +p.toFixed(4);
+      },
+      // 3. open.er-api.com free forex
+      async () => {
+        const r = await fetch('https://open.er-api.com/v6/latest/USD', { signal:AbortSignal.timeout(5000) });
+        if (!r.ok) throw new Error('er-api ' + r.status);
+        const d = await r.json();
+        if (!d.rates?.INR) throw new Error('no INR rate');
+        return +d.rates.INR.toFixed(4);
+      },
+    ];
+    for (const src of inrSources) {
+      try { result.inrusd = await src(); break; } catch(e) { /* try next */ }
     }
 
     // Gold: Yahoo Finance GC=F gives USD/troy oz → convert to INR/gram
