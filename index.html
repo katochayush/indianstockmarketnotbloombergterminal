@@ -704,6 +704,8 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 .scr-run-btn{background:linear-gradient(135deg,rgba(255,153,51,.3),rgba(255,153,51,.15));border:1px solid rgba(255,153,51,.5);color:var(--sf);cursor:pointer;padding:7px 18px;border-radius:5px;font-size:10px;font-family:DM Mono,monospace;font-weight:700;letter-spacing:.1em;transition:all .2s;white-space:nowrap}
 .scr-run-btn:hover{background:linear-gradient(135deg,rgba(255,153,51,.45),rgba(255,153,51,.25));box-shadow:0 0 12px rgba(255,153,51,.2)}
 .scr-run-btn:disabled{opacity:.4;cursor:not-allowed}
+.scr-reset-btn{background:rgba(255,255,255,.04);border:1px solid var(--br2);color:var(--dim2);cursor:pointer;padding:7px 14px;border-radius:5px;font-size:10px;font-family:DM Mono,monospace;letter-spacing:.08em;transition:all .2s;white-space:nowrap}
+.scr-reset-btn:hover{color:var(--rd);border-color:rgba(255,59,59,.3);background:rgba(255,59,59,.06)}
 .scr-filters{display:flex;gap:8px;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--br2);flex-wrap:wrap;align-items:flex-end}
 .scr-filter-group{display:flex;flex-direction:column;gap:4px;min-width:120px}
 .scr-fg-label{font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:.12em;font-family:DM Mono,monospace}
@@ -1910,6 +1912,7 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
           <button class="scr-view-btn on" onclick="scrSetView('table',this)">☰ Table</button>
           <button class="scr-view-btn"    onclick="scrSetView('cards',this)">⊞ Cards</button>
         </div>
+        <button class="scr-reset-btn" onclick="scrReset()" title="Clear all filters and results">↺ Reset</button>
         <button class="scr-run-btn" id="scr-run-btn" onclick="runScreener()">▶ Run Screen</button>
       </div>
     </div>
@@ -5868,8 +5871,20 @@ function scrNeedsFno(f) {
 }
 
 function scrSetUniverse(u, btn) {
+  if (_scrUniverse === u) return;       // no-op if same
   _scrUniverse = u;
   document.querySelectorAll('.scr-seg-btn').forEach(b => b.classList.toggle('on', b.dataset.u === u));
+  // Clear bulk cache so new universe fetches fresh data
+  _scrBulkCache    = null;
+  _scrFnoBulkCache = null;
+  _scrChartCache   = {};
+  // Clear results and status so user knows to re-run
+  _scrResults = [];
+  const wrap = document.getElementById('scr-results');
+  if (wrap) wrap.innerHTML = '';
+  scrSetStatus('Universe changed to <strong>' + u.toUpperCase() + '</strong> — press ▶ Run Screen to screen this universe');
+  // If a preset is active, auto re-run with new universe
+  if (_scrActivePreset && _scrActivePreset !== 'clear') runScreener();
 }
 
 function scrSetView(v, btn) {
@@ -5885,6 +5900,18 @@ function scrClearInputs() {
   document.querySelectorAll('.scr-sel').forEach(el => el.selectedIndex = 0);
   document.querySelectorAll('.scr-preset').forEach(b => b.classList.remove('active'));
   _scrActivePreset = null;
+  _scrSort = { col: 'chgPct', dir: 'desc' };
+}
+
+function scrReset() {
+  scrClearInputs();
+  _scrBulkCache    = null;
+  _scrFnoBulkCache = null;
+  _scrChartCache   = {};
+  _scrResults      = [];
+  const wrap = document.getElementById('scr-results');
+  if (wrap) wrap.innerHTML = '';
+  scrSetStatus('Filters cleared — pick a preset or set filters, then press ▶ Run Screen');
 }
 
 function scrPreset(name) {
@@ -5899,8 +5926,8 @@ function scrPreset(name) {
     dip:         () => { set('scr-52h-min', -60); set('scr-52h-max', -40); },
     volume:      () => { set('scr-vol-min', 2); },
     ema_bull:    () => { set('scr-ema-sig', 'bull'); document.getElementById('scr-ema-sig').value='bull'; },
-    gainers:     () => { set('scr-chg-min', 2); },
-    losers:      () => { set('scr-chg-max', -2); },
+    gainers:     () => { _scrSort = { col:'chgPct', dir:'desc' }; },  // sort by biggest gainers, no filter needed
+    losers:      () => { _scrSort = { col:'chgPct', dir:'asc' };  },  // sort by biggest losers
     long_build:  () => { document.getElementById('scr-fno-signal').value='long_build'; document.getElementById('scr-fno-only').value='yes'; },
     short_build: () => { document.getElementById('scr-fno-signal').value='short_build'; document.getElementById('scr-fno-only').value='yes'; },
     high_div:    () => { set('scr-dy-min', 3); },
