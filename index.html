@@ -4356,7 +4356,9 @@ function addHolding() {
 function removeHolding(sym) {
   portfolio = portfolio.filter(h => h.sym !== sym);
   localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
-  _pfChartDataCache = {}; // invalidate chart cache
+  _pfData = null;
+  _pfChartDataCache = {};
+  if (typeof updatePortfolioStrip === 'function') updatePortfolioStrip();
   renderPortfolioTab();
 }
 
@@ -4426,7 +4428,8 @@ let _pfData=null, _pfSectorChart=null, _pfPnlChart=null, _pfPnlRange='1mo';
 let _pfChartDataCache={}; // cache: sym+range → {ts,cls}
 
 function renderPortfolioTab() {
-  // Always ensure Overview tab is active on first load
+  // Always re-read from localStorage — prevents stale in-memory state
+  portfolio = JSON.parse(localStorage.getItem('bt_portfolio') || '[]');
   const currentActive = document.querySelector('.pfa-panel.on')?.id;
   if (!currentActive || currentActive === 'pft-overview') {
     // Make sure overview tab is visually selected
@@ -4473,6 +4476,7 @@ async function prefetchPfChartData(range) {
 }
 
 function computePfData() {
+  portfolio = JSON.parse(localStorage.getItem('bt_portfolio') || '[]');
   if (!portfolio.length) { _pfData=null; renderPfSummaryEmpty(); return; }
   let totalInvested=0, totalCurrent=0, totalDayPnl=0;
   const holdings = portfolio.map(h => {
@@ -4709,117 +4713,6 @@ function renderPfPerformers(){
   renderList('pf-best',sorted.slice(0,5));
   renderList('pf-worst',sorted.slice(-5).reverse());
 }
-function addHolding() {
-  const sym     = (document.getElementById('pf-sym')?.value||'').toUpperCase().trim().replace('.NS','').replace('.BO','');
-  const qty     = parseFloat(document.getElementById('pf-qty')?.value);
-  const avg     = parseFloat(document.getElementById('pf-avg')?.value);
-  const buyDate = document.getElementById('pf-buy-date')?.value || '';
-  if (!sym || !qty || !avg || qty<=0 || avg<=0) { alert('Please fill in Symbol, Qty and Avg Price'); return; }
-  const existing = portfolio.find(h => h.sym.replace('.NS','').replace('.BO','') === sym);
-  if (existing) {
-    const totalCost = existing.qty * existing.avg + qty * avg;
-    existing.qty += qty;
-    existing.avg = totalCost / existing.qty;
-    if (buyDate) existing.buyDate = buyDate;
-  } else {
-    portfolio.push({ sym, qty, avg, buyDate });
-  }
-  localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
-  ['pf-sym','pf-qty','pf-avg','pf-buy-date'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  // Switch to Overview tab so charts are visible immediately after adding
-  document.querySelectorAll('.pfa-tab').forEach(b => b.classList.toggle('on', b.dataset.pft === 'overview'));
-  document.querySelectorAll('.pfa-panel').forEach(p => p.classList.toggle('on', p.id === 'pft-overview'));
-  renderPortfolioTab();
-}
-function removeHolding(sym) {
-  portfolio = portfolio.filter(h => h.sym !== sym);
-  localStorage.setItem('bt_portfolio', JSON.stringify(portfolio));
-  renderPortfolioTab();
-}
-
-function renderPortfolioTab() {
-  const tbody = document.getElementById('pf-tbody');
-  if (!tbody) return;
-
-  if (!portfolio.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="pf-empty">No holdings yet.<br>Add your first stock above to track live P&L.</td></tr>';
-    ['pf-invested','pf-current','pf-pnl','pf-ret'].forEach(id => {
-      const el = document.getElementById(id); if(el) el.textContent = '₹0';
-    });
-    return;
-  }
-
-  let totalInvested = 0, totalCurrent = 0;
-  const rows = portfolio.map(h => {
-    const sym = h.sym;
-    // Try to get live price from liveStocks
-    const liveKey = sym + '.NS';
-    const live = window.liveStocks?.[liveKey];
-    const ltp   = live?.price || h.avg; // fallback to avg if not loaded
-    const dayChg = live?.pct || 0;
-    const invested = h.qty * h.avg;
-    const current  = h.qty * ltp;
-    const pnl      = current - invested;
-    const pnlPct   = (pnl / invested * 100);
-    totalInvested += invested;
-    totalCurrent  += current;
-
-    const up   = pnl >= 0;
-    const dayUp = dayChg >= 0;
-    const fmt  = v => '₹' + Math.abs(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
-
-    return `<tr>
-      <td><span style="color:var(--sf);font-weight:700;cursor:pointer" onclick="quickSearch('${sym}')">${sym}</span></td>
-      <td>${h.qty.toLocaleString('en-IN')}</td>
-      <td>${fmt(h.avg)}</td>
-      <td style="color:${dayUp?'var(--gn)':'var(--rd)'};font-weight:600">${fmt(ltp)}</td>
-      <td>₹${invested.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
-      <td>₹${current.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
-      <td style="color:${up?'var(--gn)':'var(--rd)'}">
-        ${up?'▲':'▼'} ₹${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
-      </td>
-      <td style="color:${up?'var(--gn)':'var(--rd)'}">
-        ${up?'+':''}${pnlPct.toFixed(2)}%
-      </td>
-      <td style="color:${dayUp?'var(--gn)':'var(--rd)'}">
-        ${dayUp?'▲':'▼'} ${Math.abs(dayChg).toFixed(2)}%
-      </td>
-      <td><button class="pf-btn del" onclick="removeHolding('${sym}')">✕</button></td>
-    </tr>`;
-  });
-
-  tbody.innerHTML = rows.join('');
-
-  const totalPnl = totalCurrent - totalInvested;
-  const totalRet = totalInvested ? (totalPnl/totalInvested*100) : 0;
-  const up = totalPnl >= 0;
-
-  const fmt = v => '₹' + v.toLocaleString('en-IN', {maximumFractionDigits:0});
-  const inv = document.getElementById('pf-invested');
-  const cur = document.getElementById('pf-current');
-  const pnl = document.getElementById('pf-pnl');
-  const ret = document.getElementById('pf-ret');
-  if (inv) inv.textContent = fmt(totalInvested);
-  if (cur) { cur.textContent = fmt(totalCurrent); cur.className = 'pf-card-v ' + (up?'up':'dn'); }
-  if (pnl) { pnl.textContent = (up?'▲ +':'▼ ') + fmt(Math.abs(totalPnl)); pnl.className = 'pf-card-v ' + (up?'up':'dn'); }
-  if (ret) { ret.textContent = (up?'+':'') + totalRet.toFixed(2) + '%'; ret.className = 'pf-card-v ' + (up?'up':'dn'); }
-
-  // Fetch missing prices in background
-  const missing = portfolio.filter(h => !window.liveStocks?.[h.sym+'.NS']).map(h => h.sym+'.NS');
-  if (missing.length) {
-    Promise.all(missing.map(async s => {
-      try {
-        const j = await apiFetch({sym:s, type:'quote'}, 6000);
-        const q = j?.quoteResponse?.result?.[0];
-        if (q?.regularMarketPrice) {
-          storeStock(s, q.regularMarketPrice, q.regularMarketPreviousClose,
-            q.regularMarketVolume, q.regularMarketDayHigh, q.regularMarketDayLow, q.shortName);
-        }
-      } catch(e){}
-    })).then(() => renderPortfolioTab());
-  }
-}
-
 // Auto-refresh portfolio every 15s when tab is visible
 setInterval(() => {
   if (document.getElementById('pg-portfolio')?.classList.contains('on') && portfolio.length) {
@@ -5247,7 +5140,7 @@ function updatePortfolioStrip() {
   holdings.forEach(h => {
     const live = window.liveStocks && (window.liveStocks[h.sym] || window.liveStocks[h.sym + '.NS']);
     if (live && live.price) {
-      totalCost += (h.avgCost || 0) * (h.qty || 0);
+      totalCost += (h.avg || h.avgCost || 0) * (h.qty || 0);
       totalVal  += live.price * (h.qty || 0);
       count++;
     }
