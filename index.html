@@ -7072,41 +7072,51 @@ async function loadFiiDii(force = false) {
     renderFiiDii();
   };
 
-  // ── Attempt 1: Vercel server (NSE session + MoneyControl + BSE) ──────────
+  // ── Attempt 1: Vercel server → NSE Archive CSV (no auth needed) ─────────
   try {
     const ctrl = new AbortController();
-    const tid  = setTimeout(() => ctrl.abort(), 12000);
+    const tid  = setTimeout(() => ctrl.abort(), 15000);
     const res  = await fetch('/api/stock?type=fiidii', { signal: ctrl.signal });
     clearTimeout(tid);
     if (res.ok) {
       const j = await res.json();
-      if (j?.rows?.length >= 3) { setLive(j.rows, 'NSE/Live'); return; }
+      if (upd) upd.textContent = `Server: ${j.rows?.length||0} rows, source=${j.source||'?'}, err=${j.error||'none'}`;
+      if (j?.rows?.length >= 1) { setLive(j.rows, 'NSE Archive'); return; }
+    }
+  } catch(e) {
+    if (upd) upd.textContent = 'Server error: ' + e.message;
+  }
+
+  // ── Attempt 2: Browser direct to NSE archive CSV ──────────────────────────
+  try {
+    const pad = n => String(n).padStart(2,'0');
+    const d = new Date();
+    // Try today and yesterday
+    for (let back = 0; back <= 3; back++) {
+      const dt = new Date(d); dt.setDate(dt.getDate()-back);
+      if (dt.getDay()===0||dt.getDay()===6) continue;
+      const dd=pad(dt.getDate()),mm=pad(dt.getMonth()+1),yyyy=dt.getFullYear();
+      const url = `https://archives.nseindia.com/content/equities/fiiStatistics.csv`;
+      const ctrl = new AbortController();
+      setTimeout(()=>ctrl.abort(), 6000);
+      const r = await fetch(url, { signal: ctrl.signal });
+      if (r.ok) {
+        const text = await r.text();
+        const lines = text.split('\n').filter(l=>l.trim()&&/\d{2}-[A-Za-z]/.test(l));
+        if (lines.length > 0) {
+          const pn2 = s => { const n=parseFloat(String(s||'').replace(/,/g,'')); return isNaN(n)?0:n; };
+          const rows = lines.slice(-30).map(line => {
+            const c2 = line.split(',').map(x=>x.trim().replace(/"/g,''));
+            return { date:c2[0], fiiBuy:pn2(c2[1]), fiiSell:pn2(c2[2]), fiiNet:pn2(c2[3]||c2[1]-c2[2]), diiBuy:0, diiSell:0, diiNet:0 };
+          }).filter(r=>r.date&&(r.fiiBuy||r.fiiSell));
+          if (rows.length >= 3) { setLive(rows, 'NSE Archive (browser)'); return; }
+        }
+      }
+      break; // fiiStatistics.csv doesn't change by date, only try once
     }
   } catch(_) {}
 
-  // ── Attempt 2: Browser → NSE directly (browsers are never IP-blocked) ────
-  // We use two CORS relays — if one is down the other works
-  const relays = [
-    url => 'https://corsproxy.io/?' + encodeURIComponent(url),
-    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-  ];
-  const nseDataUrl = 'https://www.nseindia.com/api/fiidiiTradeReact';
-  for (const relay of relays) {
-    try {
-      const ctrl = new AbortController();
-      const tid  = setTimeout(() => ctrl.abort(), 8000);
-      const r    = await fetch(relay(nseDataUrl), { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (r.ok) {
-        const json = await r.json();
-        const arr  = Array.isArray(json) ? json : (json.data || []);
-        const rows = norm(arr);
-        if (rows.length >= 3) { setLive(rows, 'NSE Direct'); return; }
-      }
-    } catch(_) {}
-  }
-
-  // ── All attempts failed — show simulated with clear label + NSE link ──────
+  // ── All failed — show simulated with clear label + NSE link ───────────────
   _fiiData = { rows: _fiiData?.rows?.length ? _fiiData.rows : fiiMockData(), simulated: true };
   setBadge('⚠️ SIM', 'rgba(255,100,0,.25)');
   if (upd) upd.innerHTML = '<span style="color:var(--yl)">⚠️ Simulated · <a href="https://www.nseindia.com/reports-and-publications/fii-dii-data" target="_blank" style="color:var(--sf);text-decoration:underline">View real NSE data ↗</a></span>';
