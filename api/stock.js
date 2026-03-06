@@ -425,6 +425,71 @@ module.exports = async function handler(req, res) {
 
   if (!sym && type !== 'fiidii' && type !== 'news' && type !== 'commodities' && type !== 'announcements') return res.status(400).json({error:'sym required'});
 
+  // ── FII/DII FLOW ─────────────────────────────────────────────────────────
+  if (type === 'fiidii') {
+    const pn = s => { const n=parseFloat(String(s||'').replace(/,/g,'')); return isNaN(n)?0:n; };
+    const norm = arr => (Array.isArray(arr)?arr:[]).slice(0,30).reduce((out,r)=>{
+      const fb=pn(r.fiiBuy||r['FII BUY']||r.buyValue||0);
+      const fs=pn(r.fiiSell||r['FII SELL']||r.sellValue||0);
+      const db=pn(r.diiBuy||r['DII BUY']||r.diiBuyValue||0);
+      const ds=pn(r.diiSell||r['DII SELL']||r.diiSellValue||0);
+      const dt=r.date||r.Date||r.tradeDate||'';
+      if(dt&&(fb||fs)) out.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
+      return out;
+    },[]);
+
+    // Run all 3 sources in parallel — first one that returns data wins
+    // Total budget: 8 seconds (Vercel limit is 10s)
+    const tryNSE = async () => {
+      const cookie = await nseSession().catch(()=>'');
+      const hdrs = {...H, 'Referer':'https://www.nseindia.com/', ...(cookie?{Cookie:cookie}:{})};
+      const r = await fetch('https://www.nseindia.com/api/fiidiiTradeReact',
+        {headers:hdrs, signal:AbortSignal.timeout(6000)});
+      if(!r.ok) throw new Error('NSE '+r.status);
+      const j = await r.json();
+      const rows = norm(Array.isArray(j)?j:(j.data||[]));
+      if(!rows.length) throw new Error('NSE empty');
+      return rows;
+    };
+
+    const tryMC = async () => {
+      const r = await fetch('https://priceapi.moneycontrol.com/pricefeed/notmobile/getfiidii',
+        {headers:{...H,'Referer':'https://www.moneycontrol.com/'}, signal:AbortSignal.timeout(6000)});
+      if(!r.ok) throw new Error('MC '+r.status);
+      const j = await r.json();
+      const rows = norm(j?.data||j?.result||(Array.isArray(j)?j:[]));
+      if(!rows.length) throw new Error('MC empty');
+      return rows;
+    };
+
+    const tryBSE = async () => {
+      const pad2=n=>String(n).padStart(2,'0');
+      const t=new Date(),f=new Date(t); f.setDate(f.getDate()-60);
+      const fd=d=>`${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
+      const r = await fetch(
+        `https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(f)}&enddate=${fd(t)}`,
+        {headers:{...H,'Referer':'https://www.bseindia.com/'}, signal:AbortSignal.timeout(6000)});
+      if(!r.ok) throw new Error('BSE '+r.status);
+      const j = await r.json();
+      const arr = j?.Table||j?.data||(Array.isArray(j)?j:[]);
+      const rows = norm(arr);
+      if(!rows.length) throw new Error('BSE empty');
+      return rows;
+    };
+
+    try {
+      // Race all 3 — take whichever responds first with data
+      const rows = await Promise.any([tryNSE(), tryMC(), tryBSE()]);
+      res.setHeader('Cache-Control','s-maxage=1800,stale-while-revalidate=300');
+      return res.status(200).json({rows, ts:Date.now(), source:'live'});
+    } catch(e) {
+      // All 3 failed — return empty so client shows SIM
+      res.setHeader('Cache-Control','s-maxage=60');
+      return res.status(200).json({rows:[], ts:Date.now(), source:'none',
+        error: e?.errors?.map(x=>x.message).join(' | ') || e.message});
+    }
+  }
+
   try {
     // ── BATCH ─────────────────────────────────────────────────────────────
     if (type === 'batch') {
@@ -532,96 +597,7 @@ module.exports = async function handler(req, res) {
     res.setHeader('Cache-Control','s-maxage=10, stale-while-revalidate=5');
     return res.status(200).json({quoteResponse:{result:[toResult(sym,pd.lastPrice,pd.previousClose,pd.open,pd.intraDayHighLow?.max,pd.intraDayHighLow?.min,pd.totalTradedVolume,d.priceInfo?.weekHighLow?.max,d.priceInfo?.weekHighLow?.min,d.info?.companyName||tk)]}});
 
-  
-  // ── FII/DII FLOW ─────────────────────────────────────────────────────────
-  if (type === 'fiidii') {
-    try {
-      const rows = [];
-      const pn = s => { const n=parseFloat(String(s||'').replace(/[,\s]/g,'')); return isNaN(n)?0:n; };
-      const parseDateRow = (cols) => {
-        const fb=pn(cols[1]||0), fs=pn(cols[2]||0), fnet=pn(cols[3]||(fb-fs));
-        const db=pn(cols[4]||0), ds=pn(cols[5]||0), dnet=pn(cols[6]||(db-ds));
-        return {fiiBuy:fb,fiiSell:fs,fiiNet:+fnet.toFixed(2),diiBuy:db,diiSell:ds,diiNet:+dnet.toFixed(2)};
-      };
 
-      // ── Source 1: NSE fiidiiTradeReact with full session ──────────────────
-      try {
-        const j = await nseGet('/api/fiidiiTradeReact', 10000);
-        const arr = Array.isArray(j) ? j : (j.data||[]);
-        arr.slice(0,30).forEach(r => {
-          const fb=pn(r.fiiBuy||r['FII BUY']||0), fs=pn(r.fiiSell||r['FII SELL']||0);
-          const db=pn(r.diiBuy||r['DII BUY']||0), ds=pn(r.diiSell||r['DII SELL']||0);
-          const dt=r.date||r.Date||r.tradeDate||'';
-          if(dt&&(fb||fs)) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
-        });
-      } catch(_) {}
-
-      // ── Source 2: NSE FII stats page (scrape HTML table) ─────────────────
-      if (!rows.length) {
-        try {
-          const cookie = await nseSession().catch(()=>'');
-          const hdrs = {
-            'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept':'application/json,*/*',
-            'Referer':'https://www.nseindia.com/',
-            ...(cookie?{Cookie:cookie}:{}),
-          };
-          const r2 = await fetch('https://www.nseindia.com/api/equity-stockIndices?index=SECURITIES%20IN%20F%26O', {headers:hdrs,signal:AbortSignal.timeout(8000)});
-          // This won't give FII data but confirms session works
-        } catch(_) {}
-      }
-
-      // ── Source 3: MoneyControl API (different domain, sometimes works) ────
-      if (!rows.length) {
-        try {
-          const mc = await fetch(
-            'https://priceapi.moneycontrol.com/pricefeed/notmobile/getfiidii',
-            { headers:{'User-Agent':'Mozilla/5.0','Referer':'https://www.moneycontrol.com/','Accept':'application/json'},
-              signal:AbortSignal.timeout(8000) }
-          );
-          if (mc.ok) {
-            const mj = await mc.json();
-            const arr = mj?.data || mj?.result || (Array.isArray(mj)?mj:[]);
-            arr.slice(0,30).forEach(r => {
-              const fb=pn(r.fiiBuy||r.FII_BUY||r.buy||0), fs=pn(r.fiiSell||r.FII_SELL||r.sell||0);
-              const db=pn(r.diiBuy||r.DII_BUY||0), ds=pn(r.diiSell||r.DII_SELL||0);
-              const dt=r.date||r.Date||r.trade_date||'';
-              if(dt&&(fb||fs)) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
-            });
-          }
-        } catch(_) {}
-      }
-
-      // ── Source 4: BSE India API ────────────────────────────────────────────
-      if (!rows.length) {
-        try {
-          const pad2 = n=>String(n).padStart(2,'0');
-          const t=new Date(), f=new Date(t); f.setDate(f.getDate()-60);
-          const fd=d=>`${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
-          const bse = await fetch(
-            `https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(f)}&enddate=${fd(t)}`,
-            { headers:{'User-Agent':'Mozilla/5.0','Referer':'https://www.bseindia.com/','Accept':'application/json'},
-              signal:AbortSignal.timeout(8000) }
-          );
-          if (bse.ok) {
-            const bj = await bse.json();
-            const arr = bj?.Table||bj?.data||(Array.isArray(bj)?bj:[]);
-            arr.slice(0,30).forEach(r => {
-              const fb=pn(r.fiiBuy||r.FII_BUY_AMT||0), fs=pn(r.fiiSell||r.FII_SELL_AMT||0);
-              const db=pn(r.diiBuy||r.DII_BUY_AMT||0), ds=pn(r.diiSell||r.DII_SELL_AMT||0);
-              const dt=r.date||r.Date||r.TRADE_DATE||'';
-              if(dt&&(fb||fs)) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
-            });
-          }
-        } catch(_) {}
-      }
-
-      res.setHeader('Cache-Control','s-maxage=1800,stale-while-revalidate=300');
-      return res.status(200).json({rows,ts:Date.now(),source:rows.length?'live':'none'});
-    } catch(e) {
-      return res.status(200).json({rows:[],ts:Date.now(),error:e.message});
-    }
-  }
 
   } catch(e) { return res.status(500).json({error:e.message}); }
 };
