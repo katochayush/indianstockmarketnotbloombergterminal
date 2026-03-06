@@ -7042,91 +7042,46 @@ async function initFiiDii() {
 async function loadFiiDii(force = false) {
   const badge = document.getElementById('fii-live-badge');
   const upd   = document.getElementById('fii-updated');
-  const setBadge = (text, color) => {
-    if (badge) { badge.textContent = text; badge.style.background = color; badge.style.color = '#fff'; }
+  const setBadge = (txt, bg, col) => {
+    if (badge) { badge.textContent=txt; badge.style.background=bg; badge.style.color=col||'#fff'; }
   };
-  setBadge('⏳', 'rgba(255,200,0,.3)');
-  if (upd) upd.textContent = 'Fetching…';
+  setBadge('⏳ Loading…','rgba(255,200,0,.2)','#fff');
+  if (upd) upd.textContent = 'Fetching from NSE…';
 
-  // Show cached/mock immediately so UI is never blank
+  // Show mock immediately so UI is never blank
   if (!_fiiData?.rows?.length) {
     _fiiData = { rows: fiiMockData(), simulated: true };
     renderFiiDii();
   }
 
-  const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
-  const norm = arr => (Array.isArray(arr)?arr:[]).slice(0,30).reduce((rows,row) => {
-    const fb=pn(row.fiiBuy||row['FII BUY']||row.buyValue||0);
-    const fs=pn(row.fiiSell||row['FII SELL']||row.sellValue||0);
-    const db=pn(row.diiBuy||row['DII BUY']||0);
-    const ds=pn(row.diiSell||row['DII SELL']||0);
-    const dt=row.date||row.Date||row.tradeDate||'';
-    if(dt&&(fb||fs)) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
-    return rows;
-  },[]);
-
-  const setLive = (rows, src) => {
-    _fiiData = { rows, simulated: false };
-    setBadge('🟢 LIVE', 'rgba(0,210,106,.25)');
-    if (upd) upd.textContent = src + ' · ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    renderFiiDii();
-  };
-
-  // ── Attempt 1: Vercel server → NSE Archive CSV (no auth needed) ─────────
+  // Single call to our server — which tries NSE → MoneyControl → BSE
   try {
     const ctrl = new AbortController();
     const tid  = setTimeout(() => ctrl.abort(), 15000);
     const res  = await fetch('/api/stock?type=fiidii', { signal: ctrl.signal });
     clearTimeout(tid);
-    if (res.ok) {
-      const j = await res.json();
-      if (upd) upd.textContent = `Server: ${j.rows?.length||0} rows, source=${j.source||'?'}, err=${j.error||'none'}`;
-      if (j?.rows?.length >= 1) { setLive(j.rows, 'NSE Archive'); return; }
+
+    if (!res.ok) throw new Error('Server HTTP ' + res.status);
+    const j = await res.json();
+
+    if (j?.rows?.length >= 1) {
+      _fiiData = { rows: j.rows, simulated: false };
+      const ts = new Date(j.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+      setBadge('🟢 LIVE', 'rgba(0,210,106,.2)', '#00D26A');
+      if (upd) upd.textContent = 'NSE Live · ' + ts;
+      renderFiiDii();
+      return;
     }
+    throw new Error('No rows returned (source=' + (j.source||'?') + ' err=' + (j.error||'none') + ')');
   } catch(e) {
-    if (upd) upd.textContent = 'Server error: ' + e.message;
+    _fiiData = { rows: _fiiData?.rows?.length ? _fiiData.rows : fiiMockData(), simulated: true };
+    setBadge('⚠️ SIM','rgba(255,100,0,.2)','#ffaa00');
+    if (upd) upd.innerHTML = '⚠️ ' + e.message + ' · <a href="https://www.nseindia.com/reports-and-publications/fii-dii-data" target="_blank" style="color:var(--sf)">NSE ↗</a>';
+    renderFiiDii();
   }
-
-  // ── Attempt 2: Browser direct to NSE archive CSV ──────────────────────────
-  try {
-    const pad = n => String(n).padStart(2,'0');
-    const d = new Date();
-    // Try today and yesterday
-    for (let back = 0; back <= 3; back++) {
-      const dt = new Date(d); dt.setDate(dt.getDate()-back);
-      if (dt.getDay()===0||dt.getDay()===6) continue;
-      const dd=pad(dt.getDate()),mm=pad(dt.getMonth()+1),yyyy=dt.getFullYear();
-      const url = `https://archives.nseindia.com/content/equities/fiiStatistics.csv`;
-      const ctrl = new AbortController();
-      setTimeout(()=>ctrl.abort(), 6000);
-      const r = await fetch(url, { signal: ctrl.signal });
-      if (r.ok) {
-        const text = await r.text();
-        const lines = text.split('\n').filter(l=>l.trim()&&/\d{2}-[A-Za-z]/.test(l));
-        if (lines.length > 0) {
-          const pn2 = s => { const n=parseFloat(String(s||'').replace(/,/g,'')); return isNaN(n)?0:n; };
-          const rows = lines.slice(-30).map(line => {
-            const c2 = line.split(',').map(x=>x.trim().replace(/"/g,''));
-            return { date:c2[0], fiiBuy:pn2(c2[1]), fiiSell:pn2(c2[2]), fiiNet:pn2(c2[3]||c2[1]-c2[2]), diiBuy:0, diiSell:0, diiNet:0 };
-          }).filter(r=>r.date&&(r.fiiBuy||r.fiiSell));
-          if (rows.length >= 3) { setLive(rows, 'NSE Archive (browser)'); return; }
-        }
-      }
-      break; // fiiStatistics.csv doesn't change by date, only try once
-    }
-  } catch(_) {}
-
-  // ── All failed — show simulated with clear label + NSE link ───────────────
-  _fiiData = { rows: _fiiData?.rows?.length ? _fiiData.rows : fiiMockData(), simulated: true };
-  setBadge('⚠️ SIM', 'rgba(255,100,0,.25)');
-  if (upd) upd.innerHTML = '<span style="color:var(--yl)">⚠️ Simulated · <a href="https://www.nseindia.com/reports-and-publications/fii-dii-data" target="_blank" style="color:var(--sf);text-decoration:underline">View real NSE data ↗</a></span>';
-  renderFiiDii();
 }
 
 
-
-
-// ── FII/DII RENDER FUNCTIONS ──────────────────────────────────────────────────
 
 function initFiiDii() {
   if (_fiiData?.rows?.length) { renderFiiDii(); return; }
