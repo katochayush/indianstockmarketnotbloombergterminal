@@ -7042,71 +7042,74 @@ async function initFiiDii() {
 async function loadFiiDii(force = false) {
   const badge = document.getElementById('fii-live-badge');
   const upd   = document.getElementById('fii-updated');
-  if (badge) { badge.textContent = '⏳'; badge.style.background = 'rgba(255,200,0,.2)'; badge.style.color = '#fff'; }
-  if (upd)   upd.textContent = 'Fetching live data…';
+  const setBadge = (text, color) => {
+    if (badge) { badge.textContent = text; badge.style.background = color; badge.style.color = '#fff'; }
+  };
+  setBadge('⏳', 'rgba(255,200,0,.3)');
+  if (upd) upd.textContent = 'Fetching…';
 
-  // Show simulated immediately so UI is never blank while fetching
+  // Show cached/mock immediately so UI is never blank
   if (!_fiiData?.rows?.length) {
     _fiiData = { rows: fiiMockData(), simulated: true };
     renderFiiDii();
   }
 
-  // ── Attempt 1: Our Vercel API (tries NSE → MoneyControl → BSE) ───────────
+  const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
+  const norm = arr => (Array.isArray(arr)?arr:[]).slice(0,30).reduce((rows,row) => {
+    const fb=pn(row.fiiBuy||row['FII BUY']||row.buyValue||0);
+    const fs=pn(row.fiiSell||row['FII SELL']||row.sellValue||0);
+    const db=pn(row.diiBuy||row['DII BUY']||0);
+    const ds=pn(row.diiSell||row['DII SELL']||0);
+    const dt=row.date||row.Date||row.tradeDate||'';
+    if(dt&&(fb||fs)) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
+    return rows;
+  },[]);
+
+  const setLive = (rows, src) => {
+    _fiiData = { rows, simulated: false };
+    setBadge('🟢 LIVE', 'rgba(0,210,106,.25)');
+    if (upd) upd.textContent = src + ' · ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    renderFiiDii();
+  };
+
+  // ── Attempt 1: Vercel server (NSE session + MoneyControl + BSE) ──────────
   try {
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch('/api/stock?type=fiidii', { signal: controller.signal });
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 12000);
+    const res  = await fetch('/api/stock?type=fiidii', { signal: ctrl.signal });
     clearTimeout(tid);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const j = await res.json();
-    if (j?.rows?.length >= 3) {
-      _fiiData = { rows: j.rows, simulated: false };
-      const ts = j.ts ? new Date(j.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '';
-      if (badge) { badge.textContent = '🟢 LIVE'; badge.style.background = 'rgba(0,210,106,.2)'; badge.style.color = 'var(--gn)'; }
-      if (upd)   upd.textContent = 'NSE/Live data · ' + ts;
-      renderFiiDii();
-      return;
+    if (res.ok) {
+      const j = await res.json();
+      if (j?.rows?.length >= 3) { setLive(j.rows, 'NSE/Live'); return; }
     }
-    throw new Error('empty response');
-  } catch(serverErr) { /* server blocked by NSE — try browser-direct */ }
+  } catch(_) {}
 
-  // ── Attempt 2: Browser direct to NSE (browser is never blocked) ──────────
-  // We use a lightweight CORS proxy that forwards requests without modification
-  try {
-    const nseUrl   = 'https://www.nseindia.com/api/fiidiiTradeReact';
-    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(nseUrl);
-    const controller2 = new AbortController();
-    const tid2 = setTimeout(() => controller2.abort(), 8000);
-    const res2 = await fetch(proxyUrl, {
-      headers: { 'x-requested-with': 'XMLHttpRequest' },
-      signal: controller2.signal
-    });
-    clearTimeout(tid2);
-    if (res2.ok) {
-      const json = await res2.json();
-      const arr  = Array.isArray(json) ? json : (json.data || []);
-      if (arr.length >= 3) {
-        const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
-        const rows = arr.slice(0,30).map(row => {
-          const fb=pn(row.fiiBuy||row['FII BUY']||0), fs=pn(row.fiiSell||row['FII SELL']||0);
-          const db=pn(row.diiBuy||row['DII BUY']||0), ds=pn(row.diiSell||row['DII SELL']||0);
-          return { date:row.date||row.Date||'', fiiBuy:fb, fiiSell:fs, fiiNet:+(fb-fs).toFixed(2), diiBuy:db, diiSell:ds, diiNet:+(db-ds).toFixed(2) };
-        }).filter(r => r.date && (r.fiiBuy || r.fiiSell));
-        if (rows.length >= 3) {
-          _fiiData = { rows, simulated: false };
-          if (badge) { badge.textContent = '🟢 LIVE'; badge.style.background = 'rgba(0,210,106,.2)'; badge.style.color = 'var(--gn)'; }
-          if (upd)   upd.textContent = 'NSE direct · ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-          renderFiiDii();
-          return;
-        }
+  // ── Attempt 2: Browser → NSE directly (browsers are never IP-blocked) ────
+  // We use two CORS relays — if one is down the other works
+  const relays = [
+    url => 'https://corsproxy.io/?' + encodeURIComponent(url),
+    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  ];
+  const nseDataUrl = 'https://www.nseindia.com/api/fiidiiTradeReact';
+  for (const relay of relays) {
+    try {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 8000);
+      const r    = await fetch(relay(nseDataUrl), { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (r.ok) {
+        const json = await r.json();
+        const arr  = Array.isArray(json) ? json : (json.data || []);
+        const rows = norm(arr);
+        if (rows.length >= 3) { setLive(rows, 'NSE Direct'); return; }
       }
-    }
-  } catch(proxyErr) { /* proxy also failed */ }
+    } catch(_) {}
+  }
 
-  // ── All sources failed — show simulated with clear warning ───────────────
-  _fiiData = { rows: fiiMockData(), simulated: true };
-  if (badge) { badge.textContent = '⚠️ SIM'; badge.style.background = 'rgba(255,100,0,.2)'; badge.style.color = 'var(--yl)'; }
-  if (upd) upd.innerHTML = '<span style="color:var(--yl)">⚠️ Simulated — NSE blocked. <a href="https://www.nseindia.com/reports-and-publications/fii-dii-data" target="_blank" style="color:var(--sf)">View real data ↗</a></span>';
+  // ── All attempts failed — show simulated with clear label + NSE link ──────
+  _fiiData = { rows: _fiiData?.rows?.length ? _fiiData.rows : fiiMockData(), simulated: true };
+  setBadge('⚠️ SIM', 'rgba(255,100,0,.25)');
+  if (upd) upd.innerHTML = '<span style="color:var(--yl)">⚠️ Simulated · <a href="https://www.nseindia.com/reports-and-publications/fii-dii-data" target="_blank" style="color:var(--sf);text-decoration:underline">View real NSE data ↗</a></span>';
   renderFiiDii();
 }
 
