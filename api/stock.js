@@ -501,38 +501,95 @@ module.exports = async function handler(req, res) {
   
   // ── FII/DII FLOW ─────────────────────────────────────────────────────────
   if (type === 'fiidii') {
-    const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
-    const nseHdrs = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    const pn = s => { const n = parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n) ? 0 : n; };
+
+    const normaliseRows = (arr) => arr.slice(0,30).reduce((rows, row) => {
+      const fb = pn(row.fiiBuy  || row['FII BUY']  || row.buyValue   || row.BUY_VAL  || 0);
+      const fs = pn(row.fiiSell || row['FII SELL'] || row.sellValue  || row.SELL_VAL || 0);
+      const db = pn(row.diiBuy  || row['DII BUY']  || row.diiBuyVal  || 0);
+      const ds = pn(row.diiSell || row['DII SELL'] || row.diiSellVal || 0);
+      const dt = row.date || row.Date || row.TRADE_DATE || row.tradeDate || '';
+      if (dt && (fb || fs)) rows.push({ date:dt, fiiBuy:fb, fiiSell:fs, fiiNet:+(fb-fs).toFixed(2), diiBuy:db, diiSell:ds, diiNet:+(db-ds).toFixed(2) });
+      return rows;
+    }, []);
+
+    // Browser-like headers
+    const BHdrs = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
       'Accept': 'application/json, text/plain, */*',
       'Accept-Language': 'en-US,en;q=0.9',
-      'Referer': 'https://www.nseindia.com/',
-      'Origin': 'https://www.nseindia.com',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin',
     };
+
     try {
-      const rows = [];
-      // Step 1: establish NSE session for cookie
-      let cookie = '';
+      let rows = [];
+
+      // ── SOURCE 1: NSE India with full session ─────────────────────────────
       try {
-        const home = await fetch('https://www.nseindia.com/', { headers: nseHdrs, signal: AbortSignal.timeout(5000) });
-        const sc = home.headers.get('set-cookie') || '';
-        cookie = sc.split(',').map(c => c.split(';')[0].trim()).filter(Boolean).join('; ');
-      } catch(_) {}
-      // Step 2: fetch with session cookie
-      const hdrs2 = { ...nseHdrs, ...(cookie ? { Cookie: cookie } : {}) };
-      const r1 = await fetch('https://www.nseindia.com/api/fiidiiTradeReact', { headers: hdrs2, signal: AbortSignal.timeout(8000) });
-      if (r1.ok) {
-        const arr = await r1.json().then(j => Array.isArray(j) ? j : (j.data || []));
-        arr.slice(0, 30).forEach(row => {
-          const fb=pn(row.fiiBuy||row['FII BUY']||0), fs=pn(row.fiiSell||row['FII SELL']||0);
-          const db=pn(row.diiBuy||row['DII BUY']||0), ds=pn(row.diiSell||row['DII SELL']||0);
-          const dt=row.date||row.Date||row.tradeDate||'';
-          if(dt) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
+        // Step 1: Hit homepage to get real session cookies
+        const homeRes = await fetch('https://www.nseindia.com/', {
+          headers: { ...BHdrs, 'Upgrade-Insecure-Requests': '1', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' },
+          signal: AbortSignal.timeout(6000),
+          redirect: 'follow',
         });
+        const rawCookies = homeRes.headers.get('set-cookie') || '';
+        const cookie = rawCookies.split(/,(?=[^;]+=)/).map(c => c.split(';')[0].trim()).filter(Boolean).join('; ');
+
+        // Step 2: Fetch FII/DII data with session
+        const dataRes = await fetch('https://www.nseindia.com/api/fiidiiTradeReact', {
+          headers: { ...BHdrs, 'Referer': 'https://www.nseindia.com/', 'Origin': 'https://www.nseindia.com', 'Cookie': cookie },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (dataRes.ok) {
+          const json = await dataRes.json();
+          const arr  = Array.isArray(json) ? json : (json.data || []);
+          rows = normaliseRows(arr);
+        }
+      } catch(e1) { /* try next source */ }
+
+      // ── SOURCE 2: MoneyControl FII/DII ───────────────────────────────────
+      if (!rows.length) {
+        try {
+          const mcRes = await fetch('https://priceapi.moneycontrol.com/pricefeed/notmobile/getfiidii', {
+            headers: { ...BHdrs, 'Referer': 'https://www.moneycontrol.com/' },
+            signal: AbortSignal.timeout(7000),
+          });
+          if (mcRes.ok) {
+            const mcJson = await mcRes.json();
+            const arr = mcJson?.data || mcJson?.result || mcJson || [];
+            rows = normaliseRows(Array.isArray(arr) ? arr : []);
+          }
+        } catch(e2) { /* try next */ }
       }
+
+      // ── SOURCE 3: BSE India ───────────────────────────────────────────────
+      if (!rows.length) {
+        try {
+          const today = new Date();
+          const fmt   = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+          const from  = new Date(today); from.setDate(from.getDate() - 45);
+          const bseUrl = `https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fmt(from)}&enddate=${fmt(today)}&ddlbuy=&ddlsell=`;
+          const bseRes = await fetch(bseUrl, {
+            headers: { ...BHdrs, 'Referer': 'https://www.bseindia.com/', 'Origin': 'https://www.bseindia.com' },
+            signal: AbortSignal.timeout(7000),
+          });
+          if (bseRes.ok) {
+            const bseJson = await bseRes.json();
+            const arr = bseJson?.Table || bseJson?.data || bseJson || [];
+            rows = normaliseRows(Array.isArray(arr) ? arr : []);
+          }
+        } catch(e3) { /* all sources failed */ }
+      }
+
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=120');
-      return res.status(200).json({ rows, ts: Date.now(), source: rows.length ? 'NSE' : 'none' });
-    } catch(e) { return res.status(200).json({ rows: [], ts: Date.now(), error: e.message }); }
+      return res.status(200).json({ rows, ts: Date.now(), source: rows.length ? 'live' : 'none' });
+    } catch(e) {
+      return res.status(200).json({ rows: [], ts: Date.now(), error: e.message });
+    }
   }
 
   } catch(e) { return res.status(500).json({error:e.message}); }
