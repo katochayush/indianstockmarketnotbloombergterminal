@@ -254,12 +254,20 @@ module.exports = async function handler(req, res) {
                   : fnoSym === 'FINNIFTY'  ? '^NSMIDCP'
                   : fnoSym + '.NS';
 
-      const r = await fetch(
-        `https://query2.finance.yahoo.com/v7/finance/options/${encodeURIComponent(yhSym)}`,
-        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
-      );
-      if (!r.ok) throw new Error('YH options ' + r.status);
-      const d = await r.json();
+      // Try v8 first, then v7 as fallback
+      let d = null;
+      for (const ver of ['v8','v7']) {
+        try {
+          const rr = await fetch(
+            `https://query2.finance.yahoo.com/${ver}/finance/options/${encodeURIComponent(yhSym)}`,
+            { headers: {'User-Agent':'Mozilla/5.0','Accept':'application/json'}, signal: AbortSignal.timeout(8000) }
+          );
+          if (!rr.ok) continue;
+          const dd = await rr.json();
+          if (dd?.optionChain?.result?.[0]) { d = dd; break; }
+        } catch(_) {}
+      }
+      if (!d) throw new Error('YH options unavailable');
       const result  = d?.optionChain?.result?.[0];
       if (!result)  throw new Error('no option chain result');
 
@@ -323,8 +331,7 @@ module.exports = async function handler(req, res) {
         res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=15');
         return res.status(200).json({ ...d, source: 'nse' });
       } catch(nseErr) {
-        // Both failed — return error so frontend uses its model with a clear label
-        return res.status(500).json({ error: 'Both Yahoo and NSE unavailable: ' + nseErr.message, fallback: true });
+        return res.status(200).json({ fallback: true, error: 'Yahoo: '+yhErr.message+' | NSE: '+nseErr.message });
       }
     }
   }
@@ -428,65 +435,79 @@ module.exports = async function handler(req, res) {
   // ── FII/DII FLOW ─────────────────────────────────────────────────────────
   if (type === 'fiidii') {
     const pn = s => { const n=parseFloat(String(s||'').replace(/,/g,'')); return isNaN(n)?0:n; };
-    const norm = arr => (Array.isArray(arr)?arr:[]).slice(0,30).reduce((out,r)=>{
-      const fb=pn(r.fiiBuy||r['FII BUY']||r.buyValue||0);
-      const fs=pn(r.fiiSell||r['FII SELL']||r.sellValue||0);
-      const db=pn(r.diiBuy||r['DII BUY']||r.diiBuyValue||0);
-      const ds=pn(r.diiSell||r['DII SELL']||r.diiSellValue||0);
-      const dt=r.date||r.Date||r.tradeDate||'';
+    const norm = (arr, limit=30) => (Array.isArray(arr)?arr:[]).slice(-limit).reduce((out,r)=>{
+      const fb=pn(r.fiiBuy||r['FII BUY']||r.buyValue||r.BUY_AMT||0);
+      const fs=pn(r.fiiSell||r['FII SELL']||r.sellValue||r.SELL_AMT||0);
+      const db=pn(r.diiBuy||r['DII BUY']||r.diiBuyValue||r.DII_BUY_AMT||0);
+      const ds=pn(r.diiSell||r['DII SELL']||r.diiSellValue||r.DII_SELL_AMT||0);
+      const dt=r.date||r.Date||r.tradeDate||r.TRADE_DATE||'';
       if(dt&&(fb||fs)) out.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
       return out;
     },[]);
 
-    // Run all 3 sources in parallel — first one that returns data wins
-    // Total budget: 8 seconds (Vercel limit is 10s)
+    const pad2 = n => String(n).padStart(2,'0');
+
+    // NSE: fetch with date range for 30 days of data
     const tryNSE = async () => {
       const cookie = await nseSession().catch(()=>'');
-      const hdrs = {...H, 'Referer':'https://www.nseindia.com/', ...(cookie?{Cookie:cookie}:{})};
+      const hdrs = {...H,'Referer':'https://www.nseindia.com/',...(cookie?{Cookie:cookie}:{})};
+      // NSE fiidiiTradeReact returns last 30 trading days
       const r = await fetch('https://www.nseindia.com/api/fiidiiTradeReact',
-        {headers:hdrs, signal:AbortSignal.timeout(6000)});
+        {headers:hdrs, signal:AbortSignal.timeout(7000)});
       if(!r.ok) throw new Error('NSE '+r.status);
       const j = await r.json();
-      const rows = norm(Array.isArray(j)?j:(j.data||[]));
-      if(!rows.length) throw new Error('NSE empty');
+      const arr = Array.isArray(j)?j:(j.data||[]);
+      const rows = norm(arr, 30);
+      if(rows.length < 2) throw new Error('NSE insufficient: '+rows.length);
       return rows;
     };
 
+    // MoneyControl: returns last 30 days
     const tryMC = async () => {
       const r = await fetch('https://priceapi.moneycontrol.com/pricefeed/notmobile/getfiidii',
         {headers:{...H,'Referer':'https://www.moneycontrol.com/'}, signal:AbortSignal.timeout(6000)});
       if(!r.ok) throw new Error('MC '+r.status);
       const j = await r.json();
-      const rows = norm(j?.data||j?.result||(Array.isArray(j)?j:[]));
-      if(!rows.length) throw new Error('MC empty');
+      const rows = norm(j?.data||j?.result||(Array.isArray(j)?j:[]), 30);
+      if(rows.length < 2) throw new Error('MC insufficient: '+rows.length);
       return rows;
     };
 
+    // BSE: returns date-range data (most reliable for history)
     const tryBSE = async () => {
-      const pad2=n=>String(n).padStart(2,'0');
-      const t=new Date(),f=new Date(t); f.setDate(f.getDate()-60);
+      const t=new Date(), f=new Date(t); f.setDate(f.getDate()-45);
       const fd=d=>`${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
       const r = await fetch(
-        `https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(f)}&enddate=${fd(t)}`,
-        {headers:{...H,'Referer':'https://www.bseindia.com/'}, signal:AbortSignal.timeout(6000)});
+        `https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(f)}&enddate=${fd(t)}&ddlbuy=&ddlsell=`,
+        {headers:{...H,'Referer':'https://www.bseindia.com/','Origin':'https://www.bseindia.com'}, signal:AbortSignal.timeout(6000)});
       if(!r.ok) throw new Error('BSE '+r.status);
       const j = await r.json();
       const arr = j?.Table||j?.data||(Array.isArray(j)?j:[]);
-      const rows = norm(arr);
-      if(!rows.length) throw new Error('BSE empty');
+      const rows = norm(arr, 30);
+      if(rows.length < 2) throw new Error('BSE insufficient: '+rows.length);
+      return rows;
+    };
+
+    // Trendlyne public endpoint — no auth needed
+    const tryTrendlyne = async () => {
+      const r = await fetch('https://trendlyne.com/macro/fii-dii-data/api/',
+        {headers:{...H,'Referer':'https://trendlyne.com/'}, signal:AbortSignal.timeout(6000)});
+      if(!r.ok) throw new Error('TL '+r.status);
+      const j = await r.json();
+      const arr = j?.data||(Array.isArray(j)?j:[]);
+      const rows = norm(arr, 30);
+      if(rows.length < 2) throw new Error('TL insufficient: '+rows.length);
       return rows;
     };
 
     try {
-      // Race all 3 — take whichever responds first with data
-      const rows = await Promise.any([tryNSE(), tryMC(), tryBSE()]);
+      const rows = await Promise.any([tryNSE(), tryMC(), tryBSE(), tryTrendlyne()]);
       res.setHeader('Cache-Control','s-maxage=1800,stale-while-revalidate=300');
       return res.status(200).json({rows, ts:Date.now(), source:'live'});
     } catch(e) {
-      // All 3 failed — return empty so client shows SIM
       res.setHeader('Cache-Control','s-maxage=60');
       return res.status(200).json({rows:[], ts:Date.now(), source:'none',
-        error: e?.errors?.map(x=>x.message).join(' | ') || e.message});
+        error: (e?.errors||[]).map(x=>x.message).join(' | ')||e.message});
     }
   }
 
