@@ -7007,32 +7007,42 @@ async function initFiiDii() {
 async function loadFiiDii(force = false) {
   const badge = document.getElementById('fii-live-badge');
   const upd   = document.getElementById('fii-updated');
-  if (badge) badge.textContent = '⏳';
+  if (badge) { badge.textContent = '⏳'; badge.style.background = 'rgba(255,200,0,.2)'; }
+  if (upd)   upd.textContent = 'Fetching…';
 
-  try {
-    const j = await apiFetch({ type: 'fiidii' }, 12000);
-    let rows = j?.rows || [];
-
-    // If NSE returned empty (CORS block in Vercel serverless), use fallback
-    if (!rows.length) {
-      rows = fiiMockData();
-      if (upd) upd.textContent = 'NSE data unavailable — showing simulated data';
-      if (badge) { badge.textContent = 'SIM'; badge.style.background = 'rgba(255,200,0,.3)'; }
-    } else {
-      const ts = j.ts ? new Date(j.ts).toLocaleTimeString('en-IN') : '';
-      if (upd) upd.textContent = `Updated: ${ts} · Source: NSE`;
-      if (badge) { badge.textContent = 'LIVE'; badge.style.background = ''; }
-    }
-
-    _fiiData = { rows };
-    renderFiiDii();
-  } catch(e) {
-    // Full fallback
-    _fiiData = { rows: fiiMockData() };
-    if (badge) { badge.textContent = 'SIM'; badge.style.background = 'rgba(255,200,0,.3)'; }
-    if (upd) upd.textContent = 'Using simulated data';
+  // Always show simulated data immediately so UI is never blank
+  if (!_fiiData?.rows?.length) {
+    _fiiData = { rows: fiiMockData(), simulated: true };
     renderFiiDii();
   }
+
+  // Then try real API with a 6s timeout
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch('/api/stock?type=fiidii', { signal: controller.signal });
+    clearTimeout(tid);
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j    = await res.json();
+    const rows = j?.rows || [];
+
+    if (rows.length >= 3) {
+      _fiiData = { rows, simulated: false };
+      const ts = j.ts ? new Date(j.ts).toLocaleTimeString('en-IN') : '';
+      if (badge) { badge.textContent = 'LIVE'; badge.style.background = 'rgba(0,210,106,.2)'; }
+      if (upd)   upd.textContent = 'Updated: ' + ts + ' · NSE';
+    } else {
+      throw new Error('empty');
+    }
+  } catch(e) {
+    // Keep showing simulated data
+    _fiiData = { rows: _fiiData?.rows?.length ? _fiiData.rows : fiiMockData(), simulated: true };
+    if (badge) { badge.textContent = 'SIM'; badge.style.background = 'rgba(255,200,0,.25)'; }
+    if (upd)   upd.textContent = 'NSE unavailable — simulated data';
+  }
+
+  renderFiiDii();
 }
 
 function renderFiiDii() {
@@ -7490,10 +7500,7 @@ function loadChartJs(cb) {
       </div>
     </div>
 
-    <!-- Loading overlay -->
-    <div id="fii-loading" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:10">
-      <div style="color:var(--sf);font-family:DM Mono,monospace;font-size:12px">⏳ Fetching institutional flow data…</div>
-    </div>
+
 
   </div>
 </div>
