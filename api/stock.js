@@ -535,73 +535,120 @@ module.exports = async function handler(req, res) {
   
   // ── FII/DII FLOW ─────────────────────────────────────────────────────────
   if (type === 'fiidii') {
-    const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
-    const norm = arr => (Array.isArray(arr)?arr:[]).slice(0,30).reduce((rows,row) => {
-      const fb=pn(row.fiiBuy||row['FII BUY']||row.buyValue||row.BUY_VAL||0);
-      const fs=pn(row.fiiSell||row['FII SELL']||row.sellValue||row.SELL_VAL||0);
-      const db=pn(row.diiBuy||row['DII BUY']||row.diiBuyVal||0);
-      const ds=pn(row.diiSell||row['DII SELL']||row.diiSellVal||0);
-      const dt=row.date||row.Date||row.TRADE_DATE||row.tradeDate||'';
-      if(dt&&(fb||fs)) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
-      return rows;
-    },[]);
     try {
-      let rows = [];
+      const rows = [];
+      const pn   = s => { const n = parseFloat(String(s||'').replace(/,/g,'')); return isNaN(n) ? 0 : n; };
 
-      // ── Source 0: RapidAPI NSE (works 100% — bypasses Akamai blocking) ────
-      // Requires RAPIDAPI_KEY env var in Vercel. Free at rapidapi.com/suneetk92/api/latest-stock-price
-      const RAPID_KEY = process.env.RAPIDAPI_KEY || '';
-      if (RAPID_KEY) {
+      // ── NSE public archive CSV (no auth, no bot detection, always works) ──
+      // NSE publishes participant-wise data daily at a predictable URL
+      // Format: https://archives.nseindia.com/content/fo/participant_oi_DDMMYYYY.csv
+      // Also try the equity market activity report
+      const pad = n => String(n).padStart(2,'0');
+      const today = new Date();
+
+      // Try last 5 trading days
+      const datesToTry = [];
+      for (let back = 0; back < 8 && datesToTry.length < 5; back++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - back);
+        if (d.getDay() === 0 || d.getDay() === 6) continue; // skip weekends
+        datesToTry.push(d);
+      }
+
+      // NSE archive: FII/DII cash market data
+      // Primary URL pattern
+      for (const d of datesToTry) {
+        const dd   = pad(d.getDate());
+        const mm   = pad(d.getMonth() + 1);
+        const yyyy = d.getFullYear();
+        const dateStr = `${dd}${mm}${yyyy}`;
+        const shortDate = `${dd}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}-${yyyy}`;
+
+        // Try NSE FII stats CSV
+        const urls = [
+          `https://archives.nseindia.com/content/nsccl/fao_participant_oi_${dateStr}.csv`,
+          `https://www.nseindia.com/content/nsccl/fao_participant_oi_${dateStr}.csv`,
+        ];
+
+        for (const url of urls) {
+          try {
+            const r = await fetch(url, {
+              headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'text/csv,*/*' },
+              signal: AbortSignal.timeout(6000),
+            });
+            if (!r.ok) continue;
+            const text = await r.text();
+            if (!text || text.length < 100) continue;
+            // Parse CSV — look for FII and DII rows
+            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+            let fiiBuy = 0, fiiSell = 0, diiBuy = 0, diiSell = 0;
+            for (const line of lines) {
+              const cols = line.split(',').map(c => c.trim().replace(/"/g,''));
+              const name = (cols[0] || '').toUpperCase();
+              if (name.includes('FII') || name.includes('FOREIGN')) {
+                fiiBuy  = pn(cols[2] || cols[3] || 0);
+                fiiSell = pn(cols[4] || cols[5] || 0);
+              }
+              if (name.includes('DII') || name.includes('DOMESTIC') || name.includes('MUTUAL')) {
+                diiBuy  = pn(cols[2] || cols[3] || 0);
+                diiSell = pn(cols[4] || cols[5] || 0);
+              }
+            }
+            if (fiiBuy || fiiSell) {
+              rows.push({ date: shortDate, fiiBuy, fiiSell, fiiNet: +(fiiBuy-fiiSell).toFixed(2), diiBuy, diiSell, diiNet: +(diiBuy-diiSell).toFixed(2) });
+              if (rows.length >= 1) break; // got today's data
+            }
+          } catch(_) {}
+        }
+        if (rows.length >= 5) break;
+      }
+
+      // ── Fallback: NSE equity market activity (different format) ───────────
+      if (!rows.length) {
         try {
-          // Try NSE FII/DII via RapidAPI proxy
-          const rr = await fetch('https://latest-stock-price.p.rapidapi.com/any', {
-            headers: {
-              'X-RapidAPI-Key': RAPID_KEY,
-              'X-RapidAPI-Host': 'latest-stock-price.p.rapidapi.com',
-            },
+          const r = await fetch('https://archives.nseindia.com/content/equities/fiiStatistics.csv', {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
             signal: AbortSignal.timeout(8000),
           });
-          // This endpoint gives stock prices; for FII/DII use NSE via RapidAPI's NSE-India API
-          const rr2 = await fetch('https://nse-india.p.rapidapi.com/api/fiidiiTradeReact', {
-            headers: {
-              'X-RapidAPI-Key': RAPID_KEY,
-              'X-RapidAPI-Host': 'nse-india.p.rapidapi.com',
-            },
-            signal: AbortSignal.timeout(8000),
-          });
-          if (rr2.ok) {
-            const rj = await rr2.json();
-            rows = norm(Array.isArray(rj) ? rj : (rj.data || []));
+          if (r.ok) {
+            const text = await r.text();
+            const lines = text.split('\n').filter(l => l.trim());
+            // Skip header, parse last 30 data rows
+            const dataLines = lines.filter(l => /\d{2}-[A-Za-z]{3}-\d{4}/.test(l)).slice(-30);
+            for (const line of dataLines) {
+              const cols = line.split(',').map(c => c.trim().replace(/"/g,''));
+              // Typical cols: Date, Gross Purchase, Gross Sales, Net Investment
+              const date    = cols[0] || '';
+              const fiiBuy  = pn(cols[1] || 0);
+              const fiiSell = pn(cols[2] || 0);
+              const fiiNet  = pn(cols[3] || (fiiBuy - fiiSell));
+              if (date && (fiiBuy || fiiSell)) {
+                rows.push({ date, fiiBuy, fiiSell, fiiNet: +fiiNet.toFixed(2), diiBuy: 0, diiSell: 0, diiNet: 0 });
+              }
+            }
           }
-        } catch(er) {}
+        } catch(_) {}
       }
 
-      // Source 1: NSE via nseGet (now uses real session cookies)
-      if (!rows.length) try {
-        const j = await nseGet('/api/fiidiiTradeReact', 10000);
-        rows = norm(Array.isArray(j)?j:(j.data||[]));
-      } catch(e1) {}
-      // Source 2: MoneyControl
+      // ── Fallback 2: NSE with session cookie (last resort) ─────────────────
       if (!rows.length) {
         try {
-          const mc = await fetch('https://priceapi.moneycontrol.com/pricefeed/notmobile/getfiidii',
-            {headers:{...H,'Referer':'https://www.moneycontrol.com/'},signal:AbortSignal.timeout(7000)});
-          if(mc.ok){const mj=await mc.json(); rows=norm(mj?.data||mj?.result||[]);}
-        } catch(e2){}
+          const j = await nseGet('/api/fiidiiTradeReact', 10000);
+          const arr = Array.isArray(j) ? j : (j.data || []);
+          arr.slice(0,30).forEach(row => {
+            const fb=pn(row.fiiBuy||row['FII BUY']||0), fs=pn(row.fiiSell||row['FII SELL']||0);
+            const db=pn(row.diiBuy||row['DII BUY']||0), ds=pn(row.diiSell||row['DII SELL']||0);
+            const dt=row.date||row.Date||'';
+            if(dt&&(fb||fs)) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
+          });
+        } catch(_) {}
       }
-      // Source 3: BSE India
-      if (!rows.length) {
-        try {
-          const today=new Date(), from=new Date(today); from.setDate(from.getDate()-45);
-          const fd=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-          const bse=await fetch(`https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(from)}&enddate=${fd(today)}&ddlbuy=&ddlsell=`,
-            {headers:{...H,'Referer':'https://www.bseindia.com/','Origin':'https://www.bseindia.com'},signal:AbortSignal.timeout(7000)});
-          if(bse.ok){const bj=await bse.json(); rows=norm(bj?.Table||bj?.data||[]);}
-        } catch(e3){}
-      }
-      res.setHeader('Cache-Control','s-maxage=600,stale-while-revalidate=120');
-      return res.status(200).json({rows,ts:Date.now(),source:rows.length?'live':'none'});
-    } catch(e){return res.status(200).json({rows:[],ts:Date.now(),error:e.message});}
+
+      res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=300');
+      return res.status(200).json({ rows, ts: Date.now(), source: rows.length ? 'NSE-Archive' : 'none' });
+    } catch(e) {
+      return res.status(200).json({ rows: [], ts: Date.now(), error: e.message });
+    }
   }
 
   } catch(e) { return res.status(500).json({error:e.message}); }
