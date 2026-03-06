@@ -1336,8 +1336,8 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
     <!-- FII + Macro -->
     <div class="bp" style="background:var(--bg2)">
       <div class="ph">FII / DII Flow</div>
-      <div class="fb"><div class="fr2"><span class="fl2">FII Net</span><span class="fv2 s" id="fii-net">▼ −₹1,072 Cr</span></div><div class="fbt"><div class="fbb" id="fii-bar" style="width:28%"></div><div class="fbs"></div></div><div class="fn" id="fii-sub">Buy ₹2,840 Cr · Sell ₹3,912 Cr</div></div>
-      <div class="fb"><div class="fr2"><span class="fl2">DII Net</span><span class="fv2 b" id="dii-net">▲ +₹3,364 Cr</span></div><div class="fbt"><div class="fbb" id="dii-bar" style="width:71%"></div><div class="fbs"></div></div><div class="fn" id="dii-sub">Buy ₹13,204 Cr · Sell ₹9,840 Cr</div></div>
+      <div class="fb"><div class="fr2"><span class="fl2">FII Net</span><span class="fv2" id="fii-net">⏳</span></div><div class="fbt"><div class="fbb" id="fii-bar" style="width:50%"></div><div class="fbs"></div></div><div class="fn" id="fii-sub">Loading…</div></div>
+      <div class="fb"><div class="fr2"><span class="fl2">DII Net</span><span class="fv2" id="dii-net">⏳</span></div><div class="fbt"><div class="fbb" id="dii-bar" style="width:50%"></div><div class="fbs"></div></div><div class="fn" id="dii-sub">Loading…</div></div>
       <div style="margin-top:8px">
         <div class="ph" style="font-size:10px">Macro</div>
         <div class="c" style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:15px">📈</span><div><div style="font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:.08em">GDP FY25</div><div style="font-family:DM Mono,monospace;font-size:13px;color:#fff">7.2%</div><div style="font-size:8px;color:var(--gn)">▲ Strongest G20</div></div></div>
@@ -3054,6 +3054,8 @@ function updateIntelFeed() {
 // Boot: fetch news immediately then every 3 mins
 fetchLiveNews();
 setInterval(fetchLiveNews, 180000);
+// Pre-fetch FII/DII on load so Markets tab widget shows real data
+setTimeout(() => { if (typeof loadFiiDii === 'function') loadFiiDii(false); }, 3000);
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -7048,6 +7050,28 @@ async function loadFiiDii(force = false) {
 function renderFiiDii() {
   if (!_fiiData?.rows?.length) return;
   const rows = _fiiData.rows;
+
+  // ── Update Markets tab FII/DII widget too ─────────────────────────────
+  const today0 = rows[rows.length - 1];
+  if (today0) {
+    const fNet = today0.fiiNet, dNet = today0.diiNet;
+    const fEl = document.getElementById('fii-net');
+    const dEl = document.getElementById('dii-net');
+    const fSub = document.getElementById('fii-sub');
+    const dSub = document.getElementById('dii-sub');
+    const fBar = document.getElementById('fii-bar');
+    const dBar = document.getElementById('dii-bar');
+    const fmt2 = v => '₹' + Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:0}) + ' Cr';
+    if (fEl) { fEl.textContent = (fNet>=0?'▲ +':'▼ −')+fmt2(fNet); fEl.className = 'fv2 '+(fNet>=0?'b':'s'); }
+    if (dEl) { dEl.textContent = (dNet>=0?'▲ +':'▼ −')+fmt2(dNet); dEl.className = 'fv2 '+(dNet>=0?'b':'s'); }
+    if (fSub) fSub.textContent = 'Buy '+fmt2(today0.fiiBuy)+' · Sell '+fmt2(today0.fiiSell);
+    if (dSub) dSub.textContent = 'Buy '+fmt2(today0.diiBuy)+' · Sell '+fmt2(today0.diiSell);
+    // Bar width = net buy ratio 0-100%
+    const fTotal = today0.fiiBuy + today0.fiiSell || 1;
+    const dTotal = today0.diiBuy + today0.diiSell || 1;
+    if (fBar) fBar.style.width = Math.round(today0.fiiBuy/fTotal*100)+'%';
+    if (dBar) dBar.style.width = Math.round(today0.diiBuy/dTotal*100)+'%';
+  }
 
   // ── Summary strip ──────────────────────────────────────────────────────
   const today  = rows[rows.length - 1];
