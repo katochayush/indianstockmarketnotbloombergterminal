@@ -4211,7 +4211,7 @@ async function loadFno(sym, btn) {
   document.getElementById('fno-oi-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--dim2)">Fetching option chain…</td></tr>';
 
   try {
-    const j = await apiFetch({ type: 'fno', sym }, 12000);
+    const j = await apiFetch({ type: 'fno', sym }, 15000);
     const st = document.getElementById('fno-status-label');
 
     if (j && j.records && j.records.data && j.records.data.length) {
@@ -4221,12 +4221,15 @@ async function loadFno(sym, btn) {
       if (st) st.innerHTML = `<span style="color:${col}">${src}</span>`;
       renderFnoTab(j, sym);
     } else if (j && j.fallback) {
-      // Both sources failed on server
+      if (st) st.innerHTML = `<span style="color:var(--rd)" title="${j.error||''}">⚠️ Live unavailable · Estimated model</span>`;
       renderFnoFallback(sym);
     } else {
+      if (st) st.innerHTML = `<span style="color:var(--yl)">⚠️ No data returned</span>`;
       renderFnoFallback(sym);
     }
   } catch(e) {
+    const st = document.getElementById('fno-status-label');
+    if (st) st.innerHTML = `<span style="color:var(--rd)">⚠️ ${e.message}</span>`;
     renderFnoFallback(sym);
   }
 }
