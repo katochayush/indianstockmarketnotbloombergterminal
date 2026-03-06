@@ -498,6 +498,30 @@ module.exports = async function handler(req, res) {
     res.setHeader('Cache-Control','s-maxage=10, stale-while-revalidate=5');
     return res.status(200).json({quoteResponse:{result:[toResult(sym,pd.lastPrice,pd.previousClose,pd.open,pd.intraDayHighLow?.max,pd.intraDayHighLow?.min,pd.totalTradedVolume,d.priceInfo?.weekHighLow?.max,d.priceInfo?.weekHighLow?.min,d.info?.companyName||tk)]}});
 
+  
+  // ── FII/DII FLOW ─────────────────────────────────────────────────────────
+  if (type === 'fiidii') {
+    try {
+      const hdrs = {'User-Agent':'Mozilla/5.0','Accept':'application/json, */*','Referer':'https://www.nseindia.com/'};
+      const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
+      const rows = [];
+      try {
+        const r1 = await fetch('https://www.nseindia.com/api/fiidiiTradeReact',{headers:hdrs,signal:AbortSignal.timeout(8000)});
+        if (r1.ok) {
+          const arr = await r1.json().then(j=>Array.isArray(j)?j:(j.data||[]));
+          arr.slice(0,30).forEach(row => {
+            const fb=pn(row.fiiBuy||row['FII BUY']||0), fs=pn(row.fiiSell||row['FII SELL']||0);
+            const db=pn(row.diiBuy||row['DII BUY']||0), ds=pn(row.diiSell||row['DII SELL']||0);
+            const date=row.date||row.Date||row.tradeDate||'';
+            if(date) rows.push({date,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
+          });
+        }
+      } catch(_){}
+      res.setHeader('Cache-Control','s-maxage=300,stale-while-revalidate=60');
+      return res.status(200).json({rows,ts:Date.now(),source:'NSE'});
+    } catch(e){ return res.status(200).json({rows:[],ts:Date.now(),error:e.message}); }
+  }
+
   } catch(e) { return res.status(500).json({error:e.message}); }
 };
 
