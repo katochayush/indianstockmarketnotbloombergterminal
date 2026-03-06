@@ -466,7 +466,7 @@ body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-
 /* ═══════════════════════════════════════════════════════════
    MARKET OPEN SPLASH
 ═══════════════════════════════════════════════════════════ */
-#mkt-splash{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:8000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;display:none}
+#mkt-splash{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:8000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 #mkt-splash.show{display:flex}
 .ms-ring{width:80px;height:80px;border:3px solid var(--br2);border-top-color:var(--sf);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -2494,7 +2494,7 @@ setInterval(updateClock,1000);updateClock();
 function tab(n,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));
-  document.getElementById('pg-'+n).classList.add('on');
+  const pgEl=document.getElementById('pg-'+n); if(!pgEl){console.warn('tab: missing page',n);return;} pgEl.classList.add('on');
   // Mark active in both desktop nav (by data-tab) and passed element
   document.querySelectorAll('.nt[data-tab="'+n+'"]').forEach(t=>t.classList.add('on'));
   if(el && !el.dataset.tab) el.classList.add('on'); // legacy support
@@ -3054,8 +3054,6 @@ function updateIntelFeed() {
 // Boot: fetch news immediately then every 3 mins
 fetchLiveNews();
 setInterval(fetchLiveNews, 180000);
-// Pre-fetch FII/DII on load so Markets tab widget shows real data
-setTimeout(() => { if (typeof loadFiiDii === 'function') loadFiiDii(false); }, 3000);
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4840,6 +4838,41 @@ function renderPfPerformers(){
   renderList('pf-best',sorted.slice(0,5));
   renderList('pf-worst',sorted.slice(-5).reverse());
 }
+// ── MARKET OPENING SPLASH ────────────────────────────────────────────────────
+(function() {
+  const splash   = document.getElementById('mkt-splash');
+  const msTitle  = document.getElementById('ms-title');
+  const msSub    = document.getElementById('ms-sub');
+  const msCount  = document.getElementById('ms-count');
+  if (!splash) return;
+
+  const now   = new Date();
+  const h     = now.getHours(), m = now.getMinutes();
+  const isOpeningBell = (h === 9 && m >= 15 && m <= 17); // 9:15–9:17 AM only
+
+  if (!isOpeningBell) {
+    // Not opening time — never show splash
+    splash.style.display = 'none';
+    return;
+  }
+
+  // Show countdown only at market open
+  splash.style.display = 'flex';
+  let count = 3;
+  if (msCount) msCount.textContent = count;
+  const timer = setInterval(() => {
+    count--;
+    if (msCount) msCount.textContent = count;
+    if (count <= 0) {
+      clearInterval(timer);
+      splash.style.opacity = '1';
+      splash.style.transition = 'opacity 0.5s';
+      requestAnimationFrame(() => { splash.style.opacity = '0'; });
+      setTimeout(() => { splash.style.display = 'none'; }, 500);
+    }
+  }, 1000);
+})();
+
 // Auto-refresh portfolio every 15s when tab is visible
 setInterval(() => {
   if (document.getElementById('pg-portfolio')?.classList.contains('on') && portfolio.length) {
@@ -7076,3 +7109,352 @@ async function loadFiiDii(force = false) {
   if (upd) upd.innerHTML = '<span style="color:var(--yl)">⚠️ Simulated — NSE blocked. <a href="https://www.nseindia.com/reports-and-publications/fii-dii-data" target="_blank" style="color:var(--sf)">View real data ↗</a></span>';
   renderFiiDii();
 }
+
+
+
+
+// ── FII/DII RENDER FUNCTIONS ──────────────────────────────────────────────────
+
+function initFiiDii() {
+  if (_fiiData?.rows?.length) { renderFiiDii(); return; }
+  loadFiiDii(false);
+}
+
+function renderFiiDii() {
+  if (!_fiiData?.rows?.length) return;
+  const rows = _fiiData.rows;
+
+  // Update Markets tab FII/DII widget
+  const today0 = rows[rows.length - 1];
+  if (today0) {
+    const fNet = today0.fiiNet, dNet = today0.diiNet;
+    const fmt2 = v => '₹' + Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:0}) + ' Cr';
+    const fEl = document.getElementById('fii-net');
+    const dEl = document.getElementById('dii-net');
+    if (fEl) { fEl.textContent = (fNet>=0?'▲ +':'▼ −')+fmt2(fNet); fEl.className = 'fv2 '+(fNet>=0?'b':'s'); }
+    if (dEl) { dEl.textContent = (dNet>=0?'▲ +':'▼ −')+fmt2(dNet); dEl.className = 'fv2 '+(dNet>=0?'b':'s'); }
+    const fSub = document.getElementById('fii-sub');
+    const dSub = document.getElementById('dii-sub');
+    if (fSub) fSub.textContent = 'Buy '+fmt2(today0.fiiBuy)+' · Sell '+fmt2(today0.fiiSell);
+    if (dSub) dSub.textContent = 'Buy '+fmt2(today0.diiBuy)+' · Sell '+fmt2(today0.diiSell);
+    const fBar = document.getElementById('fii-bar');
+    const dBar = document.getElementById('dii-bar');
+    const fT = today0.fiiBuy + today0.fiiSell || 1;
+    const dT = today0.diiBuy + today0.diiSell || 1;
+    if (fBar) fBar.style.width = Math.round(today0.fiiBuy/fT*100)+'%';
+    if (dBar) dBar.style.width = Math.round(today0.diiBuy/dT*100)+'%';
+  }
+
+  const fmt = v => '₹' + Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:0}) + ' Cr';
+  const fmtNet = (v, id) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.textContent = (v>=0?'▲ +':'▼ ')+fmt(v);
+    el.style.color = v>=0 ? 'var(--gn)' : 'var(--rd)';
+  };
+  const set = (id,txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
+
+  const today = rows[rows.length-1];
+  set('fii-buy-today', fmt(today.fiiBuy));
+  set('fii-sell-today', fmt(today.fiiSell));
+  fmtNet(today.fiiNet, 'fii-net-today');
+  set('dii-buy-today', fmt(today.diiBuy));
+  set('dii-sell-today', fmt(today.diiSell));
+  fmtNet(today.diiNet, 'dii-net-today');
+
+  const fiiNet30 = rows.reduce((s,r)=>s+r.fiiNet,0);
+  const diiNet30 = rows.reduce((s,r)=>s+r.diiNet,0);
+  fmtNet(fiiNet30,'fii-net-30d');
+  fmtNet(diiNet30,'dii-net-30d');
+
+  const moodEl = document.getElementById('fii-mood');
+  if (moodEl) {
+    const r5 = rows.slice(-5).reduce((s,r)=>s+r.fiiNet,0);
+    const m = r5>2000?{t:'BULL 🐂',c:'var(--gn)'}:r5>0?{t:'MILD +',c:'var(--gn)'}:r5>-2000?{t:'MILD −',c:'var(--yl)'}:{t:'BEAR 🐻',c:'var(--rd)'};
+    moodEl.textContent=m.t; moodEl.style.color=m.c;
+  }
+  const fiiCard=document.getElementById('fii-net-card');
+  if(fiiCard) fiiCard.style.borderLeft=`3px solid ${today.fiiNet>=0?'var(--gn)':'var(--rd)'}`;
+  const diiCard=document.getElementById('dii-net-card');
+  if(diiCard) diiCard.style.borderLeft=`3px solid ${today.diiNet>=0?'var(--gn)':'var(--rd)'}`;
+
+  renderFiiBarChart();
+  renderFiiCumChart();
+  renderFiiSectorBars();
+  renderFiiTable();
+}
+
+function fiiSetSeg(seg,btn) {
+  _fiiSeg = seg;
+  document.querySelectorAll('#fii-seg .fii-seg-btn').forEach(b=>b.classList.toggle('on',b.dataset.s===seg));
+  renderFiiBarChart();
+}
+
+function fiiSetTable(type,btn) {
+  _fiiTable=type;
+  document.querySelectorAll('.fii-card-hdr .fii-seg-btn').forEach(b=>b.classList.toggle('on',b.textContent.trim().toLowerCase()===type));
+  renderFiiTable();
+}
+
+function loadChartJs(cb) {
+  if (window.Chart) { cb(); return; }
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+  s.onload=cb; document.head.appendChild(s);
+}
+
+function renderFiiBarChart() {
+  if (!_fiiData?.rows?.length) return;
+  const canvas=document.getElementById('fii-bar-chart'); if(!canvas) return;
+  if(!window.Chart){loadChartJs(()=>renderFiiBarChart());return;}
+  if(_fiiBarChart){try{_fiiBarChart.destroy();}catch(e){}}
+  const rows=_fiiData.rows.slice(-20);
+  const labels=rows.map(r=>{const d=new Date(r.date);return isNaN(d)?r.date.slice(0,6):d.getDate()+'/'+(d.getMonth()+1);});
+  const fiiNets=rows.map(r=>r.fiiNet);
+  const diiNets=rows.map(r=>r.diiNet);
+  const isDark=!document.documentElement.classList.contains('light');
+  _fiiBarChart=new Chart(canvas.getContext('2d'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'FII Net',data:fiiNets,backgroundColor:fiiNets.map(v=>v>=0?'rgba(0,210,106,0.7)':'rgba(255,59,59,0.7)'),borderRadius:2},
+      {label:'DII Net',data:diiNets,backgroundColor:diiNets.map(v=>v>=0?'rgba(100,181,246,0.7)':'rgba(251,146,60,0.7)'),borderRadius:2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{color:'#778899',font:{size:9},boxWidth:10}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw>=0?'+':''}₹${Math.round(ctx.raw).toLocaleString('en-IN')} Cr`}}},
+      scales:{
+        x:{grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'},ticks:{color:'#556677',font:{size:8}}},
+        y:{grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'},ticks:{color:'#556677',font:{size:8},callback:v=>(v>=0?'+':'')+Math.round(v/100)/10+'K Cr'}},
+      }
+    }
+  });
+}
+
+function renderFiiCumChart() {
+  if (!_fiiData?.rows?.length) return;
+  const canvas=document.getElementById('fii-cumulative-chart'); if(!canvas) return;
+  if(!window.Chart){loadChartJs(()=>renderFiiCumChart());return;}
+  if(_fiiCumChart){try{_fiiCumChart.destroy();}catch(e){}}
+  const rows=_fiiData.rows;
+  const labels=rows.map(r=>{const d=new Date(r.date);return isNaN(d)?r.date.slice(0,6):d.getDate()+'/'+(d.getMonth()+1);});
+  let fc=0,dc=0;
+  const fiiCums=rows.map(r=>{fc+=r.fiiNet;return +fc.toFixed(0);});
+  const diiCums=rows.map(r=>{dc+=r.diiNet;return +dc.toFixed(0);});
+  const isDark=!document.documentElement.classList.contains('light');
+  _fiiCumChart=new Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'FII Cumulative',data:fiiCums,borderColor:'#00D26A',borderWidth:2,fill:false,tension:0.3,pointRadius:0},
+      {label:'DII Cumulative',data:diiCums,borderColor:'#64B5F6',borderWidth:2,fill:false,tension:0.3,pointRadius:0},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{color:'#778899',font:{size:9},boxWidth:10}},
+        tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw>=0?'+':''}₹${Math.round(ctx.raw).toLocaleString('en-IN')} Cr`}}},
+      scales:{
+        x:{grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'},ticks:{color:'#556677',font:{size:8},maxTicksLimit:8}},
+        y:{grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'},ticks:{color:'#556677',font:{size:8},callback:v=>(v>=0?'+':'')+Math.round(v/100)/10+'K Cr'}},
+      }
+    }
+  });
+}
+
+function renderFiiSectorBars() {
+  const wrap=document.getElementById('fii-sector-bars'); if(!wrap) return;
+  const sectors=[
+    {name:'Banking',fii:35,dii:18},{name:'IT',fii:22,dii:12},{name:'Energy',fii:15,dii:20},
+    {name:'FMCG',fii:-8,dii:25},{name:'Auto',fii:18,dii:10},{name:'Pharma',fii:12,dii:8},
+    {name:'Metals',fii:-5,dii:15},{name:'Infra',fii:6,dii:22},{name:'Real Estate',fii:-3,dii:12},{name:'Telecom',fii:9,dii:6},
+  ];
+  const rows=_fiiData.rows; const today=rows[rows.length-1];
+  const scale=Math.abs(today.fiiNet)/100;
+  const maxVal=Math.max(...sectors.map(s=>Math.abs(s.fii)))*scale;
+  wrap.innerHTML=sectors.map(s=>{
+    const fiiVal=s.fii*scale;
+    const buyPct=s.fii>0?Math.min(50,Math.abs(fiiVal)/maxVal*50):0;
+    const sellPct=s.fii<0?Math.min(50,Math.abs(fiiVal)/maxVal*50):0;
+    const col=s.fii>=0?'var(--gn)':'var(--rd)';
+    return `<div class="fii-sector-row">
+      <div class="fii-sector-name">${s.name}</div>
+      <div class="fii-sector-track">
+        <div class="fii-sector-fill-buy" style="width:${buyPct}%;background:var(--gn)"></div>
+        <div class="fii-sector-fill-sell" style="width:${sellPct}%;background:var(--rd)"></div>
+      </div>
+      <div class="fii-sector-net" style="color:${col}">${s.fii>=0?'+':'−'}₹${Math.round(Math.abs(fiiVal))} Cr</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFiiTable() {
+  const tbody=document.getElementById('fii-tbody'); if(!tbody) return;
+  if(!_fiiData?.rows?.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--dim2);padding:20px">Loading…</td></tr>';return;}
+  const rows=[..._fiiData.rows].reverse();
+  const fmt=v=>v.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  tbody.innerHTML=rows.map((r,i)=>{
+    const net=_fiiTable==='fii'?r.fiiNet:r.diiNet;
+    const buy=_fiiTable==='fii'?r.fiiBuy:r.diiBuy;
+    const sell=_fiiTable==='fii'?r.fiiSell:r.diiSell;
+    const up=net>=0;
+    const prev=rows[i+1]; const prevNet=prev?(_fiiTable==='fii'?prev.fiiNet:prev.diiNet):net;
+    return `<tr>
+      <td style="color:var(--dim2)">${r.date}</td>
+      <td style="color:var(--gn)">₹${fmt(buy)}</td>
+      <td style="color:var(--rd)">₹${fmt(sell)}</td>
+      <td style="color:${up?'var(--gn)':'var(--rd)'};font-weight:700">${up?'▲ +':'▼ '}₹${fmt(Math.abs(net))}</td>
+      <td class="${net>prevNet?'fii-trend-bull':'fii-trend-bear'}">${net>prevNet?'▲':'▼'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Pre-fetch FII/DII on load so Markets tab widget shows real data
+setTimeout(()=>{ if(typeof loadFiiDii==='function') loadFiiDii(false); },3000);
+
+
+</script>
+
+<!-- ══ TAB: OPTIONS P&L CALCULATOR ════════════════════════════════════════ -->
+<div class="pg" id="pg-options">
+  <div class="opt-root">
+    <div class="opt-header">
+      <div>
+        <div class="opt-title">⚙️ OPTIONS P&L CALCULATOR</div>
+        <div class="opt-subtitle">Black-Scholes pricing · Greeks · Payoff diagram · Multi-leg strategies</div>
+      </div>
+      <div class="opt-strategy-btns">
+        <button class="opt-strat-btn on" onclick="optPreset('custom')">✏️ Custom</button>
+        <button class="opt-strat-btn" onclick="optPreset('long_call')">📈 Long Call</button>
+        <button class="opt-strat-btn" onclick="optPreset('long_put')">📉 Long Put</button>
+        <button class="opt-strat-btn" onclick="optPreset('covered_call')">🛡️ Covered Call</button>
+        <button class="opt-strat-btn" onclick="optPreset('straddle')">↕️ Straddle</button>
+        <button class="opt-strat-btn" onclick="optPreset('strangle')">〰️ Strangle</button>
+        <button class="opt-strat-btn" onclick="optPreset('bull_call')">🐂 Bull Call Spread</button>
+        <button class="opt-strat-btn" onclick="optPreset('bear_put')">🐻 Bear Put Spread</button>
+        <button class="opt-strat-btn" onclick="optPreset('iron_condor')">🦅 Iron Condor</button>
+      </div>
+    </div>
+    <div class="opt-body">
+      <div class="opt-left">
+        <div class="opt-section">
+          <div class="opt-section-title">📌 Underlying</div>
+          <div class="opt-row">
+            <div class="opt-field"><div class="opt-label">Symbol</div>
+              <div style="display:flex;gap:6px">
+                <input class="opt-inp" id="opt-sym" placeholder="NIFTY" style="width:100px" oninput="optSymChanged()"/>
+                <button class="opt-fetch-btn" onclick="optFetchSpot()">↻ Fetch</button>
+              </div>
+            </div>
+            <div class="opt-field"><div class="opt-label">Spot Price (₹)</div><input class="opt-inp" id="opt-spot" type="number" placeholder="22500" oninput="optRecalc()"/></div>
+            <div class="opt-field"><div class="opt-label">IV %</div><input class="opt-inp" id="opt-iv" type="number" value="15" step="0.5" oninput="optRecalc()"/><div class="opt-hint" id="opt-iv-hint"></div></div>
+            <div class="opt-field"><div class="opt-label">Risk-Free Rate %</div><input class="opt-inp" id="opt-rf" type="number" value="6.5" step="0.1" oninput="optRecalc()"/></div>
+          </div>
+        </div>
+        <div class="opt-section">
+          <div class="opt-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>📋 Option Legs</span>
+            <button class="opt-add-leg-btn" onclick="optAddLeg()">+ Add Leg</button>
+          </div>
+          <div id="opt-legs-wrap"></div>
+        </div>
+        <div class="opt-section">
+          <div class="opt-section-title">📊 Strategy Summary</div>
+          <div class="opt-metrics-grid">
+            <div class="opt-metric"><div class="opt-metric-l">Max Profit</div><div class="opt-metric-v" id="om-maxprofit">—</div></div>
+            <div class="opt-metric"><div class="opt-metric-l">Max Loss</div><div class="opt-metric-v" id="om-maxloss">—</div></div>
+            <div class="opt-metric"><div class="opt-metric-l">Breakeven(s)</div><div class="opt-metric-v" id="om-be">—</div></div>
+            <div class="opt-metric"><div class="opt-metric-l">Net Premium</div><div class="opt-metric-v" id="om-net">—</div></div>
+            <div class="opt-metric"><div class="opt-metric-l">Net Delta</div><div class="opt-metric-v" id="om-delta">—</div></div>
+            <div class="opt-metric"><div class="opt-metric-l">Net Theta/day</div><div class="opt-metric-v" id="om-theta">—</div></div>
+            <div class="opt-metric"><div class="opt-metric-l">Net Vega</div><div class="opt-metric-v" id="om-vega">—</div></div>
+            <div class="opt-metric"><div class="opt-metric-l">Net Gamma</div><div class="opt-metric-v" id="om-gamma">—</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="opt-right">
+        <div class="opt-chart-card">
+          <div class="opt-chart-hdr">📉 Payoff at Expiry
+            <label style="font-size:9px;color:var(--dim2);font-family:DM Mono,monospace"><input type="checkbox" id="opt-show-today" onchange="optRecalc()" checked style="margin-right:3px"/>Today P&L</label>
+          </div>
+          <div style="position:relative;height:280px"><canvas id="opt-payoff-chart"></canvas></div>
+          <div class="opt-chart-legend" id="opt-payoff-legend"></div>
+        </div>
+        <div class="opt-chart-card">
+          <div class="opt-chart-hdr">🔬 Greeks Breakdown</div>
+          <div style="overflow-x:auto">
+            <table class="opt-greeks-table">
+              <thead><tr><th>Leg</th><th>Type</th><th>Strike</th><th>Expiry</th><th>Premium</th><th>BS Price</th><th>Delta</th><th>Gamma</th><th>Theta/d</th><th>Vega</th><th>IV%</th></tr></thead>
+              <tbody id="opt-greeks-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: FII/DII ═══════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-fiidii">
+  <div class="fii-root">
+    <div class="fii-header">
+      <div>
+        <div class="fii-title">🏦 FII / DII INSTITUTIONAL FLOWS</div>
+        <div class="fii-sub">NSE official data · Cash · Updated daily after market close</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge bg-lv" id="fii-live-badge" style="font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(255,153,51,.2);color:var(--sf);font-family:DM Mono,monospace">LIVE</span>
+        <span id="fii-updated" style="font-size:9px;color:var(--dim2);font-family:DM Mono,monospace">—</span>
+        <button class="fii-refresh-btn" onclick="loadFiiDii(true)">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="fii-summary-strip">
+      <div class="fii-sum-card fii-card-buy"><div class="fii-sum-label">FII BUY</div><div class="fii-sum-val" id="fii-buy-today">—</div></div>
+      <div class="fii-sum-card fii-card-sell"><div class="fii-sum-label">FII SELL</div><div class="fii-sum-val" id="fii-sell-today">—</div></div>
+      <div class="fii-sum-card" id="fii-net-card"><div class="fii-sum-label">FII NET</div><div class="fii-sum-val" id="fii-net-today">—</div></div>
+      <div class="fii-divider"></div>
+      <div class="fii-sum-card fii-card-buy"><div class="fii-sum-label">DII BUY</div><div class="fii-sum-val" id="dii-buy-today">—</div></div>
+      <div class="fii-sum-card fii-card-sell"><div class="fii-sum-label">DII SELL</div><div class="fii-sum-val" id="dii-sell-today">—</div></div>
+      <div class="fii-sum-card" id="dii-net-card"><div class="fii-sum-label">DII NET</div><div class="fii-sum-val" id="dii-net-today">—</div></div>
+      <div class="fii-divider"></div>
+      <div class="fii-sum-card"><div class="fii-sum-label">30D FII NET</div><div class="fii-sum-val" id="fii-net-30d">—</div></div>
+      <div class="fii-sum-card"><div class="fii-sum-label">30D DII NET</div><div class="fii-sum-val" id="dii-net-30d">—</div></div>
+      <div class="fii-sum-card"><div class="fii-sum-label">MARKET MOOD</div><div class="fii-sum-val" id="fii-mood">—</div></div>
+    </div>
+    <div class="fii-body">
+      <div class="fii-left">
+        <div class="fii-card">
+          <div class="fii-card-hdr">📊 Daily Net Flow — Last 20 Days
+            <div class="fii-seg" id="fii-seg">
+              <button class="fii-seg-btn on" data-s="cash" onclick="fiiSetSeg('cash',this)">Cash</button>
+              <button class="fii-seg-btn" data-s="total" onclick="fiiSetSeg('total',this)">Total</button>
+            </div>
+          </div>
+          <div style="position:relative;height:220px"><canvas id="fii-bar-chart"></canvas></div>
+        </div>
+        <div class="fii-card">
+          <div class="fii-card-hdr">📈 Cumulative FII vs DII Net Flow</div>
+          <div style="position:relative;height:180px"><canvas id="fii-cumulative-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="fii-right">
+        <div class="fii-card">
+          <div class="fii-card-hdr">🗂 Estimated Sector Activity</div>
+          <div id="fii-sector-bars"></div>
+        </div>
+        <div class="fii-card" style="padding:0;overflow:hidden">
+          <div class="fii-card-hdr" style="padding:12px 14px 0">📋 Daily FII/DII Data
+            <div style="display:flex;gap:4px">
+              <button class="fii-seg-btn on" onclick="fiiSetTable('fii',this)">FII</button>
+              <button class="fii-seg-btn" onclick="fiiSetTable('dii',this)">DII</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+            <table class="fii-table">
+              <thead><tr><th>Date</th><th>Buy (₹Cr)</th><th>Sell (₹Cr)</th><th>Net (₹Cr)</th><th>Trend</th></tr></thead>
+              <tbody id="fii-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
