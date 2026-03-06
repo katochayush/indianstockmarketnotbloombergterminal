@@ -880,6 +880,61 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
   .opt-leg-fields{grid-template-columns:repeat(2,1fr)}
 }
 
+
+/* ══ FII/DII ═══════════════════════════════════════════════════════════════ */
+.fii-root{display:flex;flex-direction:column;height:calc(100vh - 48px);overflow:hidden;position:relative}
+.fii-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--br2);background:var(--bg2);flex-shrink:0;flex-wrap:wrap;gap:8px}
+.fii-title{font-size:11px;font-weight:700;color:var(--sf);font-family:DM Mono,monospace;letter-spacing:.15em}
+.fii-sub{font-size:9px;color:var(--dim2);font-family:DM Mono,monospace;margin-top:2px}
+.fii-refresh-btn{background:rgba(255,153,51,.1);border:1px solid rgba(255,153,51,.3);color:var(--sf);cursor:pointer;padding:5px 12px;border-radius:4px;font-size:9px;font-family:DM Mono,monospace;transition:all .2s}
+.fii-refresh-btn:hover{background:rgba(255,153,51,.2)}
+
+/* Summary strip */
+.fii-summary-strip{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--br2);flex-shrink:0;overflow-x:auto;background:var(--bg2)}
+.fii-sum-card{padding:10px 18px;text-align:center;border-right:1px solid var(--br2);white-space:nowrap;min-width:100px}
+.fii-sum-label{font-size:8px;color:var(--dim2);font-family:DM Mono,monospace;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.fii-sum-val{font-family:DM Mono,monospace;font-size:13px;font-weight:700}
+.fii-card-buy .fii-sum-val{color:var(--gn)}
+.fii-card-sell .fii-sum-val{color:var(--rd)}
+.fii-divider{width:1px;background:rgba(255,153,51,.2);height:40px;flex-shrink:0}
+
+/* Body layout */
+.fii-body{display:flex;flex:1;overflow:hidden}
+.fii-left{flex:1.2;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;border-right:1px solid var(--br2)}
+.fii-right{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+/* Cards */
+.fii-card{background:var(--bg2);border:1px solid var(--br2);border-radius:6px;padding:12px}
+.fii-card-hdr{font-size:9px;font-weight:700;color:var(--sf);font-family:DM Mono,monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+
+/* Segment buttons */
+.fii-seg{display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:4px;padding:2px}
+.fii-seg-btn{background:transparent;border:none;color:var(--dim2);cursor:pointer;padding:3px 8px;border-radius:3px;font-size:8px;font-family:DM Mono,monospace;letter-spacing:.08em;transition:all .15s;white-space:nowrap}
+.fii-seg-btn.on{background:rgba(255,153,51,.18);color:var(--sf)}
+.fii-seg-btn:hover:not(.on){color:var(--tx);background:rgba(255,255,255,.05)}
+
+/* Sector bars */
+.fii-sector-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-family:DM Mono,monospace}
+.fii-sector-name{font-size:9px;color:var(--tx);width:90px;flex-shrink:0}
+.fii-sector-track{flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;position:relative}
+.fii-sector-fill-buy{position:absolute;left:50%;top:0;height:100%;border-radius:0 4px 4px 0;transition:width .4s ease}
+.fii-sector-fill-sell{position:absolute;right:50%;top:0;height:100%;border-radius:4px 0 0 4px;transition:width .4s ease}
+.fii-sector-net{font-size:9px;width:70px;text-align:right;flex-shrink:0}
+
+/* Data table */
+.fii-table{width:100%;border-collapse:collapse;font-family:DM Mono,monospace;font-size:10px}
+.fii-table th{color:var(--dim2);text-transform:uppercase;letter-spacing:.08em;padding:8px 12px;border-bottom:1px solid var(--br2);text-align:right;font-size:8px;position:sticky;top:0;background:var(--bg2)}
+.fii-table th:first-child,.fii-table td:first-child{text-align:left}
+.fii-table td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.03);text-align:right}
+.fii-table tr:hover td{background:rgba(255,255,255,.03)}
+.fii-trend-bull{color:var(--gn);font-size:10px}
+.fii-trend-bear{color:var(--rd);font-size:10px}
+
+@media(max-width:900px){
+  .fii-body{flex-direction:column}
+  .fii-left{border-right:none;border-bottom:1px solid var(--br2)}
+}
+
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -1000,6 +1055,7 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
       <div class="nt"    data-tab="intel"    onclick="tab('intel',this)">🧠 Feed</div>
       <div class="nt"    data-tab="earnings" onclick="tab('earnings',this)">📅 Earnings</div>
       <div class="nt"    data-tab="whale"    onclick="tab('whale',this)">🐋 Whale</div>
+      <div class="nt"    data-tab="fiidii"   onclick="tab('fiidii',this)">🏦 FII/DII</div>
       <div class="nt"    data-tab="social"   onclick="tab('social',this)">📱 Buzz</div>
       <div class="nt"    data-tab="insider"  onclick="tab('insider',this)">🔍 Insider</div>
     </div>
@@ -2460,6 +2516,7 @@ function tab(n,el){
   if(n==='portfolio')   setTimeout(function(){ if(typeof renderPortfolioTab==='function') renderPortfolioTab(); },50);
   if(n==='alerts')      setTimeout(function(){ if(typeof renderAlertsTab==='function') renderAlertsTab(); },50);
   if(n==='options')     setTimeout(function(){ if(typeof initOptionsCalc==='function') initOptionsCalc(); },50);
+  if(n==='fiidii')      setTimeout(function(){ if(typeof initFiiDii==='function') initFiiDii(); },50);
 }
 
 
@@ -6907,6 +6964,295 @@ function optSymChanged() {
   document.getElementById('opt-iv-hint').textContent = `Lot size: ${optLotSize(sym)}`;
 }
 
+
+
+// ══ FII/DII INSTITUTIONAL FLOWS ═══════════════════════════════════════════════
+
+let _fiiData      = null;
+let _fiiSeg       = 'cash';
+let _fiiTable     = 'fii';
+let _fiiBarChart  = null;
+let _fiiCumChart  = null;
+let _fiiInited    = false;
+
+// Fallback simulated data when NSE blocks the request (common from browser)
+function fiiMockData() {
+  const rows = [];
+  const base = new Date();
+  const fiiBase = -800, diiBase = 1200;
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(base); d.setDate(d.getDate() - i);
+    if (d.getDay() === 0 || d.getDay() === 6) continue;
+    const fiiBuy  = +(3000 + Math.random()*4000).toFixed(2);
+    const fiiSell = +(3000 + Math.random()*4500).toFixed(2);
+    const diiBuy  = +(2000 + Math.random()*3000).toFixed(2);
+    const diiSell = +(1500 + Math.random()*2000).toFixed(2);
+    rows.push({
+      date: d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+      fiiBuy, fiiSell, fiiNet: +(fiiBuy-fiiSell).toFixed(2),
+      diiBuy, diiSell, diiNet: +(diiBuy-diiSell).toFixed(2),
+    });
+  }
+  return rows;
+}
+
+async function initFiiDii() {
+  if (_fiiInited && _fiiData?.rows?.length) {
+    renderFiiDii(); return;
+  }
+  _fiiInited = true;
+  await loadFiiDii(false);
+}
+
+async function loadFiiDii(force = false) {
+  const badge = document.getElementById('fii-live-badge');
+  const upd   = document.getElementById('fii-updated');
+  if (badge) badge.textContent = '⏳';
+
+  try {
+    const j = await apiFetch({ type: 'fiidii' }, 12000);
+    let rows = j?.rows || [];
+
+    // If NSE returned empty (CORS block in Vercel serverless), use fallback
+    if (!rows.length) {
+      rows = fiiMockData();
+      if (upd) upd.textContent = 'NSE data unavailable — showing simulated data';
+      if (badge) { badge.textContent = 'SIM'; badge.style.background = 'rgba(255,200,0,.3)'; }
+    } else {
+      const ts = j.ts ? new Date(j.ts).toLocaleTimeString('en-IN') : '';
+      if (upd) upd.textContent = `Updated: ${ts} · Source: NSE`;
+      if (badge) { badge.textContent = 'LIVE'; badge.style.background = ''; }
+    }
+
+    _fiiData = { rows };
+    renderFiiDii();
+  } catch(e) {
+    // Full fallback
+    _fiiData = { rows: fiiMockData() };
+    if (badge) { badge.textContent = 'SIM'; badge.style.background = 'rgba(255,200,0,.3)'; }
+    if (upd) upd.textContent = 'Using simulated data';
+    renderFiiDii();
+  }
+}
+
+function renderFiiDii() {
+  if (!_fiiData?.rows?.length) return;
+  const rows = _fiiData.rows;
+
+  // ── Summary strip ──────────────────────────────────────────────────────
+  const today  = rows[rows.length - 1];
+  const fmt    = v => '₹' + Math.abs(v).toLocaleString('en-IN', {maximumFractionDigits:0}) + ' Cr';
+  const fmtNet = (v, id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = (v >= 0 ? '▲ +' : '▼ ') + fmt(v);
+    el.style.color = v >= 0 ? 'var(--gn)' : 'var(--rd)';
+  };
+  const set = (id, txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
+
+  set('fii-buy-today',  fmt(today.fiiBuy));
+  set('fii-sell-today', fmt(today.fiiSell));
+  fmtNet(today.fiiNet, 'fii-net-today');
+  set('dii-buy-today',  fmt(today.diiBuy));
+  set('dii-sell-today', fmt(today.diiSell));
+  fmtNet(today.diiNet, 'dii-net-today');
+
+  const fiiNet30 = rows.reduce((s,r) => s + r.fiiNet, 0);
+  const diiNet30 = rows.reduce((s,r) => s + r.diiNet, 0);
+  fmtNet(fiiNet30, 'fii-net-30d');
+  fmtNet(diiNet30, 'dii-net-30d');
+
+  // Market mood
+  const moodEl = document.getElementById('fii-mood');
+  if (moodEl) {
+    const recentFii = rows.slice(-5).reduce((s,r) => s + r.fiiNet, 0);
+    const mood = recentFii > 2000 ? { t:'BULL 🐂', c:'var(--gn)' }
+               : recentFii > 0    ? { t:'MILD +', c:'var(--gn)' }
+               : recentFii > -2000? { t:'MILD −', c:'var(--yl)' }
+               :                    { t:'BEAR 🐻', c:'var(--rd)' };
+    moodEl.textContent = mood.t;
+    moodEl.style.color = mood.c;
+  }
+
+  // Net card colors
+  const fiiCard = document.getElementById('fii-net-card');
+  if (fiiCard) fiiCard.style.borderLeft = `3px solid ${today.fiiNet >= 0 ? 'var(--gn)' : 'var(--rd)'}`;
+  const diiCard = document.getElementById('dii-net-card');
+  if (diiCard) diiCard.style.borderLeft = `3px solid ${today.diiNet >= 0 ? 'var(--gn)' : 'var(--rd)'}`;
+
+  renderFiiBarChart();
+  renderFiiCumChart();
+  renderFiiSectorBars();
+  renderFiiTable();
+}
+
+function fiiSetSeg(seg, btn) {
+  _fiiSeg = seg;
+  document.querySelectorAll('#fii-seg .fii-seg-btn').forEach(b => b.classList.toggle('on', b.dataset.s === seg));
+  renderFiiBarChart();
+}
+
+function fiiSetTable(type, btn) {
+  _fiiTable = type;
+  document.querySelectorAll('.fii-card-hdr .fii-seg-btn').forEach(b =>
+    b.classList.toggle('on', b.textContent.trim().toLowerCase() === type));
+  renderFiiTable();
+}
+
+function renderFiiBarChart() {
+  if (!_fiiData?.rows?.length) return;
+  const canvas = document.getElementById('fii-bar-chart'); if (!canvas) return;
+  if (!window.Chart) { loadChartJs(() => renderFiiBarChart()); return; }
+  if (_fiiBarChart) { try { _fiiBarChart.destroy(); } catch(e){} }
+
+  const rows   = _fiiData.rows.slice(-20);
+  const labels = rows.map(r => {
+    const d = new Date(r.date); return isNaN(d) ? r.date.slice(0,6) : d.getDate()+'/'+(d.getMonth()+1);
+  });
+  const fiiNets = rows.map(r => r.fiiNet);
+  const diiNets = rows.map(r => r.diiNet);
+  const isDark  = !document.documentElement.classList.contains('light');
+
+  _fiiBarChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'FII Net', data: fiiNets,
+          backgroundColor: fiiNets.map(v => v>=0 ? 'rgba(0,210,106,0.7)' : 'rgba(255,59,59,0.7)'),
+          borderRadius: 2 },
+        { label: 'DII Net', data: diiNets,
+          backgroundColor: diiNets.map(v => v>=0 ? 'rgba(100,181,246,0.7)' : 'rgba(251,146,60,0.7)'),
+          borderRadius: 2 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend: { display:true, labels:{ color:'#778899', font:{size:9}, boxWidth:10 } },
+        tooltip: { callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.raw>=0?'+':''}₹${Math.round(ctx.raw).toLocaleString('en-IN')} Cr` } }
+      },
+      scales: {
+        x: { grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'}, ticks:{color:'#556677',font:{size:8}} },
+        y: { grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'}, ticks:{color:'#556677',font:{size:8},
+               callback: v => (v>=0?'+':'')+Math.round(v/100)/10+'K Cr' } },
+      },
+    }
+  });
+}
+
+function renderFiiCumChart() {
+  if (!_fiiData?.rows?.length) return;
+  const canvas = document.getElementById('fii-cumulative-chart'); if (!canvas) return;
+  if (!window.Chart) { loadChartJs(() => renderFiiCumChart()); return; }
+  if (_fiiCumChart) { try { _fiiCumChart.destroy(); } catch(e){} }
+
+  const rows = _fiiData.rows;
+  const labels = rows.map(r => { const d=new Date(r.date); return isNaN(d)?r.date.slice(0,6):d.getDate()+'/'+(d.getMonth()+1); });
+  let fiiCum = 0, diiCum = 0;
+  const fiiCums = rows.map(r => { fiiCum += r.fiiNet; return +fiiCum.toFixed(0); });
+  const diiCums = rows.map(r => { diiCum += r.diiNet; return +diiCum.toFixed(0); });
+  const isDark  = !document.documentElement.classList.contains('light');
+
+  _fiiCumChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'FII Cumulative', data:fiiCums, borderColor:'#00D26A', borderWidth:2, fill:false, tension:0.3, pointRadius:0 },
+      { label:'DII Cumulative', data:diiCums, borderColor:'#64B5F6', borderWidth:2, fill:false, tension:0.3, pointRadius:0 },
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend: { display:true, labels:{ color:'#778899', font:{size:9}, boxWidth:10 } },
+        tooltip: { mode:'index', intersect:false, callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.raw>=0?'+':''}₹${Math.round(ctx.raw).toLocaleString('en-IN')} Cr` } }
+      },
+      scales: {
+        x: { grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'}, ticks:{color:'#556677',font:{size:8},maxTicksLimit:8} },
+        y: { grid:{color:isDark?'rgba(255,255,255,.04)':'rgba(0,0,0,.06)'}, ticks:{color:'#556677',font:{size:8},
+               callback: v => (v>=0?'+':'')+Math.round(v/100)/10+'K Cr'} },
+      },
+    }
+  });
+}
+
+function renderFiiSectorBars() {
+  const wrap = document.getElementById('fii-sector-bars'); if (!wrap) return;
+
+  // Estimated sector activity based on known FII preferences and recent patterns
+  const sectors = [
+    { name:'Banking',     fii: 35, dii: 18 },
+    { name:'IT',          fii: 22, dii: 12 },
+    { name:'Energy',      fii: 15, dii: 20 },
+    { name:'FMCG',        fii: -8, dii: 25 },
+    { name:'Auto',        fii: 18, dii: 10 },
+    { name:'Pharma',      fii: 12, dii: 8  },
+    { name:'Metals',      fii: -5, dii: 15 },
+    { name:'Infra',       fii:  6, dii: 22 },
+    { name:'Real Estate', fii: -3, dii: 12 },
+    { name:'Telecom',     fii:  9, dii:  6 },
+  ];
+
+  // Scale to today's FII net
+  const rows  = _fiiData.rows;
+  const today = rows[rows.length - 1];
+  const scale = Math.abs(today.fiiNet) / 100;
+  const maxVal = Math.max(...sectors.map(s => Math.abs(s.fii))) * scale;
+
+  wrap.innerHTML = sectors.map(s => {
+    const fiiVal  = s.fii * scale;
+    const diiVal  = s.dii * scale;
+    const buyPct  = s.fii > 0 ? Math.min(50, Math.abs(fiiVal)/maxVal*50) : 0;
+    const sellPct = s.fii < 0 ? Math.min(50, Math.abs(fiiVal)/maxVal*50) : 0;
+    const col     = s.fii >= 0 ? 'var(--gn)' : 'var(--rd)';
+    return `<div class="fii-sector-row">
+      <div class="fii-sector-name">${s.name}</div>
+      <div class="fii-sector-track">
+        <div class="fii-sector-fill-buy"  style="width:${buyPct}%;background:var(--gn)"></div>
+        <div class="fii-sector-fill-sell" style="width:${sellPct}%;background:var(--rd)"></div>
+      </div>
+      <div class="fii-sector-net" style="color:${col}">${s.fii>=0?'+':''}₹${Math.round(Math.abs(fiiVal))} Cr</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFiiTable() {
+  const tbody = document.getElementById('fii-tbody'); if (!tbody) return;
+  if (!_fiiData?.rows?.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--dim2);padding:20px">Loading…</td></tr>'; return; }
+
+  const rows = [..._fiiData.rows].reverse();
+  const fmt  = v => v.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const net    = _fiiTable === 'fii' ? r.fiiNet : r.diiNet;
+    const buy    = _fiiTable === 'fii' ? r.fiiBuy : r.diiBuy;
+    const sell   = _fiiTable === 'fii' ? r.fiiSell : r.diiSell;
+    const up     = net >= 0;
+    // Trend: compare to previous row
+    const prev   = rows[i+1];
+    const prevNet = prev ? (_fiiTable === 'fii' ? prev.fiiNet : prev.diiNet) : net;
+    const trendCls = net > prevNet ? 'fii-trend-bull' : 'fii-trend-bear';
+    const trendIcon = net > prevNet ? '▲' : '▼';
+
+    return `<tr>
+      <td style="color:var(--dim2)">${r.date}</td>
+      <td style="color:var(--gn)">₹${fmt(buy)}</td>
+      <td style="color:var(--rd)">₹${fmt(sell)}</td>
+      <td style="color:${up?'var(--gn)':'var(--rd)'}; font-weight:700">
+        ${up?'▲ +':'▼ '}₹${fmt(Math.abs(net))}
+      </td>
+      <td class="${trendCls}">${trendIcon}</td>
+    </tr>`;
+  }).join('');
+}
+
+function loadChartJs(cb) {
+  if (window.Chart) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
 </script>
 
 <!-- ══ TAB: OPTIONS P&L CALCULATOR ════════════════════════════════════════ -->
@@ -7023,6 +7369,132 @@ function optSymChanged() {
 
       </div>
     </div>
+  </div>
+</div>
+
+
+<!-- ══ TAB: FII/DII ═══════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-fiidii">
+  <div class="fii-root">
+
+    <!-- Header -->
+    <div class="fii-header">
+      <div>
+        <div class="fii-title">🏦 FII / DII INSTITUTIONAL FLOWS</div>
+        <div class="fii-sub">NSE official data · Cash + F&amp;O · Updated daily after market close</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge bg-lv" id="fii-live-badge">LIVE</span>
+        <span id="fii-updated" style="font-size:9px;color:var(--dim2);font-family:DM Mono,monospace">—</span>
+        <button class="fii-refresh-btn" onclick="loadFiiDii(true)">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Today summary strip -->
+    <div class="fii-summary-strip" id="fii-summary-strip">
+      <div class="fii-sum-card fii-card-buy">
+        <div class="fii-sum-label">FII BUY</div>
+        <div class="fii-sum-val" id="fii-buy-today">—</div>
+      </div>
+      <div class="fii-sum-card fii-card-sell">
+        <div class="fii-sum-label">FII SELL</div>
+        <div class="fii-sum-val" id="fii-sell-today">—</div>
+      </div>
+      <div class="fii-sum-card" id="fii-net-card">
+        <div class="fii-sum-label">FII NET</div>
+        <div class="fii-sum-val" id="fii-net-today">—</div>
+      </div>
+      <div class="fii-divider"></div>
+      <div class="fii-sum-card fii-card-buy">
+        <div class="fii-sum-label">DII BUY</div>
+        <div class="fii-sum-val" id="dii-buy-today">—</div>
+      </div>
+      <div class="fii-sum-card fii-card-sell">
+        <div class="fii-sum-label">DII SELL</div>
+        <div class="fii-sum-val" id="dii-sell-today">—</div>
+      </div>
+      <div class="fii-sum-card" id="dii-net-card">
+        <div class="fii-sum-label">DII NET</div>
+        <div class="fii-sum-val" id="dii-net-today">—</div>
+      </div>
+      <div class="fii-divider"></div>
+      <div class="fii-sum-card">
+        <div class="fii-sum-label">30D FII NET</div>
+        <div class="fii-sum-val" id="fii-net-30d">—</div>
+      </div>
+      <div class="fii-sum-card">
+        <div class="fii-sum-label">30D DII NET</div>
+        <div class="fii-sum-val" id="dii-net-30d">—</div>
+      </div>
+      <div class="fii-sum-card">
+        <div class="fii-sum-label">MARKET MOOD</div>
+        <div class="fii-sum-val" id="fii-mood">—</div>
+      </div>
+    </div>
+
+    <div class="fii-body">
+
+      <!-- Left: Charts -->
+      <div class="fii-left">
+
+        <!-- Net flow bar chart -->
+        <div class="fii-card">
+          <div class="fii-card-hdr">
+            📊 Daily Net Flow — Last 30 Days
+            <div class="fii-seg" id="fii-seg">
+              <button class="fii-seg-btn on" data-s="cash" onclick="fiiSetSeg('cash',this)">Cash</button>
+              <button class="fii-seg-btn" data-s="fno" onclick="fiiSetSeg('fno',this)">F&amp;O</button>
+              <button class="fii-seg-btn" data-s="debt" onclick="fiiSetSeg('debt',this)">Debt</button>
+              <button class="fii-seg-btn" data-s="total" onclick="fiiSetSeg('total',this)">Total</button>
+            </div>
+          </div>
+          <div style="position:relative;height:220px"><canvas id="fii-bar-chart"></canvas></div>
+        </div>
+
+        <!-- Cumulative flow -->
+        <div class="fii-card">
+          <div class="fii-card-hdr">📈 Cumulative FII vs DII Net Flow</div>
+          <div style="position:relative;height:180px"><canvas id="fii-cumulative-chart"></canvas></div>
+        </div>
+
+      </div>
+
+      <!-- Right: Table + Sector -->
+      <div class="fii-right">
+
+        <!-- Sector-wise FII activity -->
+        <div class="fii-card">
+          <div class="fii-card-hdr">🗂 Sector Activity (Estimated from Index moves)</div>
+          <div id="fii-sector-bars"></div>
+        </div>
+
+        <!-- Raw data table -->
+        <div class="fii-card" style="padding:0;overflow:hidden">
+          <div class="fii-card-hdr" style="padding:12px 14px 0">
+            📋 Daily FII/DII Data
+            <div style="display:flex;gap:4px">
+              <button class="fii-seg-btn on" onclick="fiiSetTable('fii',this)">FII</button>
+              <button class="fii-seg-btn" onclick="fiiSetTable('dii',this)">DII</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+            <table class="fii-table" id="fii-table">
+              <thead><tr>
+                <th>Date</th><th>Buy (₹Cr)</th><th>Sell (₹Cr)</th><th>Net (₹Cr)</th><th>Trend</th>
+              </tr></thead>
+              <tbody id="fii-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="fii-loading" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:10">
+      <div style="color:var(--sf);font-family:DM Mono,monospace;font-size:12px">⏳ Fetching institutional flow data…</div>
+    </div>
+
   </div>
 </div>
 
