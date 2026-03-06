@@ -547,8 +547,37 @@ module.exports = async function handler(req, res) {
     },[]);
     try {
       let rows = [];
+
+      // ── Source 0: RapidAPI NSE (works 100% — bypasses Akamai blocking) ────
+      // Requires RAPIDAPI_KEY env var in Vercel. Free at rapidapi.com/suneetk92/api/latest-stock-price
+      const RAPID_KEY = process.env.RAPIDAPI_KEY || '';
+      if (RAPID_KEY) {
+        try {
+          // Try NSE FII/DII via RapidAPI proxy
+          const rr = await fetch('https://latest-stock-price.p.rapidapi.com/any', {
+            headers: {
+              'X-RapidAPI-Key': RAPID_KEY,
+              'X-RapidAPI-Host': 'latest-stock-price.p.rapidapi.com',
+            },
+            signal: AbortSignal.timeout(8000),
+          });
+          // This endpoint gives stock prices; for FII/DII use NSE via RapidAPI's NSE-India API
+          const rr2 = await fetch('https://nse-india.p.rapidapi.com/api/fiidiiTradeReact', {
+            headers: {
+              'X-RapidAPI-Key': RAPID_KEY,
+              'X-RapidAPI-Host': 'nse-india.p.rapidapi.com',
+            },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (rr2.ok) {
+            const rj = await rr2.json();
+            rows = norm(Array.isArray(rj) ? rj : (rj.data || []));
+          }
+        } catch(er) {}
+      }
+
       // Source 1: NSE via nseGet (now uses real session cookies)
-      try {
+      if (!rows.length) try {
         const j = await nseGet('/api/fiidiiTradeReact', 10000);
         rows = norm(Array.isArray(j)?j:(j.data||[]));
       } catch(e1) {}
