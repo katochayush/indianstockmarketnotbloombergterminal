@@ -501,25 +501,38 @@ module.exports = async function handler(req, res) {
   
   // ── FII/DII FLOW ─────────────────────────────────────────────────────────
   if (type === 'fiidii') {
+    const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
+    const nseHdrs = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.nseindia.com/',
+      'Origin': 'https://www.nseindia.com',
+    };
     try {
-      const hdrs = {'User-Agent':'Mozilla/5.0','Accept':'application/json, */*','Referer':'https://www.nseindia.com/'};
-      const pn = s => { const n=parseFloat(String(s||0).replace(/,/g,'')); return isNaN(n)?0:n; };
       const rows = [];
+      // Step 1: establish NSE session for cookie
+      let cookie = '';
       try {
-        const r1 = await fetch('https://www.nseindia.com/api/fiidiiTradeReact',{headers:hdrs,signal:AbortSignal.timeout(8000)});
-        if (r1.ok) {
-          const arr = await r1.json().then(j=>Array.isArray(j)?j:(j.data||[]));
-          arr.slice(0,30).forEach(row => {
-            const fb=pn(row.fiiBuy||row['FII BUY']||0), fs=pn(row.fiiSell||row['FII SELL']||0);
-            const db=pn(row.diiBuy||row['DII BUY']||0), ds=pn(row.diiSell||row['DII SELL']||0);
-            const date=row.date||row.Date||row.tradeDate||'';
-            if(date) rows.push({date,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
-          });
-        }
-      } catch(_){}
-      res.setHeader('Cache-Control','s-maxage=300,stale-while-revalidate=60');
-      return res.status(200).json({rows,ts:Date.now(),source:'NSE'});
-    } catch(e){ return res.status(200).json({rows:[],ts:Date.now(),error:e.message}); }
+        const home = await fetch('https://www.nseindia.com/', { headers: nseHdrs, signal: AbortSignal.timeout(5000) });
+        const sc = home.headers.get('set-cookie') || '';
+        cookie = sc.split(',').map(c => c.split(';')[0].trim()).filter(Boolean).join('; ');
+      } catch(_) {}
+      // Step 2: fetch with session cookie
+      const hdrs2 = { ...nseHdrs, ...(cookie ? { Cookie: cookie } : {}) };
+      const r1 = await fetch('https://www.nseindia.com/api/fiidiiTradeReact', { headers: hdrs2, signal: AbortSignal.timeout(8000) });
+      if (r1.ok) {
+        const arr = await r1.json().then(j => Array.isArray(j) ? j : (j.data || []));
+        arr.slice(0, 30).forEach(row => {
+          const fb=pn(row.fiiBuy||row['FII BUY']||0), fs=pn(row.fiiSell||row['FII SELL']||0);
+          const db=pn(row.diiBuy||row['DII BUY']||0), ds=pn(row.diiSell||row['DII SELL']||0);
+          const dt=row.date||row.Date||row.tradeDate||'';
+          if(dt) rows.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
+        });
+      }
+      res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=120');
+      return res.status(200).json({ rows, ts: Date.now(), source: rows.length ? 'NSE' : 'none' });
+    } catch(e) { return res.status(200).json({ rows: [], ts: Date.now(), error: e.message }); }
   }
 
   } catch(e) { return res.status(500).json({error:e.message}); }
