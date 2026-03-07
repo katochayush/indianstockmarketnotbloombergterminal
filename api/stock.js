@@ -464,15 +464,22 @@ module.exports = async function handler(req, res) {
       const todayArr = Array.isArray(j0)?j0:(j0.data||[]);
       console.log('[FII] NSE today rows:', todayArr.length, JSON.stringify(todayArr[0]||{}).slice(0,150));
 
+      // Log ALL keys from first row so we can see exact field names
+      if(todayArr[0]) console.log('[FII] NSE ALL KEYS:', Object.keys(todayArr[0]).join('|'), 'FULL:', JSON.stringify(todayArr[0]));
+
       todayArr.forEach(r => {
-        const fb=pn(r.fiiBuyValue||r.fiiBuy||r['FII BUY']||0);
-        const fs=pn(r.fiiSellValue||r.fiiSell||r['FII SELL']||0);
-        const fn=pn(r.fiNetValue||r.fiiNetValue||r.fiiNet||0);
+        // NSE fiidiiTradeReact actual fields (logged above to verify)
+        const allKeys = Object.keys(r).join(',').toLowerCase();
+        console.log('[FII] row keys:', allKeys, 'vals:', JSON.stringify(r));
+        const fb=pn(r.fiiBuyValue||r.buyValue||r.fiiBuy||r['FII BUY']||r.buy||0);
+        const fs=pn(r.fiiSellValue||r.sellValue||r.fiiSell||r['FII SELL']||r.sell||0);
+        const fn=pn(r.fiNetValue||r.netValue||r.fiiNetValue||r.fiiNet||r.net||0);
         const db=pn(r.diiBuyValue||r.diiBuy||r['DII BUY']||0);
         const ds=pn(r.diiSellValue||r.diiSell||r['DII SELL']||0);
         const dn=pn(r.diiNetValue||r.diiNet||0);
-        const dt=r.date||r.Date||r.tradeDate||'';
-        if(dt) rows.push(makeRow(dt,fb,fs,fn,db,ds,dn));
+        const dt=r.date||r.Date||r.tradeDate||r.category||'';
+        console.log('[FII] parsed fb='+fb+' fs='+fs+' fn='+fn+' dt='+dt);
+        if(fn||fb||fs) rows.push(makeRow(dt,fb,fs,fn,db,ds,dn));
       });
 
       // Historical data — correct NSE endpoint
