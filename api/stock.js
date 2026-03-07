@@ -436,12 +436,21 @@ module.exports = async function handler(req, res) {
   if (type === 'fiidii') {
     const pn = s => { const n=parseFloat(String(s||'').replace(/,/g,'')); return isNaN(n)?0:n; };
     const norm = (arr, limit=30) => (Array.isArray(arr)?arr:[]).slice(-limit).reduce((out,r)=>{
-      const fb=pn(r.fiiBuy||r['FII BUY']||r.buyValue||r.BUY_AMT||0);
-      const fs=pn(r.fiiSell||r['FII SELL']||r.sellValue||r.SELL_AMT||0);
-      const db=pn(r.diiBuy||r['DII BUY']||r.diiBuyValue||r.DII_BUY_AMT||0);
-      const ds=pn(r.diiSell||r['DII SELL']||r.diiSellValue||r.DII_SELL_AMT||0);
-      const dt=r.date||r.Date||r.tradeDate||r.TRADE_DATE||'';
-      if(dt&&(fb||fs)) out.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:+(fb-fs).toFixed(2),diiBuy:db,diiSell:ds,diiNet:+(db-ds).toFixed(2)});
+      // NSE actual fields: fiiBuyValue, fiiSellValue, diiNetValue etc.
+      const fb=pn(r.fiiBuyValue||r.fiiBuy||r['FII BUY']||r.buyValue||r.BUY_AMT||r.fii_buy||0);
+      const fs=pn(r.fiiSellValue||r.fiiSell||r['FII SELL']||r.sellValue||r.SELL_AMT||r.fii_sell||0);
+      const db=pn(r.diiBuyValue||r.diiBuy||r['DII BUY']||r.dii_buy||r.DII_BUY_AMT||0);
+      const ds=pn(r.diiSellValue||r.diiSell||r['DII SELL']||r.dii_sell||r.DII_SELL_AMT||0);
+      // NSE net fields (use directly if buy/sell missing)
+      const fn=pn(r.fiiNetValue||r.fiNetValue||r.fiiNet||0);
+      const dn=pn(r.diiNetValue||r.diiNet||0);
+      const dt=r.date||r.Date||r.tradeDate||r.TRADE_DATE||r.trade_date||'';
+      const fiiBuy=fb||(fn>0?fn:0), fiiSell=fs||(fn<0?-fn:0);
+      const diiBuy=db||(dn>0?dn:0), diiSell=ds||(dn<0?-dn:0);
+      if(dt&&(fiiBuy||fiiSell||fn)) out.push({
+        date:dt, fiiBuy, fiiSell, fiiNet:fb||fs ? +(fiiBuy-fiiSell).toFixed(2) : fn,
+        diiBuy, diiSell, diiNet:db||ds ? +(diiBuy-diiSell).toFixed(2) : dn
+      });
       return out;
     },[]);
 
@@ -450,64 +459,61 @@ module.exports = async function handler(req, res) {
     // NSE: fetch with date range for 30 days of data
     const tryNSE = async () => {
       const cookie = await nseSession().catch(()=>'');
+      console.log('[FII] NSE cookie len:', cookie.length);
       const hdrs = {...H,'Referer':'https://www.nseindia.com/',...(cookie?{Cookie:cookie}:{})};
-      // NSE fiidiiTradeReact returns last 30 trading days
-      const r = await fetch('https://www.nseindia.com/api/fiidiiTradeReact',
-        {headers:hdrs, signal:AbortSignal.timeout(7000)});
-      if(!r.ok) throw new Error('NSE '+r.status);
-      const j = await r.json();
-      const arr = Array.isArray(j)?j:(j.data||[]);
-      const rows = norm(arr, 30);
-      if(rows.length < 2) throw new Error('NSE insufficient: '+rows.length);
+      const r = await fetch('https://www.nseindia.com/api/fiidiiTradeReact',{headers:hdrs,signal:AbortSignal.timeout(7000)});
+      console.log('[FII] NSE status:', r.status);
+      if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('NSE '+r.status+' '+t.slice(0,60));}
+      const j=await r.json(); const arr=Array.isArray(j)?j:(j.data||[]);
+      console.log('[FII] NSE raw rows:', arr.length, JSON.stringify(arr[0]||{}).slice(0,100));
+      const rows=norm(arr,30); console.log('[FII] NSE parsed:', rows.length);
+      if(rows.length<2) throw new Error('NSE only '+rows.length+' rows, raw='+arr.length+' sample='+JSON.stringify(arr[0]||{}).slice(0,80));
       return rows;
     };
-
-    // MoneyControl: returns last 30 days
     const tryMC = async () => {
-      const r = await fetch('https://priceapi.moneycontrol.com/pricefeed/notmobile/getfiidii',
-        {headers:{...H,'Referer':'https://www.moneycontrol.com/'}, signal:AbortSignal.timeout(6000)});
+      const r=await fetch('https://priceapi.moneycontrol.com/pricefeed/notmobile/getfiidii',
+        {headers:{...H,'Referer':'https://www.moneycontrol.com/'},signal:AbortSignal.timeout(6000)});
+      console.log('[FII] MC status:', r.status);
       if(!r.ok) throw new Error('MC '+r.status);
-      const j = await r.json();
-      const rows = norm(j?.data||j?.result||(Array.isArray(j)?j:[]), 30);
-      if(rows.length < 2) throw new Error('MC insufficient: '+rows.length);
+      const j=await r.json(); const arr=j?.data||j?.result||(Array.isArray(j)?j:[]);
+      console.log('[FII] MC raw rows:', arr.length, 'keys:', Object.keys(j||{}).join(','));
+      const rows=norm(arr,30); console.log('[FII] MC parsed:', rows.length);
+      if(rows.length<2) throw new Error('MC only '+rows.length+' rows, keys='+Object.keys(j||{}).join(','));
       return rows;
     };
-
-    // BSE: returns date-range data (most reliable for history)
     const tryBSE = async () => {
-      const t=new Date(), f=new Date(t); f.setDate(f.getDate()-45);
+      const t=new Date(),f=new Date(t); f.setDate(f.getDate()-45);
       const fd=d=>`${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
-      const r = await fetch(
-        `https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(f)}&enddate=${fd(t)}&ddlbuy=&ddlsell=`,
-        {headers:{...H,'Referer':'https://www.bseindia.com/','Origin':'https://www.bseindia.com'}, signal:AbortSignal.timeout(6000)});
+      const url=`https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(f)}&enddate=${fd(t)}&ddlbuy=&ddlsell=`;
+      const r=await fetch(url,{headers:{...H,'Referer':'https://www.bseindia.com/','Origin':'https://www.bseindia.com'},signal:AbortSignal.timeout(6000)});
+      console.log('[FII] BSE status:', r.status);
       if(!r.ok) throw new Error('BSE '+r.status);
-      const j = await r.json();
-      const arr = j?.Table||j?.data||(Array.isArray(j)?j:[]);
-      const rows = norm(arr, 30);
-      if(rows.length < 2) throw new Error('BSE insufficient: '+rows.length);
+      const j=await r.json(); const arr=j?.Table||j?.data||(Array.isArray(j)?j:[]);
+      console.log('[FII] BSE raw rows:', arr.length, 'keys:', Object.keys(j||{}).join(','), JSON.stringify(arr[0]||{}).slice(0,100));
+      const rows=norm(arr,30); console.log('[FII] BSE parsed:', rows.length);
+      if(rows.length<2) throw new Error('BSE only '+rows.length+' rows, keys='+Object.keys(j||{}).join(','));
       return rows;
     };
-
-    // Trendlyne public endpoint — no auth needed
-    const tryTrendlyne = async () => {
-      const r = await fetch('https://trendlyne.com/macro/fii-dii-data/api/',
-        {headers:{...H,'Referer':'https://trendlyne.com/'}, signal:AbortSignal.timeout(6000)});
+    const tryTL = async () => {
+      const r=await fetch('https://trendlyne.com/macro/fii-dii-data/api/',
+        {headers:{...H,'Referer':'https://trendlyne.com/'},signal:AbortSignal.timeout(6000)});
+      console.log('[FII] TL status:', r.status);
       if(!r.ok) throw new Error('TL '+r.status);
-      const j = await r.json();
-      const arr = j?.data||(Array.isArray(j)?j:[]);
-      const rows = norm(arr, 30);
-      if(rows.length < 2) throw new Error('TL insufficient: '+rows.length);
+      const j=await r.json(); const arr=j?.data||(Array.isArray(j)?j:[]);
+      console.log('[FII] TL raw rows:', arr.length);
+      const rows=norm(arr,30); if(rows.length<2) throw new Error('TL only '+rows.length);
       return rows;
     };
-
     try {
-      const rows = await Promise.any([tryNSE(), tryMC(), tryBSE(), tryTrendlyne()]);
-      res.setHeader('Cache-Control','s-maxage=1800,stale-while-revalidate=300');
+      const rows = await Promise.any([tryNSE(), tryMC(), tryBSE(), tryTL()]);
+      console.log('[FII] SUCCESS:', rows.length, 'rows, first='+rows[0]?.date+' last='+rows[rows.length-1]?.date);
+      res.setHeader('Cache-Control','s-maxage=60,stale-while-revalidate=30');
       return res.status(200).json({rows, ts:Date.now(), source:'live'});
     } catch(e) {
+      const errs=(e?.errors||[]).map(x=>x.message).join(' | ')||e.message;
+      console.log('[FII] ALL FAILED:', errs);
       res.setHeader('Cache-Control','s-maxage=60');
-      return res.status(200).json({rows:[], ts:Date.now(), source:'none',
-        error: (e?.errors||[]).map(x=>x.message).join(' | ')||e.message});
+      return res.status(200).json({rows:[], ts:Date.now(), source:'none', error:errs});
     }
   }
 
