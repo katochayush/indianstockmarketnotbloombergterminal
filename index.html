@@ -7173,13 +7173,34 @@ function loadChartJs(cb) {
   s.onload=cb; document.head.appendChild(s);
 }
 
+function parseFiiDate(str) {
+  if (!str) return null;
+  // Handle formats: "06-Mar-2026", "2026-03-06", "06/03/2026", "March 06, 2026"
+  const s = String(str).trim();
+  const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  // DD-Mon-YYYY or DD Mon YYYY
+  const m1 = s.match(/^(\d{1,2})[-\s]([A-Za-z]{3})[-\s](\d{4})$/);
+  if (m1) return new Date(+m1[3], months[m1[2].toLowerCase()], +m1[1]);
+  // YYYY-MM-DD
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m2) return new Date(+m2[1], +m2[2]-1, +m2[3]);
+  // DD/MM/YYYY
+  const m3 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m3) return new Date(+m3[3], +m3[2]-1, +m3[1]);
+  const d = new Date(s); return isNaN(d) ? null : d;
+}
+function fmtFiiLabel(str) {
+  const d = parseFiiDate(str);
+  return d ? d.getDate()+'/'+(d.getMonth()+1) : str.slice(0,6);
+}
+
 function renderFiiBarChart() {
   if (!_fiiData?.rows?.length) return;
   const canvas=document.getElementById('fii-bar-chart'); if(!canvas) return;
   if(!window.Chart){loadChartJs(()=>renderFiiBarChart());return;}
   if(_fiiBarChart){try{_fiiBarChart.destroy();}catch(e){}}
   const rows=_fiiData.rows.slice(-20);
-  const labels=rows.map(r=>{const d=new Date(r.date);return isNaN(d)?r.date.slice(0,6):d.getDate()+'/'+(d.getMonth()+1);});
+  const labels=rows.map(r=>fmtFiiLabel(r.date));
   const fiiNets=rows.map(r=>r.fiiNet);
   const diiNets=rows.map(r=>r.diiNet);
   const isDark=!document.documentElement.classList.contains('light');
@@ -7206,7 +7227,7 @@ function renderFiiCumChart() {
   if(!window.Chart){loadChartJs(()=>renderFiiCumChart());return;}
   if(_fiiCumChart){try{_fiiCumChart.destroy();}catch(e){}}
   const rows=_fiiData.rows;
-  const labels=rows.map(r=>{const d=new Date(r.date);return isNaN(d)?r.date.slice(0,6):d.getDate()+'/'+(d.getMonth()+1);});
+  const labels=rows.map(r=>fmtFiiLabel(r.date));
   let fc=0,dc=0;
   const fiiCums=rows.map(r=>{fc+=r.fiiNet;return +fc.toFixed(0);});
   const diiCums=rows.map(r=>{dc+=r.diiNet;return +dc.toFixed(0);});
@@ -7265,8 +7286,9 @@ function renderFiiTable() {
     const sell=_fiiTable==='fii'?r.fiiSell:r.diiSell;
     const up=net>=0;
     const prev=rows[i+1]; const prevNet=prev?(_fiiTable==='fii'?prev.fiiNet:prev.diiNet):net;
+    const pd=parseFiiDate(r.date); const dtDisplay=pd?pd.getDate()+'-'+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][pd.getMonth()]+'-'+pd.getFullYear():r.date;
     return `<tr>
-      <td style="color:var(--dim2)">${r.date}</td>
+      <td style="color:var(--dim2)">${dtDisplay}</td>
       <td style="color:var(--gn)">₹${fmt(buy)}</td>
       <td style="color:var(--rd)">₹${fmt(sell)}</td>
       <td style="color:${up?'var(--gn)':'var(--rd)'};font-weight:700">${up?'▲ +':'▼ '}₹${fmt(Math.abs(net))}</td>
