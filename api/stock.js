@@ -459,15 +459,39 @@ module.exports = async function handler(req, res) {
     // NSE: fetch with date range for 30 days of data
     const tryNSE = async () => {
       const cookie = await nseSession().catch(()=>'');
-      console.log('[FII] NSE cookie len:', cookie.length);
       const hdrs = {...H,'Referer':'https://www.nseindia.com/',...(cookie?{Cookie:cookie}:{})};
-      const r = await fetch('https://www.nseindia.com/api/fiidiiTradeReact',{headers:hdrs,signal:AbortSignal.timeout(7000)});
-      console.log('[FII] NSE status:', r.status);
-      if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('NSE '+r.status+' '+t.slice(0,60));}
-      const j=await r.json(); const arr=Array.isArray(j)?j:(j.data||[]);
-      console.log('[FII] NSE raw rows:', arr.length, JSON.stringify(arr[0]||{}).slice(0,100));
-      const rows=norm(arr,30); console.log('[FII] NSE parsed:', rows.length);
-      if(rows.length<2) throw new Error('NSE only '+rows.length+' rows, raw='+arr.length+' sample='+JSON.stringify(arr[0]||{}).slice(0,80));
+      const rows = [];
+
+      // NSE fiidiiTradeReact = only today. For history use date-range endpoint.
+      const pad2 = n => String(n).padStart(2,'0');
+      const fmtNSE = d => `${pad2(d.getDate())}-${pad2(d.getMonth()+1)}-${d.getFullYear()}`;
+      const toDate = new Date();
+      const fromDate = new Date(toDate); fromDate.setDate(fromDate.getDate() - 45);
+      const url = `https://www.nseindia.com/api/historical/fii-dii?startDate=${fmtNSE(fromDate)}&endDate=${fmtNSE(toDate)}`;
+      console.log('[FII] NSE hist url:', url);
+
+      const r = await fetch(url, {headers:hdrs, signal:AbortSignal.timeout(8000)});
+      console.log('[FII] NSE hist status:', r.status);
+      if(!r.ok) throw new Error('NSE-hist '+r.status);
+      const j = await r.json();
+      const arr = Array.isArray(j)?j:(j.data||j.FIIDIIData||[]);
+      console.log('[FII] NSE hist rows:', arr.length, 'sample:', JSON.stringify(arr[0]||{}).slice(0,150));
+
+      // NSE historical format: {date, fiiNetBuy, fiiBuyVal, fiiSellVal, diiNetBuy, diiBuyVal, diiSellVal}
+      arr.slice(-30).forEach(r => {
+        const fb = pn(r.fiiBuyVal||r.fiiBuyValue||r.fiiBuy||r['FII Buy']||0);
+        const fs = pn(r.fiiSellVal||r.fiiSellValue||r.fiiSell||r['FII Sell']||0);
+        const fn = pn(r.fiiNetBuy||r.fiiNet||r['FII Net']||r.fiiNetValue||0);
+        const db = pn(r.diiBuyVal||r.diiBuyValue||r.diiBuy||r['DII Buy']||0);
+        const ds = pn(r.diiSellVal||r.diiSellValue||r.diiSell||r['DII Sell']||0);
+        const dn = pn(r.diiNetBuy||r.diiNet||r['DII Net']||r.diiNetValue||0);
+        const dt = r.date||r.Date||r.tradeDate||'';
+        const fiiBuy=fb||(fn>0?fn:0), fiiSell=fs||(fn<0?-fn:0);
+        const diiBuy=db||(dn>0?dn:0), diiSell=ds||(dn<0?-dn:0);
+        if(dt) rows.push({date:dt,fiiBuy,fiiSell,fiiNet:fb||fs?+(fiiBuy-fiiSell).toFixed(2):fn,diiBuy,diiSell,diiNet:db||ds?+(diiBuy-diiSell).toFixed(2):dn});
+      });
+      console.log('[FII] NSE parsed:', rows.length);
+      if(rows.length < 2) throw new Error('NSE-hist only '+rows.length+' rows');
       return rows;
     };
     const tryMC = async () => {
@@ -483,15 +507,29 @@ module.exports = async function handler(req, res) {
     };
     const tryBSE = async () => {
       const t=new Date(),f=new Date(t); f.setDate(f.getDate()-45);
-      const fd=d=>`${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
+      const pad2b=n=>String(n).padStart(2,'0');
+      const fd=d=>`${pad2b(d.getDate())}/${pad2b(d.getMonth()+1)}/${d.getFullYear()}`;
       const url=`https://api.bseindia.com/BseIndiaAPI/api/FIIDIIDataByDate/w?strdate=${fd(f)}&enddate=${fd(t)}&ddlbuy=&ddlsell=`;
       const r=await fetch(url,{headers:{...H,'Referer':'https://www.bseindia.com/','Origin':'https://www.bseindia.com'},signal:AbortSignal.timeout(6000)});
       console.log('[FII] BSE status:', r.status);
       if(!r.ok) throw new Error('BSE '+r.status);
-      const j=await r.json(); const arr=j?.Table||j?.data||(Array.isArray(j)?j:[]);
-      console.log('[FII] BSE raw rows:', arr.length, 'keys:', Object.keys(j||{}).join(','), JSON.stringify(arr[0]||{}).slice(0,100));
-      const rows=norm(arr,30); console.log('[FII] BSE parsed:', rows.length);
-      if(rows.length<2) throw new Error('BSE only '+rows.length+' rows, keys='+Object.keys(j||{}).join(','));
+      const j=await r.json();
+      // BSE Table format: {TRADE_DATE, FII_BUY_AMT, FII_SELL_AMT, FII_NET_AMT, DII_BUY_AMT, DII_SELL_AMT, DII_NET_AMT}
+      const arr=j?.Table||j?.Table1||j?.data||(Array.isArray(j)?j:[]);
+      console.log('[FII] BSE raw rows:', arr.length, 'keys:', Object.keys(arr[0]||{}).join(','));
+      const rows = arr.slice(-30).reduce((out,r)=>{
+        const fb=pn(r.FII_BUY_AMT||r.fiiBuy||r['FII BUY']||0);
+        const fs=pn(r.FII_SELL_AMT||r.fiiSell||r['FII SELL']||0);
+        const fn=pn(r.FII_NET_AMT||r.fiiNet||0);
+        const db=pn(r.DII_BUY_AMT||r.diiBuy||r['DII BUY']||0);
+        const ds=pn(r.DII_SELL_AMT||r.diiSell||r['DII SELL']||0);
+        const dn=pn(r.DII_NET_AMT||r.diiNet||0);
+        const dt=r.TRADE_DATE||r.date||r.Date||'';
+        if(dt) out.push({date:dt,fiiBuy:fb,fiiSell:fs,fiiNet:fb||fs?+(fb-fs).toFixed(2):fn,diiBuy:db,diiSell:ds,diiNet:db||ds?+(db-ds).toFixed(2):dn});
+        return out;
+      },[]);
+      console.log('[FII] BSE parsed:', rows.length);
+      if(rows.length<2) throw new Error('BSE only '+rows.length+' rows');
       return rows;
     };
     const tryTL = async () => {
