@@ -3564,32 +3564,41 @@ function getLiveFund(sym, q) {
   if (!q) return FUND_FALLBACK[sym] || {};
   const price = q.regularMarketPrice || 0;
   const eps   = q.epsTrailingTwelveMonths;
-  const pe    = q.trailingPE || (eps && price ? +(price/eps).toFixed(1) : null);
-  const mc    = q.marketCap;
-  const mcStr = mc > 1e12 ? '₹'+(mc/1e12).toFixed(2)+'L Cr'
+
+  // P/E: use from API or calculate from price/eps
+  const pe = q.trailingPE || (eps && price ? +(price/eps).toFixed(1) : null);
+
+  // Market cap: API returns raw number in INR (Yahoo) or USD — format it
+  const mc = q.marketCap;
+  const mcStr = mc > 1e12 ? '₹'+(mc/1e12).toFixed(2)+' L Cr'
               : mc > 1e9  ? '₹'+(mc/1e9).toFixed(0)+' Cr'
-              : mc > 1e7  ? '₹'+(mc/1e7).toFixed(0)+' Cr' : null;
-  const dy = q.trailingAnnualDividendYield
-    ? (q.trailingAnnualDividendYield < 1 ? (q.trailingAnnualDividendYield*100).toFixed(2) : q.trailingAnnualDividendYield.toFixed(2))+'%'
-    : (q.dividendRate && price ? (q.dividendRate/price*100).toFixed(2)+'%' : null);
-  const roe = q.returnOnEquity ? (q.returnOnEquity*100).toFixed(1)+'%' : null;
-  const rg  = q.revenueGrowth  ? (q.revenueGrowth *100).toFixed(1)+'%' : null;
-  const de  = q.debtToEquity   ? (q.debtToEquity/100).toFixed(2)        : null;
+              : mc > 1e6  ? '₹'+(mc/1e6).toFixed(0)+' L' : null;
+
+  // Dividend yield: Yahoo sends as decimal (0.015 = 1.5%) or percent
+  const rawDy = q.trailingAnnualDividendYield;
+  const dy = rawDy != null
+    ? (rawDy < 1 ? (rawDy*100).toFixed(2) : rawDy.toFixed(2))+'%'
+    : null;
+
+  // ROE/revenue growth come as decimals from Yahoo (0.23 = 23%)
+  const roe = q.returnOnEquity  != null ? (q.returnOnEquity*100).toFixed(1)+'%'  : null;
+  const rg  = q.revenueGrowth   != null ? (q.revenueGrowth*100).toFixed(1)+'%'   : null;
+  // D/E from Yahoo is already a ratio (e.g. 0.45)
+  const de  = q.debtToEquity    != null ? q.debtToEquity.toFixed(2)               : null;
+
   return {
     name:    q.longName || q.shortName || (FUND_FALLBACK[sym]||{}).name || sym.replace('.NS',''),
-    sector:  q.sector   || null,
-    industry:q.industry || null,
-    pe:      pe ? +pe.toFixed(1) : null,
-    eps:     eps != null ? +eps.toFixed(2) : null,
+    pe:      pe != null ? +parseFloat(pe).toFixed(1) : null,
+    eps:     eps != null ? +parseFloat(eps).toFixed(2) : null,
     mc:      mcStr,
-    beta:    q.beta ? +q.beta.toFixed(2) : null,
+    beta:    q.beta != null ? +parseFloat(q.beta).toFixed(2) : null,
     dy,
     roe,
     rg,
     de,
-    pb:      q.priceToBook   ? +q.priceToBook.toFixed(2)   : null,
-    gm:      q.grossMargins  ? (q.grossMargins*100).toFixed(1)+'%' : null,
-    om:      q.operatingMargins ? (q.operatingMargins*100).toFixed(1)+'%' : null,
+    pb:      q.priceToBook    != null ? +parseFloat(q.priceToBook).toFixed(2) : null,
+    gm:      q.grossMargins   != null ? (q.grossMargins*100).toFixed(1)+'%'   : null,
+    om:      q.operatingMargins != null ? (q.operatingMargins*100).toFixed(1)+'%' : null,
   };
 }
 
