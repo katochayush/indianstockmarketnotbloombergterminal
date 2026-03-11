@@ -3561,27 +3561,35 @@ const FUND_FALLBACK = {
 window._liveFund = {};
 
 function getLiveFund(sym, q) {
-  // Build fund object entirely from live NSE quote data
   if (!q) return FUND_FALLBACK[sym] || {};
   const price = q.regularMarketPrice || 0;
-  const prev  = q.regularMarketPreviousClose || price;
   const eps   = q.epsTrailingTwelveMonths;
   const pe    = q.trailingPE || (eps && price ? +(price/eps).toFixed(1) : null);
   const mc    = q.marketCap;
-  const mcStr = mc > 1e13 ? '₹'+(mc/1e13).toFixed(2)+'L Cr'
-              : mc > 1e11 ? '₹'+(mc/1e11).toFixed(2)+'L Cr'
-              : mc > 1e9  ? '₹'+(mc/1e9).toFixed(0)+' Cr' : null;
-  const dy = q.trailingAnnualDividendYield ? (q.trailingAnnualDividendYield*100).toFixed(2)+'%' : null;
+  const mcStr = mc > 1e12 ? '₹'+(mc/1e12).toFixed(2)+'L Cr'
+              : mc > 1e9  ? '₹'+(mc/1e9).toFixed(0)+' Cr'
+              : mc > 1e7  ? '₹'+(mc/1e7).toFixed(0)+' Cr' : null;
+  const dy = q.trailingAnnualDividendYield
+    ? (q.trailingAnnualDividendYield < 1 ? (q.trailingAnnualDividendYield*100).toFixed(2) : q.trailingAnnualDividendYield.toFixed(2))+'%'
+    : (q.dividendRate && price ? (q.dividendRate/price*100).toFixed(2)+'%' : null);
+  const roe = q.returnOnEquity ? (q.returnOnEquity*100).toFixed(1)+'%' : null;
+  const rg  = q.revenueGrowth  ? (q.revenueGrowth *100).toFixed(1)+'%' : null;
+  const de  = q.debtToEquity   ? (q.debtToEquity/100).toFixed(2)        : null;
   return {
-    name: q.longName || q.shortName || (FUND_FALLBACK[sym]||{}).name || sym.replace('.NS',''),
-    pe:   pe ? +pe : null,
-    eps:  eps != null ? +eps.toFixed(2) : null,
-    mc:   mcStr,
-    beta: q.beta ? +q.beta.toFixed(2) : null,
-    dy:   dy,
-    roe:  null,   // NSE quote doesn't expose ROE — shown as '—' honestly
-    rg:   null,
-    de:   null,
+    name:    q.longName || q.shortName || (FUND_FALLBACK[sym]||{}).name || sym.replace('.NS',''),
+    sector:  q.sector   || null,
+    industry:q.industry || null,
+    pe:      pe ? +pe.toFixed(1) : null,
+    eps:     eps != null ? +eps.toFixed(2) : null,
+    mc:      mcStr,
+    beta:    q.beta ? +q.beta.toFixed(2) : null,
+    dy,
+    roe,
+    rg,
+    de,
+    pb:      q.priceToBook   ? +q.priceToBook.toFixed(2)   : null,
+    gm:      q.grossMargins  ? (q.grossMargins*100).toFixed(1)+'%' : null,
+    om:      q.operatingMargins ? (q.operatingMargins*100).toFixed(1)+'%' : null,
   };
 }
 
@@ -4199,27 +4207,33 @@ async function loadFno(sym, btn) {
   if(fnoStatus) fnoStatus.textContent = 'Fetching live NSE data…';
   document.getElementById('fno-oi-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--dim2)">Fetching option chain…</td></tr>';
 
-  try {
-    const j = await apiFetch({ type: 'fno', sym }, 15000);
-    const st = document.getElementById('fno-status-label');
+  // Retry up to 2 times before giving up
+  let j = null, lastErr = '';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      j = await apiFetch({ type: 'fno', sym }, 18000);
+      if (j?.records?.data?.length) break;
+      lastErr = j?.error || 'No data';
+      j = null;
+    } catch(e) { lastErr = e.message; j = null; }
+    if (attempt === 0) await new Promise(r => setTimeout(r, 1500)); // wait before retry
+  }
 
-    if (j && j.records && j.records.data && j.records.data.length) {
-      _fnoData = j;
-      const src = j.source === 'yahoo' ? '📡 Yahoo Finance' : '✅ NSE Live';
-      const col = j.source === 'yahoo' ? 'var(--ac)' : 'var(--gn)';
-      if (st) st.innerHTML = `<span style="color:${col}">${src}</span>`;
-      renderFnoTab(j, sym);
-    } else if (j && j.fallback) {
-      if (st) st.innerHTML = `<span style="color:var(--rd)" title="${j.error||''}">⚠️ Live unavailable · Estimated model</span>`;
-      renderFnoFallback(sym);
+  const st = document.getElementById('fno-status-label');
+  if (j && j.records && j.records.data && j.records.data.length) {
+    _fnoData = j;
+    const src = j.source === 'nse' ? '✅ NSE Live' : '📡 Yahoo Finance';
+    const col = j.source === 'nse' ? 'var(--gn)' : 'var(--ac)';
+    if (st) st.innerHTML = `<span style="color:${col}">${src}</span>`;
+    renderFnoTab(j, sym);
+  } else {
+    if (st) st.innerHTML = `<span style="color:var(--yl)">⚠️ Market closed or data unavailable &nbsp;<button onclick="loadFno(window._fnoSym||'NIFTY',null)" style="background:rgba(255,200,0,.15);border:1px solid rgba(255,200,0,.3);color:var(--yl);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:8px">↻ Retry</button></span>`;
+    // Show last known data if we have it, otherwise empty message
+    if (_fnoData?.records?.data?.length) {
+      renderFnoTab(_fnoData, sym);
     } else {
-      if (st) st.innerHTML = `<span style="color:var(--yl)">⚠️ No data returned</span>`;
-      renderFnoFallback(sym);
+      document.getElementById('fno-oi-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--dim2);font-size:9px">📭 Option chain data unavailable<br><span style="font-size:8px">Market may be closed · ' + lastErr.slice(0,60) + '</span></td></tr>';
     }
-  } catch(e) {
-    const st = document.getElementById('fno-status-label');
-    if (st) st.innerHTML = `<span style="color:var(--rd)">⚠️ ${e.message}</span>`;
-    renderFnoFallback(sym);
   }
 }
 
