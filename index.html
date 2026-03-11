@@ -1231,18 +1231,29 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
 
 <!-- ══ TRADINGVIEW FULL WIDGET MODAL ══════════════════════════════════════ -->
 <div class="tv-modal" id="tv-modal">
-  <div class="tv-modal-inner">
-    <div class="tv-modal-bar">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:.12em;color:var(--sf)">TRADINGVIEW</span>
-        <select id="tv-sym-sel" onchange="changeTVSym(this.value)" class="tv-sym-sel"></select>
+  <div class="tv-modal-inner" style="flex-direction:row">
+    <!-- Chart side -->
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div class="tv-modal-bar">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:.12em;color:var(--sf)">📈 CHART</span>
+          <span id="tv-modal-sym-label" style="font-family:DM Mono,monospace;font-size:11px;color:var(--tx);font-weight:600"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:9px;color:var(--dim2)">Full TA · Indicators · Drawing tools</span>
+          <button onclick="closeTVWidget()" class="tv-close-btn">✕ Close</button>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:9px;color:var(--dim2)">Full indicators · Drawing tools · Replay</span>
-        <button onclick="closeTVWidget()" class="tv-close-btn">✕ Close</button>
-      </div>
+      <div id="tv-widget-container" style="flex:1;min-height:0"></div>
     </div>
-    <div id="tv-widget-container" style="flex:1;min-height:0"></div>
+    <!-- News sidebar -->
+    <div id="tv-news-sidebar" style="width:300px;min-width:260px;background:var(--cb);border-left:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:Bebas Neue,sans-serif;font-size:13px;letter-spacing:.12em;color:var(--sf)">📰 LATEST NEWS</span>
+        <span id="tv-news-sym" style="font-family:DM Mono,monospace;font-size:9px;color:var(--dim2)"></span>
+      </div>
+      <div id="tv-news-feed" style="flex:1;overflow-y:auto;padding:8px"></div>
+    </div>
   </div>
 </div>
 <div class="tv-modal-overlay" id="tv-modal-overlay" onclick="closeTVWidget()"></div>
@@ -1616,12 +1627,13 @@ tr:hover td{background:rgba(255,153,51,.04)!important}
         <div style="background:var(--cd);border:1px solid var(--br2);border-radius:6px;padding:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--sf)">Price Chart</div>
-            <div style="display:flex;gap:4px" id="sr-range-btns">
+            <div style="display:flex;gap:4px;align-items:center" id="sr-range-btns">
               <button onclick="changeRange('1d')" class="rbtn on" data-r="1d">1D</button>
               <button onclick="changeRange('5d')" class="rbtn" data-r="5d">5D</button>
               <button onclick="changeRange('1mo')" class="rbtn" data-r="1mo">1M</button>
               <button onclick="changeRange('3mo')" class="rbtn" data-r="3mo">3M</button>
               <button onclick="changeRange('1y')" class="rbtn" data-r="1y">1Y</button>
+              <button onclick="openTVChart()" title="Open TradingView fullscreen" style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);color:#fbbf24;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:9px;letter-spacing:.05em;font-family:DM Mono,monospace;margin-left:4px">⛶ EXPAND</button>
             </div>
           </div>
           <div style="position:relative;height:200px"><canvas id="sr-chart"></canvas></div>
@@ -3497,6 +3509,9 @@ async function loadStockData(sym) {
     if (!q || !q.regularMarketPrice) { showSearchError(sym); return; }
 
     currentStockPrice = q.regularMarketPrice;
+    window._currentSearchSym = sym; // for TV chart expand
+    window._currentSym = sym;
+    window._lastQuote = q;
 
     // Chart is optional — fall back to simulated if it fails
     let chartPts = genSimChart(q.regularMarketPrice, currentRange);
@@ -5843,13 +5858,74 @@ function populateTVSymSelect() {
   sel.innerHTML = syms.map(s => `<option value="${s}" ${s===_tvModalSym?'selected':''}>${s}</option>`).join('');
 }
 
+// Called by the ⛶ EXPAND button on the stock search chart
+function openTVChart() {
+  const sym = window._currentSearchSym || window._fnoSym || 'NIFTY';
+  const nse = sym.replace('.NS','').replace('.BO','').replace('^NSEI','NIFTY').replace('^NSEBANK','BANKNIFTY');
+  openTVWidget('NSE:' + nse);
+}
+
 function openTVWidget(sym) {
   _tvModalSym = sym || _chartSlots[0]?.sym || 'NSE:NIFTY';
   document.getElementById('tv-modal').classList.add('open');
   document.getElementById('tv-modal-overlay').classList.add('open');
+  // Update label
+  const tickerLabel = sym ? sym.replace('NSE:','').replace('BSE:','') : '';
+  const symLabel = document.getElementById('tv-modal-sym-label');
+  if (symLabel) symLabel.textContent = tickerLabel;
+  const tvNewsSym = document.getElementById('tv-news-sym');
+  if (tvNewsSym) tvNewsSym.textContent = tickerLabel;
+  // Populate news sidebar
+  setTimeout(() => renderTVNewsSidebar(tickerLabel), 100);
   document.body.style.overflow = 'hidden';
   populateTVSymSelect();
   loadTVWidget(_tvModalSym);
+}
+
+function renderTVNewsSidebar(ticker) {
+  const feed = document.getElementById('tv-news-feed');
+  if (!feed) return;
+  // Filter live news for this stock ticker
+  const allNews = window.liveNews || [];
+  const tk = ticker.toUpperCase();
+  const related = allNews.filter(n => {
+    const t = (n.title + ' ' + (n.desc||'')).toUpperCase();
+    // Match by ticker or common name mappings
+    const names = { 'TCS':'TATA CONSULTANCY', 'INFY':'INFOSYS', 'HDFCBANK':'HDFC BANK',
+      'ICICIBANK':'ICICI BANK', 'SBIN':'STATE BANK', 'RELIANCE':'RELIANCE',
+      'BHARTIAIRTEL':'AIRTEL', 'BAJFINANCE':'BAJAJ FINANCE', 'WIPRO':'WIPRO',
+      'HCLTECH':'HCL', 'TATAMOTORS':'TATA MOTORS', 'MARUTI':'MARUTI',
+      'ADANIENT':'ADANI', 'KOTAKBANK':'KOTAK', 'AXISBANK':'AXIS BANK',
+    };
+    const company = names[tk] || '';
+    return t.includes(tk) || (company && t.includes(company));
+  });
+  const toShow = related.length >= 3 ? related : allNews.slice(0, 15);
+  if (!toShow.length) {
+    feed.innerHTML = '<div style="text-align:center;padding:30px 16px;color:var(--dim2);font-size:10px">No news found for '+ticker+'</div>';
+    return;
+  }
+  feed.innerHTML = '';
+  toShow.forEach(n => {
+    const ago = timeAgo(n.pubDate);
+    const imp = typeof newsImpact === 'function' ? newsImpact(n) : 'neutral';
+    const dot = imp==='buy' ? '🟢' : imp==='sell' ? '🔴' : '⚪';
+    const card = document.createElement('div');
+    card.style.cssText = 'padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s';
+    if (n.link) {
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => window.open(n.link, '_blank'));
+      card.addEventListener('mouseover', () => card.style.background = 'rgba(255,255,255,.03)');
+      card.addEventListener('mouseout',  () => card.style.background = '');
+    }
+    card.innerHTML = '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px">'
+      +'<span style="font-size:9px;margin-top:1px">'+dot+'</span>'
+      +'<span style="font-size:9px;color:var(--tx);line-height:1.45;font-weight:500">'+n.title.slice(0,120)+'</span>'
+      +'</div>'
+      +'<div style="font-size:8px;color:var(--dim2);padding-left:15px">'+n.src+' · '+ago+'</div>';
+    return card;
+    feed.appendChild(card);
+  });
 }
 
 function closeTVWidget() {
@@ -7044,6 +7120,164 @@ function fiiMockData() {
   return rows;
 }
 
+async 
+// ═══════════════════════════════════════════════════════
+// TRADINGVIEW FULLSCREEN CHART
+// ═══════════════════════════════════════════════════════
+let _tvSym = '';
+let _tvWidget = null;
+
+function openTVChart() {
+  const rawSym = (window._currentSym || 'RELIANCE').replace('.NS','').replace('.BO','').replace('^NSEI','NIFTY').replace('^NSEBANK','BANKNIFTY');
+  _tvSym = rawSym;
+  const overlay = document.getElementById('tv-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Set labels
+  document.getElementById('tv-sym-label').textContent = rawSym + ' · NSE';
+  document.getElementById('tv-news-sym').textContent = 'Showing news for ' + rawSym;
+
+  // Inject TradingView widget
+  const container = document.getElementById('tv-chart-container');
+  container.innerHTML = '';
+
+  const script = document.createElement('script');
+  script.src = 'https://s3.tradingview.com/tv.js';
+  script.onload = function() {
+    _tvWidget = new TradingView.widget({
+      container_id: 'tv-chart-container',
+      symbol: 'NSE:' + rawSym,
+      interval: '15',
+      timezone: 'Asia/Kolkata',
+      theme: 'dark',
+      style: '1',
+      locale: 'en',
+      toolbar_bg: '#0f0f18',
+      enable_publishing: false,
+      allow_symbol_change: true,
+      save_image: true,
+      height: '100%',
+      width: '100%',
+      studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies','BB@tv-basicstudies','Volume@tv-basicstudies'],
+      show_popup_button: false,
+      popup_width: '1000',
+      popup_height: '650',
+      hide_side_toolbar: false,
+      withdateranges: true,
+      hide_legend: false,
+      details: true,
+      hotlist: false,
+      calendar: false,
+      news: [],
+      backgroundColor: '#0a0a0f',
+      gridColor: 'rgba(255,255,255,0.04)',
+    });
+  };
+  // If already loaded
+  if (window.TradingView) {
+    script.onload();
+  } else {
+    document.head.appendChild(script);
+  }
+
+  // Load news for this stock
+  loadTVNews(rawSym);
+  // Load quick stats
+  loadTVStats(rawSym);
+}
+
+function closeTVChart() {
+  document.getElementById('tv-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ESC key closes
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTVChart(); });
+
+async function loadTVNews(sym) {
+  const feed = document.getElementById('tv-news-feed');
+  feed.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:9px;font-family:DM Mono,monospace;text-align:center;padding:20px">⏳ Loading…</div>';
+
+  // Filter global liveNews for this stock
+  const tick = sym.toUpperCase();
+  const stockNews = (window.liveNews || []).filter(n => {
+    const t = (n.title + ' ' + (n.desc||'')).toUpperCase();
+    return t.includes(tick) || t.includes(tick.slice(0,6));
+  });
+
+  // Also try fetching from our announcements API
+  let annNews = [];
+  try {
+    const j = await apiFetch({ sym: sym+'.NS', type: 'announcements' }, 8000);
+    if (j?.data?.length) {
+      annNews = j.data.slice(0, 10).map(a => ({
+        title: a.desc || a.subject || a.headline || 'Corporate Announcement',
+        src: 'NSE',
+        pubDate: a.exchdisstime || a.bm_timestamp || '',
+        link: '',
+        isAnn: true,
+      }));
+    }
+  } catch(_) {}
+
+  const combined = [...annNews, ...stockNews, ...(window.liveNews||[]).slice(0,20)];
+  const seen = new Set();
+  const unique = combined.filter(n => {
+    const k = n.title.slice(0,40);
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  }).slice(0, 25);
+
+  if (!unique.length) {
+    feed.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:9px;font-family:DM Mono,monospace;text-align:center;padding:20px">No news found for '+sym+'</div>';
+    return;
+  }
+
+  feed.innerHTML = unique.map(n => {
+    const ago = n.pubDate ? timeAgo(n.pubDate) : '';
+    const isAnn = n.isAnn;
+    const dotCol = isAnn ? '#fbbf24' : (n.cat==='bullish'?'#00d26a':n.cat==='bearish'?'#ff5555':'#888');
+    const clickHandler = n.link ? 'window.open(this.dataset.url,\'_blank\')' : '';
+    return `<div onclick="${clickHandler}" data-url="${n.link||''}" style="padding:9px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:5px;cursor:${n.link?'pointer':'default'};transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='rgba(255,255,255,.03)'">
+      <div style="display:flex;align-items:flex-start;gap:7px">
+        <div style="width:5px;height:5px;border-radius:50%;background:${dotCol};margin-top:4px;flex-shrink:0"></div>
+        <div>
+          <div style="font-size:9.5px;color:rgba(255,255,255,.85);line-height:1.45;margin-bottom:3px">${n.title.slice(0,120)}${n.title.length>120?'…':''}</div>
+          <div style="font-size:8px;color:rgba(255,255,255,.3);font-family:DM Mono,monospace">${isAnn?'📋 NSE Announcement':'📰 '+n.src}${ago?' · '+ago:''}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadTVStats(sym) {
+  const el = document.getElementById('tv-quick-stats');
+  if (!el) return;
+  // Use cached fund data if available
+  const fund = window._liveFund && (window._liveFund[sym+'.NS'] || window._liveFund[sym]);
+  const q    = window._lastQuote;
+  if (!fund && !q) { el.innerHTML = ''; return; }
+  const f = fund || {};
+  const stats = [
+    ['P/E',     f.pe   ?? '—'],
+    ['EPS',     f.eps  != null ? '₹'+f.eps : '—'],
+    ['Beta',    f.beta ?? '—'],
+    ['Div Yld', f.dy   ?? '—'],
+    ['ROE',     f.roe  ?? '—'],
+    ['D/E',     f.de   ?? '—'],
+    ['Mkt Cap', f.mc   ?? '—'],
+    ['Rev Grw', f.rg   ?? '—'],
+  ];
+  el.innerHTML = stats.map(([l,v]) =>
+    `<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:5px 7px">
+      <div style="font-size:7.5px;color:rgba(255,255,255,.3);font-family:DM Mono,monospace;margin-bottom:1px">${l}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.8);font-family:DM Mono,monospace;font-weight:600">${v}</div>
+    </div>`
+  ).join('');
+}
+
+
 async function initFiiDii() {
   if (_fiiInited && _fiiData?.rows?.length) {
     renderFiiDii(); return;
@@ -7095,6 +7329,7 @@ async function loadFiiDii(force = false) {
     } else renderFiiDii(); // keep previous real data if we have it
   }
 }
+
 
 
 
@@ -7458,6 +7693,37 @@ setTimeout(()=>{ if(typeof loadFiiDii==='function') loadFiiDii(false); },3000);
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+
+<!-- ═══ TRADINGVIEW FULLSCREEN OVERLAY ═══ -->
+<div id="tv-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#0a0a0f;flex-direction:row">
+  <!-- Left: TradingView chart -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0f0f18;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.2em;color:#fbbf24">⛶ ADVANCED CHART</span>
+        <span id="tv-sym-label" style="font-family:DM Mono,monospace;font-size:11px;color:rgba(255,255,255,.5)"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:9px;color:rgba(255,255,255,.3);font-family:DM Mono,monospace">Powered by TradingView</span>
+        <button onclick="closeTVChart()" style="background:rgba(255,80,80,.15);border:1px solid rgba(255,80,80,.3);color:#ff5555;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-family:DM Mono,monospace">✕ CLOSE</button>
+      </div>
+    </div>
+    <div id="tv-chart-container" style="flex:1;min-height:0"></div>
+  </div>
+  <!-- Right: News sidebar -->
+  <div style="width:320px;flex-shrink:0;display:flex;flex-direction:column;background:#0d0d16;border-left:1px solid rgba(255,255,255,.07)">
+    <div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.18em;color:#fbbf24">📰 LATEST NEWS</div>
+      <div id="tv-news-sym" style="font-family:DM Mono,monospace;font-size:9px;color:rgba(255,255,255,.35);margin-top:2px"></div>
+    </div>
+    <div id="tv-news-feed" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+      <div style="color:rgba(255,255,255,.3);font-size:9px;font-family:DM Mono,monospace;text-align:center;padding:20px">Loading news…</div>
+    </div>
+    <!-- Quick stats strip at bottom -->
+    <div id="tv-quick-stats" style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.06);display:grid;grid-template-columns:1fr 1fr;gap:6px;flex-shrink:0"></div>
   </div>
 </div>
 
