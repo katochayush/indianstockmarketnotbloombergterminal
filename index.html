@@ -3508,7 +3508,7 @@ async function loadStockData(sym) {
       const q0  = (res && res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
       const hist = ts.map((t,i) => ({ t: new Date(t*1000), c: q0.close && q0.close[i] })).filter(p => p.c);
       if (hist.length > 2) { chartPts = hist; closes = hist.map(p => p.c); }
-    } catch(ce) { /* use sim chart */ }
+    } catch(ce) { console.warn('[Chart] API failed, using price-anchored fallback:', ce.message); }
 
     const fund = getLiveFund(sym, q);
     window._liveFund[sym] = fund;
@@ -4235,10 +4235,8 @@ async function loadFno(sym, btn) {
 }
 
 function renderFnoFallback(sym) {
-  // API unavailable — use live spot price + realistic OI distribution model
-  // Mark clearly as estimated so user knows NSE call failed
   const fnoStatus = document.getElementById('fno-status-label');
-  if (fnoStatus) fnoStatus.innerHTML = '<span style="color:var(--yl)">⚠️ Data unavailable — estimated model (market may be closed)</span>';
+  if (fnoStatus) fnoStatus.innerHTML = '<span style="color:var(--yl)">⚠️ Option chain unavailable (market closed or API blocked) &nbsp;<button onclick="loadFno(window._fnoSym||\'NIFTY\',null)" style="background:rgba(255,200,0,.15);border:1px solid rgba(255,200,0,.3);color:var(--yl);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:8px">↻ Retry</button></span>';
   // Use real live spot price if available
   const spotMap = { NIFTY: liveData.nifty?.v||24336, BANKNIFTY: liveData.bank?.v||52141, MIDCPNIFTY:12480, FINNIFTY:23890 };
   const spot = spotMap[sym] || liveData.nifty?.v || 24336;
@@ -7013,7 +7011,7 @@ let _fiiBarChart  = null;
 let _fiiCumChart  = null;
 let _fiiInited    = false;
 
-// Fallback simulated data when NSE blocks the request (common from browser)
+// fiiMockData() kept as reference — not shown to user, replaced by real error messages
 function fiiMockData() {
   const rows = [];
   const base = new Date();
@@ -7051,10 +7049,10 @@ async function loadFiiDii(force = false) {
   setBadge('⏳ Loading…','rgba(255,200,0,.2)','#fff');
   if (upd) upd.textContent = 'Fetching from NSE…';
 
-  // Show mock immediately so UI is never blank
+  // Show loading skeleton — don't pollute with fake data
   if (!_fiiData?.rows?.length) {
-    _fiiData = { rows: fiiMockData(), simulated: true };
-    renderFiiDii();
+    const tbody = document.getElementById('fii-tbl-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--dim2);font-family:DM Mono,monospace;font-size:9px">⏳ Loading live data…</td></tr>';
   }
 
   // Single call to our server — which tries NSE → MoneyControl → BSE
@@ -7077,10 +7075,12 @@ async function loadFiiDii(force = false) {
     }
     throw new Error('No rows returned (source=' + (j.source||'?') + ' err=' + (j.error||'none') + ')');
   } catch(e) {
-    _fiiData = { rows: _fiiData?.rows?.length ? _fiiData.rows : fiiMockData(), simulated: true };
-    setBadge('⚠️ SIM','rgba(255,100,0,.2)','#ffaa00');
+    setBadge('⚠️ ERR','rgba(255,50,50,.2)','#ff5555');
     if (upd) upd.innerHTML = '⚠️ ' + e.message + ' · <a href="https://www.nseindia.com/reports-and-publications/fii-dii-data" target="_blank" style="color:var(--sf)">NSE ↗</a>';
-    renderFiiDii();
+    if (!_fiiData?.rows?.length) {
+      const tbody = document.getElementById('fii-tbl-body');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--rd);font-family:DM Mono,monospace;font-size:9px">⚠️ ' + e.message + '</td></tr>';
+    } else renderFiiDii(); // keep previous real data if we have it
   }
 }
 
@@ -7249,30 +7249,30 @@ function renderFiiCumChart() {
   });
 }
 
-function renderFiiSectorBars() {
+async function renderFiiSectorBars() {
   const wrap=document.getElementById('fii-sector-bars'); if(!wrap) return;
-  const sectors=[
-    {name:'Banking',fii:35,dii:18},{name:'IT',fii:22,dii:12},{name:'Energy',fii:15,dii:20},
-    {name:'FMCG',fii:-8,dii:25},{name:'Auto',fii:18,dii:10},{name:'Pharma',fii:12,dii:8},
-    {name:'Metals',fii:-5,dii:15},{name:'Infra',fii:6,dii:22},{name:'Real Estate',fii:-3,dii:12},{name:'Telecom',fii:9,dii:6},
-  ];
-  const rows=_fiiData.rows; const today=rows[rows.length-1];
-  const scale=Math.abs(today.fiiNet)/100;
-  const maxVal=Math.max(...sectors.map(s=>Math.abs(s.fii)))*scale;
-  wrap.innerHTML=sectors.map(s=>{
-    const fiiVal=s.fii*scale;
-    const buyPct=s.fii>0?Math.min(50,Math.abs(fiiVal)/maxVal*50):0;
-    const sellPct=s.fii<0?Math.min(50,Math.abs(fiiVal)/maxVal*50):0;
-    const col=s.fii>=0?'var(--gn)':'var(--rd)';
-    return `<div class="fii-sector-row">
-      <div class="fii-sector-name">${s.name}</div>
-      <div class="fii-sector-track">
-        <div class="fii-sector-fill-buy" style="width:${buyPct}%;background:var(--gn)"></div>
-        <div class="fii-sector-fill-sell" style="width:${sellPct}%;background:var(--rd)"></div>
-      </div>
-      <div class="fii-sector-net" style="color:${col}">${s.fii>=0?'+':'−'}₹${Math.round(Math.abs(fiiVal))} Cr</div>
-    </div>`;
-  }).join('');
+  const badge=document.getElementById('sector-badge');
+  wrap.innerHTML='<div style="text-align:center;padding:16px;color:var(--dim2);font-size:9px;font-family:DM Mono,monospace">⏳ Loading sector data…</div>';
+  try {
+    const j = await apiFetch({ type:'sectors' }, 8000);
+    if (!j?.rows?.length) throw new Error(j?.error||'No sector data');
+    const rows = j.rows;
+    const maxPct = Math.max(...rows.map(s=>Math.abs(s.pct)), 0.1);
+    if (badge) badge.textContent = '🟢 NSE Live · '+new Date(j.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    wrap.innerHTML = rows.map(s => {
+      const col = s.pct>=0?'var(--gn)':'var(--rd)';
+      const barW = Math.min(80, Math.abs(s.pct)/maxPct*80);
+      const sign = s.pct>=0?'+':'';
+      return '<div class="fii-sector-row">'
+        +'<div class="fii-sector-name">'+s.name+'</div>'
+        +'<div class="fii-sector-track"><div class="fii-sector-fill-'+(s.pct>=0?'buy':'sell')+'" style="width:'+barW+'%;background:'+col+'"></div></div>'
+        +'<div class="fii-sector-net" style="color:'+col+'">'+sign+s.pct.toFixed(2)+'%</div>'
+        +'</div>';
+    }).join('');
+  } catch(e) {
+    if (badge) badge.textContent = '⚠️ '+e.message.slice(0,25);
+    wrap.innerHTML='<div style="text-align:center;padding:16px;color:var(--rd);font-size:9px">⚠️ '+e.message+'</div>';
+  }
 }
 
 function renderFiiTable() {
@@ -7427,7 +7427,7 @@ setTimeout(()=>{ if(typeof loadFiiDii==='function') loadFiiDii(false); },3000);
       </div>
       <div class="fii-right">
         <div class="fii-card">
-          <div class="fii-card-hdr">🗂 Estimated Sector Activity</div>
+          <div class="fii-card-hdr" style="display:flex;justify-content:space-between;align-items:center"><span>📊 Sector Performance</span><span id="sector-badge" style="font-size:8px;color:var(--dim2);font-family:DM Mono,monospace">loading…</span></div>
           <div id="fii-sector-bars"></div>
         </div>
         <div class="fii-card" style="padding:0;overflow:hidden">
