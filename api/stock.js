@@ -42,7 +42,9 @@ module.exports = async function handler(req, res) {
     return {symbol,longName:name||symbol,shortName:name||symbol,exchange:'NSE',
       regularMarketPrice:p,regularMarketPreviousClose:prev,
       regularMarketOpen:open||p,regularMarketDayHigh:high||p,regularMarketDayLow:low||p,
-      regularMarketVolume:vol||null,fiftyTwoWeekHigh:w52h||null,fiftyTwoWeekLow:w52l||null};
+      regularMarketVolume:vol||null,fiftyTwoWeekHigh:w52h||null,fiftyTwoWeekLow:w52l||null,
+      trailingPE:null,epsTrailingTwelveMonths:null,marketCap:null,beta:null,
+      trailingAnnualDividendYield:null,returnOnEquity:null,revenueGrowth:null,debtToEquity:null};
   }
   const INDEX_MAP = {'^NSEI':'NIFTY 50','^BSESN':'NIFTY 50','^NSEBANK':'NIFTY BANK','^NSEMDCP50':'NIFTY MIDCAP 50'};
 
@@ -151,8 +153,13 @@ module.exports = async function handler(req, res) {
       (opts.calls||[]).forEach(c=>{if(!strikeMap[c.strike])strikeMap[c.strike]={strikePrice:c.strike};strikeMap[c.strike].CE={openInterest:c.openInterest||0,changeinOpenInterest:c.change||0,totalTradedVolume:c.volume||0,impliedVolatility:c.impliedVolatility||0,lastPrice:c.lastPrice||0,change:c.change||0,pChange:c.percentChange||0,strikePrice:c.strike};});
       (opts.puts||[]).forEach(p=>{if(!strikeMap[p.strike])strikeMap[p.strike]={strikePrice:p.strike};strikeMap[p.strike].PE={openInterest:p.openInterest||0,changeinOpenInterest:p.change||0,totalTradedVolume:p.volume||0,impliedVolatility:p.impliedVolatility||0,lastPrice:p.lastPrice||0,change:p.change||0,pChange:p.percentChange||0,strikePrice:p.strike};});
       const data=Object.values(strikeMap).sort((a,b)=>a.strikePrice-b.strikePrice).map(s=>({strikePrice:s.strikePrice,CE:s.CE||{},PE:s.PE||{}}));
+      const yhQuote = result.quote || {};
       res.setHeader('Cache-Control','s-maxage=30,stale-while-revalidate=15');
-      return res.status(200).json({records:{underlyingValue:spot,expiryDates:expiries.map(ts=>new Date(ts*1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})),data},source:'yahoo'});
+      return res.status(200).json({
+        records:{underlyingValue:spot,expiryDates:expiries.map(ts=>new Date(ts*1000).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})),data},
+        quote: yhQuote,  // full quote data for frontend to use
+        source:'yahoo'
+      });
     } catch(yhErr) {
       try {
         const ep=['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY'].includes(fnoSym)?`/api/option-chain-indices?symbol=${encodeURIComponent(fnoSym)}`:`/api/option-chain-equities?symbol=${encodeURIComponent(fnoSym)}`;
@@ -381,9 +388,62 @@ module.exports = async function handler(req, res) {
       res.setHeader('Cache-Control','s-maxage=10,stale-while-revalidate=5');
       return res.status(200).json({quoteResponse:{result:[toResult(sym,e.last,e.previousClose,e.open||e.last,e.dayHigh||e.last,e.dayLow||e.last,null,e.yearHigh,e.yearLow,name)]}});
     }
-    const tk=toNSETicker(sym);const d=await nseGet('/api/quote-equity?symbol='+encodeURIComponent(tk),6000);const pd=d.priceInfo||{};
+    const tk=toNSETicker(sym);
+    // Fetch NSE price + Yahoo quoteSummary (rich fundamentals) in parallel
+    const yhSym = encodeURIComponent(tk+'.NS');
+    const [nseRes, yhChartRes, yhSummaryRes] = await Promise.allSettled([
+      nseGet('/api/quote-equity?symbol='+encodeURIComponent(tk), 6000),
+      fetch('https://query1.finance.yahoo.com/v8/finance/chart/'+yhSym+'?interval=1d&range=5d',
+        {headers:{'User-Agent':'Mozilla/5.0'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+yhSym+'?modules=summaryDetail%2CdefaultKeyStatistics%2CfinancialData%2CassetProfile',
+        {headers:{'User-Agent':'Mozilla/5.0','Accept':'application/json'}, signal:AbortSignal.timeout(7000)}).then(r=>r.ok?r.json():null).catch(()=>null),
+    ]);
+
+    const nse     = nseRes.status==='fulfilled'       ? nseRes.value       : null;
+    const yhChart = yhChartRes.status==='fulfilled'   ? yhChartRes.value   : null;
+    const yhSum   = yhSummaryRes.status==='fulfilled' ? yhSummaryRes.value : null;
+
+    const pd      = nse?.priceInfo || {};
+    const meta    = yhChart?.chart?.result?.[0]?.meta || {};
+    const sd      = yhSum?.quoteSummary?.result?.[0] || {};
+    const sumDet  = sd.summaryDetail  || {};
+    const keyStats= sd.defaultKeyStatistics || {};
+    const finData = sd.financialData  || {};
+
+    const price = pd.lastPrice || meta.regularMarketPrice;
+    const prev  = pd.previousClose || meta.chartPreviousClose;
+
+    const result = {
+      ...toResult(sym, price, prev,
+        pd.open||meta.regularMarketOpen,
+        pd.intraDayHighLow?.max||meta.regularMarketDayHigh,
+        pd.intraDayHighLow?.min||meta.regularMarketDayLow,
+        pd.totalTradedVolume||meta.regularMarketVolume,
+        nse?.priceInfo?.weekHighLow?.max||meta.fiftyTwoWeekHigh,
+        nse?.priceInfo?.weekHighLow?.min||meta.fiftyTwoWeekLow,
+        nse?.info?.companyName||meta.longName||meta.shortName||tk),
+      // Rich fundamentals from Yahoo quoteSummary
+      trailingPE:               sumDet.trailingPE?.raw             || meta.trailingPE     || null,
+      epsTrailingTwelveMonths:  keyStats.trailingEps?.raw          || meta.epsTrailingTwelveMonths || null,
+      marketCap:                sumDet.marketCap?.raw              || meta.marketCap      || null,
+      beta:                     sumDet.beta?.raw                   || meta.beta           || null,
+      trailingAnnualDividendYield: sumDet.trailingAnnualDividendYield?.raw || null,
+      dividendRate:             sumDet.dividendRate?.raw           || null,
+      bookValue:                keyStats.bookValue?.raw            || null,
+      priceToBook:              keyStats.priceToBook?.raw          || null,
+      debtToEquity:             keyStats.debtToEquity?.raw         || null,
+      returnOnEquity:           finData.returnOnEquity?.raw        || null,
+      revenueGrowth:            finData.revenueGrowth?.raw         || null,
+      earningsGrowth:           finData.earningsGrowth?.raw        || null,
+      totalRevenue:             finData.totalRevenue?.raw          || null,
+      grossMargins:             finData.grossMargins?.raw          || null,
+      operatingMargins:         finData.operatingMargins?.raw      || null,
+      sector:                   sd.assetProfile?.sector            || null,
+      industry:                 sd.assetProfile?.industry          || null,
+    };
+    console.log('[QUOTE] '+tk+' pe='+result.trailingPE+' eps='+result.epsTrailingTwelveMonths+' mc='+result.marketCap+' roe='+result.returnOnEquity);
     res.setHeader('Cache-Control','s-maxage=10,stale-while-revalidate=5');
-    return res.status(200).json({quoteResponse:{result:[toResult(sym,pd.lastPrice,pd.previousClose,pd.open,pd.intraDayHighLow?.max,pd.intraDayHighLow?.min,pd.totalTradedVolume,d.priceInfo?.weekHighLow?.max,d.priceInfo?.weekHighLow?.min,d.info?.companyName||tk)]}});
+    return res.status(200).json({quoteResponse:{result:[result]}});
 
   } catch(e) { return res.status(500).json({error:e.message}); }
 };
