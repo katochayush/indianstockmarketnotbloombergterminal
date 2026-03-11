@@ -389,84 +389,58 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({quoteResponse:{result:[toResult(sym,e.last,e.previousClose,e.open||e.last,e.dayHigh||e.last,e.dayLow||e.last,null,e.yearHigh,e.yearLow,name)]}});
     }
     const tk=toNSETicker(sym);
-    const yhSym = encodeURIComponent(tk+'.NS');
+    const yhSym = tk+'.NS';
+    const yhEnc = encodeURIComponent(yhSym);
+    const YH_HEADERS = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36','Accept':'application/json'};
 
-    // Fetch NSE price + Yahoo chart (has fundamentals in meta) in parallel
-    // Yahoo v8 chart meta contains: trailingPE, epsTrailingTwelveMonths, marketCap, beta, etc.
-    const [nseRes, yhRes] = await Promise.allSettled([
+    // Run all 3 in parallel — NSE price + Yahoo chart + Yahoo v7 quote (fundamentals)
+    const [nseR, chartR, quoteR] = await Promise.allSettled([
       nseGet('/api/quote-equity?symbol='+encodeURIComponent(tk), 6000),
-      fetch('https://query1.finance.yahoo.com/v8/finance/chart/'+yhSym+'?interval=1d&range=1y&includePrePost=false',
-        {headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36','Accept':'application/json','Accept-Language':'en-US,en;q=0.9'},
-         signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('https://query1.finance.yahoo.com/v8/finance/chart/'+yhEnc+'?interval=1d&range=1y',
+        {headers:YH_HEADERS, signal:AbortSignal.timeout(7000)}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('https://query1.finance.yahoo.com/v7/finance/quote?symbols='+yhEnc,
+        {headers:YH_HEADERS, signal:AbortSignal.timeout(7000)}).then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
 
-    const nse  = nseRes.status==='fulfilled' ? nseRes.value : null;
-    const yh   = yhRes.status==='fulfilled'  ? yhRes.value  : null;
+    const nse   = nseR.status==='fulfilled'   ? nseR.value   : null;
+    const chart = chartR.status==='fulfilled' ? chartR.value : null;
+    const qresp = quoteR.status==='fulfilled' ? quoteR.value : null;
+
     const pd   = nse?.priceInfo || {};
-    const meta = yh?.chart?.result?.[0]?.meta || {};
+    const meta = chart?.chart?.result?.[0]?.meta || {};
+    const yq   = qresp?.quoteResponse?.result?.[0] || {};
 
-    const price = pd.lastPrice || meta.regularMarketPrice;
-    const prev  = pd.previousClose || meta.chartPreviousClose || meta.previousClose;
+    // Price from NSE (most accurate for India), fallback to Yahoo
+    const price = pd.lastPrice       || yq.regularMarketPrice      || meta.regularMarketPrice;
+    const prev  = pd.previousClose   || yq.regularMarketPreviousClose || meta.chartPreviousClose;
 
-    // Yahoo v8 chart meta fields (verified to exist)
-    const pe   = meta.trailingPE              || null;
-    const eps  = meta.epsTrailingTwelveMonths || null;
-    const mc   = meta.marketCap               || null;
-    const beta = meta.beta                    || null;
-    const dy   = meta.trailingAnnualDividendYield || meta.dividendYield || null;
-    const pb   = meta.priceToBook             || null;
-
-    // Also try Yahoo finance/quote endpoint for more fields
-    let finFields = {};
-    try {
-      const qr = await fetch(
-        'https://query1.finance.yahoo.com/v7/finance/quote?symbols='+yhSym+'&fields=trailingPE,epsTrailingTwelveMonths,marketCap,beta,trailingAnnualDividendYield,priceToBook,debtToEquity,returnOnEquity,revenueGrowth,earningsGrowth,bookValue,grossMargins,operatingMargins',
-        {headers:{'User-Agent':'Mozilla/5.0','Accept':'application/json'}, signal:AbortSignal.timeout(6000)}
-      );
-      if (qr.ok) {
-        const qd = await qr.json();
-        const q0 = qd?.quoteResponse?.result?.[0] || {};
-        finFields = {
-          pe:   q0.trailingPE             || pe,
-          eps:  q0.epsTrailingTwelveMonths|| eps,
-          mc:   q0.marketCap              || mc,
-          beta: q0.beta                   || beta,
-          dy:   q0.trailingAnnualDividendYield || dy,
-          pb:   q0.priceToBook            || pb,
-          de:   q0.debtToEquity           || null,
-          roe:  q0.returnOnEquity         || null,
-          rg:   q0.revenueGrowth          || null,
-          eg:   q0.earningsGrowth         || null,
-          gm:   q0.grossMargins           || null,
-          om:   q0.operatingMargins       || null,
-          name: q0.longName||q0.shortName || null,
-        };
-      }
-    } catch(_) {}
-
+    // Fundamentals: v7 quote is most reliable for Indian stocks
+    const r = v => (v != null && v !== '' ? v : null);
     const result = {
       ...toResult(sym, price, prev,
-        pd.open||meta.regularMarketOpen,
-        pd.intraDayHighLow?.max||meta.regularMarketDayHigh,
-        pd.intraDayHighLow?.min||meta.regularMarketDayLow,
-        pd.totalTradedVolume||meta.regularMarketVolume,
-        nse?.priceInfo?.weekHighLow?.max||meta.fiftyTwoWeekHigh,
-        nse?.priceInfo?.weekHighLow?.min||meta.fiftyTwoWeekLow,
-        nse?.info?.companyName||finFields.name||meta.longName||meta.shortName||tk),
-      trailingPE:                  finFields.pe   || pe   || null,
-      epsTrailingTwelveMonths:     finFields.eps  || eps  || null,
-      marketCap:                   finFields.mc   || mc   || null,
-      beta:                        finFields.beta || beta || null,
-      trailingAnnualDividendYield: finFields.dy   || dy   || null,
-      priceToBook:                 finFields.pb   || pb   || null,
-      debtToEquity:                finFields.de               || null,
-      returnOnEquity:              finFields.roe              || null,
-      revenueGrowth:               finFields.rg               || null,
-      earningsGrowth:              finFields.eg               || null,
-      grossMargins:                finFields.gm               || null,
-      operatingMargins:            finFields.om               || null,
+        pd.open||yq.regularMarketOpen||meta.regularMarketOpen,
+        pd.intraDayHighLow?.max||yq.regularMarketDayHigh||meta.regularMarketDayHigh,
+        pd.intraDayHighLow?.min||yq.regularMarketDayLow||meta.regularMarketDayLow,
+        pd.totalTradedVolume||yq.regularMarketVolume||meta.regularMarketVolume,
+        nse?.priceInfo?.weekHighLow?.max||yq.fiftyTwoWeekHigh||meta.fiftyTwoWeekHigh,
+        nse?.priceInfo?.weekHighLow?.min||yq.fiftyTwoWeekLow||meta.fiftyTwoWeekLow,
+        nse?.info?.companyName||yq.longName||yq.shortName||meta.longName||meta.shortName||tk),
+      // Fundamentals — v7 quote first, chart meta as fallback
+      trailingPE:                  r(yq.trailingPE)                    ?? r(meta.trailingPE),
+      epsTrailingTwelveMonths:     r(yq.epsTrailingTwelveMonths)       ?? r(meta.epsTrailingTwelveMonths),
+      marketCap:                   r(yq.marketCap)                     ?? r(meta.marketCap),
+      beta:                        r(yq.beta)                          ?? r(meta.beta),
+      trailingAnnualDividendYield: r(yq.trailingAnnualDividendYield)   ?? r(meta.trailingAnnualDividendYield),
+      dividendRate:                r(yq.trailingAnnualDividendRate)     || null,
+      priceToBook:                 r(yq.priceToBook)                   || null,
+      debtToEquity:                r(yq.debtToEquity)                  || null,
+      returnOnEquity:              r(yq.returnOnEquity)                || null,
+      revenueGrowth:               r(yq.revenueGrowth)                 || null,
+      earningsGrowth:              r(yq.earningsGrowth)                || null,
+      grossMargins:                r(yq.grossMargins)                  || null,
+      operatingMargins:            r(yq.operatingMargins)              || null,
     };
-    console.log('[QUOTE] '+tk+' pe='+result.trailingPE+' eps='+result.epsTrailingTwelveMonths+' beta='+result.beta+' mc='+result.marketCap+' roe='+result.returnOnEquity+' de='+result.debtToEquity);
+    console.log('[QUOTE] '+tk+' price='+price+' pe='+result.trailingPE+' eps='+result.epsTrailingTwelveMonths+' mc='+result.marketCap+' beta='+result.beta+' roe='+result.returnOnEquity+' de='+result.debtToEquity);
     res.setHeader('Cache-Control','s-maxage=30,stale-while-revalidate=15');
     return res.status(200).json({quoteResponse:{result:[result]}});
 
