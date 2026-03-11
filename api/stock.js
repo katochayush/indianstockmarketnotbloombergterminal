@@ -71,19 +71,52 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({items:items.slice(0,40)});
   }
 
-  // COMMODITIES
+  // COMMODITIES — returns named fields that frontend expects
   if (type === 'commodities') {
-    const syms=['GC=F','SI=F','CL=F','BZ=F','NG=F','HG=F','ZW=F','ZC=F'];
-    const results = await Promise.all(syms.map(async s => {
-      try {
-        const r=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?interval=1d&range=5d`,{headers:{'User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(6000)});
-        if(!r.ok) return null;
-        const d=await r.json(); const q=d?.chart?.result?.[0]?.meta;
-        return q?{symbol:s,price:q.regularMarketPrice,prev:q.chartPreviousClose||q.previousClose,name:q.shortName||s}:null;
-      } catch(e){return null;}
-    }));
+    const fetch1 = async (sym) => {
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`,
+        {headers:{'User-Agent':'Mozilla/5.0'}, signal:AbortSignal.timeout(7000)}
+      );
+      if(!r.ok) throw new Error(sym+' '+r.status);
+      const d = await r.json();
+      const meta = d?.chart?.result?.[0]?.meta;
+      if(!meta?.regularMarketPrice) throw new Error(sym+' no price');
+      return { price: meta.regularMarketPrice, prev: meta.chartPreviousClose||meta.previousClose||meta.regularMarketPrice };
+    };
+
+    const [gc,si,bz,inr] = await Promise.allSettled([
+      fetch1('GC=F'),   // Gold USD/oz
+      fetch1('SI=F'),   // Silver USD/oz
+      fetch1('BZ=F'),   // Brent crude USD/bbl
+      fetch1('INR=X'),  // USD/INR rate
+    ]);
+
+    const get = r => r.status==='fulfilled' ? r.value : null;
+    const gold   = get(gc);
+    const silver = get(si);
+    const brent  = get(bz);
+    const inrusd = get(inr);
+
+    // Convert to INR-denominated values the frontend expects
+    const usdToInr = inrusd?.price || 84.5; // fallback rate
+    
+    const out = {};
+    // goldPerGram: international USD/oz -> INR/gram (1 troy oz = 31.1035g)
+    if(gold)   out.goldPerGram   = +(gold.price   / 31.1035 * usdToInr).toFixed(2);
+    if(silver) out.silverPerGram = +(silver.price / 31.1035 * usdToInr).toFixed(2);
+    if(brent)  out.brent         = +brent.price.toFixed(2);
+    if(inrusd) out.inrusd        = +inrusd.price.toFixed(4);
+
+    // Also send prev values for change calculation
+    if(gold)   out.goldPrev   = +(gold.prev   / 31.1035 * usdToInr).toFixed(2);
+    if(silver) out.silverPrev = +(silver.prev / 31.1035 * usdToInr).toFixed(2);
+    if(brent)  out.brentPrev  = +brent.prev.toFixed(2);
+    if(inrusd) out.inrusdPrev = +inrusd.prev.toFixed(4);
+
+    console.log('[CMX] gold='+out.goldPerGram+' silver='+out.silverPerGram+' brent='+out.brent+' inrusd='+out.inrusd);
     res.setHeader('Cache-Control','s-maxage=60,stale-while-revalidate=30');
-    return res.status(200).json({data:results.filter(Boolean)});
+    return res.status(200).json(out);
   }
 
   // ANNOUNCEMENTS
