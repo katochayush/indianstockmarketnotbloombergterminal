@@ -3995,39 +3995,28 @@ async function fetchCmxLive() {
     const el = document.getElementById('cmx-updated');
     if (el) el.textContent = ts;
 
-    // Gold MCX: international price (USD/oz) * INR/USD / 31.1035 (g/oz) * 10 (10g) * 1.15 (MCX duty+premium)
-    if (j.goldPerGram && j.inrusd) {
-      // goldPerGram from API = INR/gram international. MCX adds ~15% duties/premium
-      const intlPerGram = j.goldPerGram;
-      const mcx10g = Math.round(intlPerGram * 10 * 1.115); // MCX premium factor
-      const prev = window.cmxData.gold.v > 0 ? window.cmxData.gold.v : mcx10g * 0.998;
-      window.cmxData.gold = { ...window.cmxData.gold, v: mcx10g, prev, open: mcx10g*0.9985, high: mcx10g*1.002, low: mcx10g*0.997 };
-      liveData.gold = { v: intlPerGram };
-    } else if (j.goldPerGram) {
+    // Gold: API gives INR/gram international. MCX = *10g * ~1.115 duty/premium
+    if (j.goldPerGram) {
       const mcx10g = Math.round(j.goldPerGram * 10 * 1.115);
-      const prev = window.cmxData.gold.v > 0 ? window.cmxData.gold.v : mcx10g * 0.998;
-      window.cmxData.gold = { ...window.cmxData.gold, v: mcx10g, prev, open: mcx10g*0.9985, high: mcx10g*1.002, low: mcx10g*0.997 };
+      const prevMcx = j.goldPrev ? Math.round(j.goldPrev * 10 * 1.115) : mcx10g;
+      window.cmxData.gold = { ...window.cmxData.gold, v: mcx10g, prev: prevMcx };
       liveData.gold = { v: j.goldPerGram };
     }
-    // Silver MCX: international silver INR/gram * 1000 (kg) * MCX premium ~8%
+    // Silver: API gives INR/gram. MCX = per kg * ~1.08 duty/premium
     if (j.silverPerGram) {
       const mcxKg = Math.round(j.silverPerGram * 1000 * 1.08);
-      const prev = window.cmxData.silver.v > 0 ? window.cmxData.silver.v : mcxKg * 0.998;
-      window.cmxData.silver = { ...window.cmxData.silver, v: mcxKg, prev, open: mcxKg*0.999, high: mcxKg*1.003, low: mcxKg*0.996 };
+      const prevKg = j.silverPrev ? Math.round(j.silverPrev * 1000 * 1.08) : mcxKg;
+      window.cmxData.silver = { ...window.cmxData.silver, v: mcxKg, prev: prevKg };
     }
-    // Brent crude USD/bbl
+    // Brent crude USD/bbl — real price direct from Yahoo
     if (j.brent) {
-      const v = j.brent;
-      const prev = window.cmxData.crude.v > 0 ? window.cmxData.crude.v : v * 0.999;
-      window.cmxData.crude = { ...window.cmxData.crude, v, prev, open: v*0.999, high: v*1.004, low: v*0.996 };
-      liveData.brent = { v };
+      window.cmxData.crude = { ...window.cmxData.crude, v: j.brent, prev: j.brentPrev||j.brent };
+      liveData.brent = { v: j.brent };
     }
-    // USD/INR
+    // USD/INR — real rate direct from Yahoo INR=X
     if (j.inrusd) {
-      const v = j.inrusd;
-      const prev = window.cmxData.inrusd.v > 0 ? window.cmxData.inrusd.v : v * 0.9998;
-      window.cmxData.inrusd = { ...window.cmxData.inrusd, v, prev, open: v*0.9998, high: v*1.001, low: v*0.999 };
-      liveData.inrusd = { v };
+      window.cmxData.inrusd = { ...window.cmxData.inrusd, v: j.inrusd, prev: j.inrusdPrev||j.inrusd };
+      liveData.inrusd = { v: j.inrusd };
     }
     updateAllDisplays();
     if (document.getElementById('pg-commodities')?.classList.contains('on')) {
