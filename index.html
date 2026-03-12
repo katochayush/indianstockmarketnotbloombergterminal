@@ -5858,12 +5858,7 @@ function populateTVSymSelect() {
   sel.innerHTML = syms.map(s => `<option value="${s}" ${s===_tvModalSym?'selected':''}>${s}</option>`).join('');
 }
 
-// Called by the ⛶ EXPAND button on the stock search chart
-function openTVChart() {
-  const sym = window._currentSearchSym || window._fnoSym || 'NIFTY';
-  const nse = sym.replace('.NS','').replace('.BO','').replace('^NSEI','NIFTY').replace('^NSEBANK','BANKNIFTY');
-  openTVWidget('NSE:' + nse);
-}
+// openTVChart defined below (line ~7153) — uses TradingView.widget with full overlay
 
 function openTVWidget(sym) {
   _tvModalSym = sym || _chartSlots[0]?.sym || 'NSE:NIFTY';
@@ -7147,8 +7142,8 @@ async
 // ═══════════════════════════════════════════════════════
 // TRADINGVIEW FULLSCREEN CHART
 // ═══════════════════════════════════════════════════════
-let _tvSym = '';
-let _tvWidget = null;
+var _tvSym = '';
+var _tvWidget = null;
 
 function openTVChart() {
   const rawSym = (window._currentSym || 'RELIANCE').replace('.NS','').replace('.BO','').replace('^NSEI','NIFTY').replace('^NSEBANK','BANKNIFTY');
