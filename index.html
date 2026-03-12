@@ -5948,15 +5948,38 @@ function loadTVWidget(sym) {
   container.innerHTML = '';
   const isDark = !document.documentElement.classList.contains('light');
   const tfMap = { '1':'1','5':'5','15':'15','D':'D','W':'W' };
-  const iframe = document.createElement('iframe');
-  iframe.src = 'https://s.tradingview.com/widgetembed/?frameElementId=tvwidget&symbol=' + encodeURIComponent(sym) +
-    '&interval=' + (tfMap[_chartTF]||'D') +
-    '&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=1&saveimage=1&toolbarbg=' + (isDark?'0a0d12':'f5f7fa') +
-    '&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies&theme=' + (isDark?'dark':'light') +
-    '&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=1&locale=en';
-  iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
-  iframe.allowFullscreen = true;
-  container.appendChild(iframe);
+  const interval = tfMap[_chartTF] || 'D';
+
+  // TradingView Advanced Chart Widget (official embed method)
+  const widgetDiv = document.createElement('div');
+  widgetDiv.className = 'tradingview-widget-container';
+  widgetDiv.style.cssText = 'height:100%;width:100%';
+  widgetDiv.innerHTML = '<div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>';
+  container.appendChild(widgetDiv);
+
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  script.async = true;
+  script.innerHTML = JSON.stringify({
+    autosize: true,
+    symbol: sym,
+    interval: interval,
+    timezone: 'Asia/Kolkata',
+    theme: isDark ? 'dark' : 'light',
+    style: '1',
+    locale: 'en',
+    backgroundColor: isDark ? '#0a0d12' : '#ffffff',
+    gridColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    hide_top_toolbar: false,
+    hide_legend: false,
+    range: '3M',
+    allow_symbol_change: true,
+    save_image: true,
+    studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies','Volume@tv-basicstudies'],
+    support_host: 'https://www.tradingview.com'
+  });
+  widgetDiv.appendChild(script);
 }
 
 // charts tab is hooked directly into the main tab() function above
