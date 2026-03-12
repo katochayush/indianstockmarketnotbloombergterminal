@@ -3511,6 +3511,7 @@ async function loadStockData(sym) {
     currentStockPrice = q.regularMarketPrice;
     window._currentSearchSym = sym; // for TV chart expand
     window._currentSym = sym;
+    window._lastSearchSym = sym;
     window._lastQuote = q;
 
     // Chart is optional — fall back to simulated if it fails
@@ -7146,65 +7147,65 @@ var _tvSym = '';
 var _tvWidget = null;
 
 function openTVChart() {
-  const rawSym = (window._currentSym || 'RELIANCE').replace('.NS','').replace('.BO','').replace('^NSEI','NIFTY').replace('^NSEBANK','BANKNIFTY');
+  const raw = (window._currentSym || window._lastSearchSym || 'RELIANCE.NS');
+  const rawSym = raw.replace(/\.NS$/i,'').replace(/\.BO$/i,'')
+    .replace('^NSEI','NIFTY').replace('^NSEBANK','BANKNIFTY').toUpperCase();
   _tvSym = rawSym;
-  const overlay = document.getElementById('tv-overlay');
-  overlay.style.display = 'flex';
+
+  document.getElementById('tv-overlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';
-
-  // Set labels
   document.getElementById('tv-sym-label').textContent = rawSym + ' · NSE';
-  document.getElementById('tv-news-sym').textContent = 'Showing news for ' + rawSym;
+  document.getElementById('tv-news-sym').textContent = rawSym;
 
-  // Inject TradingView widget
+  // Fresh container every time — critical for TradingView re-init
   const container = document.getElementById('tv-chart-container');
-  container.innerHTML = '';
+  container.innerHTML = '<div id="tv-widget-inner" style="width:100%;height:100%"></div>';
 
-  const script = document.createElement('script');
-  script.src = 'https://s3.tradingview.com/tv.js';
-  script.onload = function() {
-    _tvWidget = new TradingView.widget({
-      container_id: 'tv-chart-container',
-      symbol: 'NSE:' + rawSym,
-      interval: '15',
-      timezone: 'Asia/Kolkata',
-      theme: 'dark',
-      style: '1',
-      locale: 'en',
-      toolbar_bg: '#0f0f18',
-      enable_publishing: false,
-      allow_symbol_change: true,
-      save_image: true,
-      height: '100%',
-      width: '100%',
-      studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies','BB@tv-basicstudies','Volume@tv-basicstudies'],
-      show_popup_button: false,
-      popup_width: '1000',
-      popup_height: '650',
-      hide_side_toolbar: false,
-      withdateranges: true,
-      hide_legend: false,
-      details: true,
-      hotlist: false,
-      calendar: false,
-      news: [],
-      backgroundColor: '#0a0a0f',
-      gridColor: 'rgba(255,255,255,0.04)',
-    });
+  const isDark = !document.documentElement.classList.contains('light');
+  const tvSym = 'NSE:' + rawSym;
+  console.log('[TV] loading:', tvSym);
+
+  const buildWidget = () => {
+    try {
+      new TradingView.widget({
+        container_id: 'tv-widget-inner',
+        symbol: tvSym,
+        interval: 'D',
+        timezone: 'Asia/Kolkata',
+        theme: isDark ? 'dark' : 'light',
+        style: '1',
+        locale: 'en',
+        toolbar_bg: isDark ? '#0a0d12' : '#ffffff',
+        enable_publishing: false,
+        allow_symbol_change: true,
+        save_image: true,
+        autosize: true,
+        studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies','Volume@tv-basicstudies'],
+        hide_side_toolbar: false,
+        withdateranges: true,
+        hide_legend: false,
+        details: true,
+        backgroundColor: isDark ? '#0a0d12' : '#ffffff',
+        gridColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)',
+      });
+    } catch(e) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:#ff5555;font-size:11px">⚠️ ' + e.message + '</div>';
+    }
   };
-  // If already loaded
-  if (window.TradingView) {
-    script.onload();
+
+  if (window.TradingView && window.TradingView.widget) {
+    buildWidget();
   } else {
-    document.head.appendChild(script);
+    const s = document.createElement('script');
+    s.src = 'https://s3.tradingview.com/tv.js';
+    s.onload = buildWidget;
+    s.onerror = () => { container.innerHTML = '<div style="padding:40px;text-align:center;color:#ff5555;font-size:11px">⚠️ TradingView script blocked. Try disabling ad blocker.</div>'; };
+    document.head.appendChild(s);
   }
 
-  // Load news for this stock
   loadTVNews(rawSym);
-  // Load quick stats
   loadTVStats(rawSym);
 }
-
 function closeTVChart() {
   document.getElementById('tv-overlay').style.display = 'none';
   document.body.style.overflow = '';
@@ -7215,59 +7216,50 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTVChart
 
 async function loadTVNews(sym) {
   const feed = document.getElementById('tv-news-feed');
-  feed.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:9px;font-family:DM Mono,monospace;text-align:center;padding:20px">⏳ Loading…</div>';
-
-  // Filter global liveNews for this stock
+  if (!feed) return;
   const tick = sym.toUpperCase();
-  const stockNews = (window.liveNews || []).filter(n => {
-    const t = (n.title + ' ' + (n.desc||'')).toUpperCase();
-    return t.includes(tick) || t.includes(tick.slice(0,6));
-  });
 
-  // Also try fetching from our announcements API
-  let annNews = [];
+  const renderItems = (items) => {
+    if (!items.length) {
+      feed.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:9px;text-align:center;padding:20px">No news yet</div>';
+      return;
+    }
+    feed.innerHTML = items.slice(0,25).map(n => {
+      const ago = n.pubDate ? timeAgo(n.pubDate) : '';
+      const dot = n.isAnn ? '#fbbf24' : (n.cat==='bullish'?'#00d26a':n.cat==='bearish'?'#ff5555':'#6b7280');
+      const card = document.createElement('div');
+      card.style.cssText = 'padding:9px 10px;margin-bottom:5px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:5px;cursor:'+(n.link?'pointer':'default');
+      if (n.link) card.onclick = () => window.open(n.link,'_blank');
+      card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:7px">'
+        +'<div style="width:5px;height:5px;border-radius:50%;background:'+dot+';margin-top:4px;flex-shrink:0"></div>'
+        +'<div><div style="font-size:9px;color:rgba(255,255,255,.85);line-height:1.45;margin-bottom:3px">'+n.title.slice(0,120)+'</div>'
+        +'<div style="font-size:8px;color:rgba(255,255,255,.3)">'+(n.src||'Market')+' · '+ago+'</div>'
+        +'</div></div>';
+      return card.outerHTML;
+    }).join('');
+  };
+
+  // Show instantly from liveNews cache — no waiting
+  const stockNews = (window.liveNews||[]).filter(n =>
+    (n.title+' '+(n.desc||'')).toUpperCase().includes(tick.slice(0,6))
+  );
+  renderItems(stockNews.length ? stockNews : (window.liveNews||[]).slice(0,20));
+
+  // Enrich with NSE announcements in background
   try {
-    const j = await apiFetch({ sym: sym+'.NS', type: 'announcements' }, 8000);
+    const j = await apiFetch({ sym: sym+'.NS', type:'announcements' }, 8000);
     if (j?.data?.length) {
-      annNews = j.data.slice(0, 10).map(a => ({
-        title: a.desc || a.subject || a.headline || 'Corporate Announcement',
-        src: 'NSE',
-        pubDate: a.exchdisstime || a.bm_timestamp || '',
-        link: '',
-        isAnn: true,
+      const ann = j.data.slice(0,10).map(a => ({
+        title: a.desc||a.subject||a.headline||'NSE Announcement',
+        src:'NSE Filing', pubDate:a.exchdisstime||a.bm_timestamp||'', link:'', isAnn:true,
       }));
+      const all = [...ann, ...stockNews, ...(window.liveNews||[]).slice(0,20)];
+      const seen = new Set();
+      renderItems(all.filter(n => { const k=n.title.slice(0,35); if(seen.has(k)) return false; seen.add(k); return true; }));
     }
   } catch(_) {}
-
-  const combined = [...annNews, ...stockNews, ...(window.liveNews||[]).slice(0,20)];
-  const seen = new Set();
-  const unique = combined.filter(n => {
-    const k = n.title.slice(0,40);
-    if (seen.has(k)) return false;
-    seen.add(k); return true;
-  }).slice(0, 25);
-
-  if (!unique.length) {
-    feed.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:9px;font-family:DM Mono,monospace;text-align:center;padding:20px">No news found for '+sym+'</div>';
-    return;
-  }
-
-  feed.innerHTML = unique.map(n => {
-    const ago = n.pubDate ? timeAgo(n.pubDate) : '';
-    const isAnn = n.isAnn;
-    const dotCol = isAnn ? '#fbbf24' : (n.cat==='bullish'?'#00d26a':n.cat==='bearish'?'#ff5555':'#888');
-    const clickHandler = n.link ? 'window.open(this.dataset.url,\'_blank\')' : '';
-    return `<div onclick="${clickHandler}" data-url="${n.link||''}" style="padding:9px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:5px;cursor:${n.link?'pointer':'default'};transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='rgba(255,255,255,.03)'">
-      <div style="display:flex;align-items:flex-start;gap:7px">
-        <div style="width:5px;height:5px;border-radius:50%;background:${dotCol};margin-top:4px;flex-shrink:0"></div>
-        <div>
-          <div style="font-size:9.5px;color:rgba(255,255,255,.85);line-height:1.45;margin-bottom:3px">${n.title.slice(0,120)}${n.title.length>120?'…':''}</div>
-          <div style="font-size:8px;color:rgba(255,255,255,.3);font-family:DM Mono,monospace">${isAnn?'📋 NSE Announcement':'📰 '+n.src}${ago?' · '+ago:''}</div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
 }
+
 
 async function loadTVStats(sym) {
   const el = document.getElementById('tv-quick-stats');
